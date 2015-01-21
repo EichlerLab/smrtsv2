@@ -20,28 +20,26 @@ TMP_DIR = config["tmp_dir"]
 # Define rules
 #
 
-# # Create a list of BAM files for downstream analysis.
-# rule collect_alignments:
-#     input: expand()
-#     output: "alignments.txt"
-#     shell: "echo {input} > {output}"
+# Create a list of BAM files for downstream analysis.
+rule collect_alignments:
+    input: dynamic("alignments/{batch_id}.bam")
+    output: "alignments.txt"
+    params: sge_opts=""
+    shell: "echo {input} > {output}"
 
-# # Sync input reads and reference assembly to local disk, align reads, sort
-# # output, and write final BAM to shared disk.
-# rule align_reads:
-#     input: reads=dynamic("batched_reads/{batch_id}.fofn"), reference=config["reference"]["assembly"], suffix=config["reference"]["suffix_array"], ctab=config["reference"]["ctab"]
-#     output: "alignments/{batch_id}.bam"
-#     params: threads="8", samtools_threads="1", samtools_memory="4G"
-#     shell: "mkdir -p {TMP_DIR}; cd {TMP_DIR}; {BLASR_BIN} {input.reads} {input.reference} -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {TMP_DIR}/{wildcards.batch_id} -o `basename {output}` -; rsync --bwlimit=20000 --remove-source-files -W `basename {output}` `pwd`/{output}"
-
-rule all:
-    #input: expand("batched_reads/{batch_id}.fofn", batch_id=BATCHES)
-    input: dynamic("batched_reads/{batch_id}.fofn")
+# Sync input reads and reference assembly to local disk, align reads, sort
+# output, and write final BAM to shared disk.
+rule align_reads:
+    input: reads="batched_reads/{batch_id}.fofn", reference=config["reference"]["assembly"], suffix=config["reference"]["suffix_array"], ctab=config["reference"]["ctab"]
+    output: "alignments/{batch_id}.bam"
+    params: sge_opts="-l mfree=3G -pe serial 12 -N align_batch_{wildcards.batch_id}", threads="8", samtools_threads="4", samtools_memory="4G"
+    shell: "mkdir -p {TMP_DIR}; cd {TMP_DIR}; {BLASR_BIN} {input.reads} {input.reference} -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {TMP_DIR}/{wildcards.batch_id} -o `basename {output}` -; rsync --bwlimit=20000 --remove-source-files -W `basename {output}` `pwd`/{output}"
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
     input: config["input"]["reads"]
     output: dynamic("batched_reads/{batch_id}.fofn")
+    params: sge_opts=""
     run:
         shell("mkdir -p batched_reads")
 
