@@ -16,18 +16,6 @@ BLASR_BIN = "/net/eichler/vol5/home/mchaisso/software/blasr_1/cpp/alignment/bin/
 configfile: "config.json"
 TMP_DIR = config["tmp_dir"]
 
-with open(config["input"]["reads"], "r") as fh:
-    INPUT_FILES = [line for line in fh]
-
-print(INPUT_FILES)
-
-# Total batches is either the number of batches requested or number of input
-# files (when fewer files exist than batches requested).
-TOTAL_INPUT_FILES = len(INPUT_FILES)
-FILES_PER_BATCH = math.ceil(float(TOTAL_INPUT_FILES) / config["alignment"]["batches"])
-BATCHES = tuple(range(min((config["alignment"]["batches"], TOTAL_INPUT_FILES)))
-print(BATCHES)
-
 #
 # Define rules
 #
@@ -47,17 +35,26 @@ print(BATCHES)
 #     shell: "mkdir -p {TMP_DIR}; cd {TMP_DIR}; {BLASR_BIN} {input.reads} {input.reference} -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {TMP_DIR}/{wildcards.batch_id} -o `basename {output}` -; rsync --bwlimit=20000 --remove-source-files -W `basename {output}` `pwd`/{output}"
 
 rule all:
-    input: expand("batched_reads/{batch_id}.fofn", batch_id=BATCHES)
-    #input: "batched_reads"
+    #input: expand("batched_reads/{batch_id}.fofn", batch_id=BATCHES)
+    input: dynamic("batched_reads/{batch_id}.fofn")
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
-    output: "batched_reads/{batch_id}.fofn"
+    input: config["input"]["reads"]
+    output: dynamic("batched_reads/{batch_id}.fofn")
     run:
         shell("mkdir -p batched_reads")
-        for files_processed in range(TOTAL_INPUT_FILES):
-            batch_id = math.floor(float(files_processed) / FILES_PER_BATCH)
-            if batch_id == int(wildcards.batch_id):
-                current_output = open("batched_reads/%s.fofn" % batch_id, "a")
-                current_output.write(INPUT_FILES[files_processed])
-                current_output.close()
+
+        with open(input[0], "r") as fh:
+            input_files = [line for line in fh]
+
+        # Total batches is either the number of batches requested or number of
+        # input files (when fewer files exist than batches requested).
+        total_input_files = len(input_files)
+        files_per_batch = config["alignment"]["files_per_batch"]
+
+        for files_processed in range(total_input_files):
+            batch_id = math.floor(float(files_processed) / files_per_batch)
+            current_output = open("batched_reads/%s.fofn" % batch_id, "a")
+            current_output.write(input_files[files_processed])
+            current_output.close()
