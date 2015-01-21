@@ -4,11 +4,13 @@ Structural variant caller for PacBio reads.
 See also: https://github.com/EichlerLab/pacbio_variant_caller
 """
 import math
+import os
 
 #
 # Define internal constants.
 #
-BLASR_BIN = "/net/eichler/vol5/home/mchaisso/software/blasr_1/cpp/alignment/bin/blasr"
+BLASR_BIN = "/net/eichler/vol5/home/mchaisso/software/blasr_2/cpp/alignment/bin/blasr"
+CWD = os.getcwd()
 
 #
 # Load user variables.
@@ -32,8 +34,8 @@ rule collect_alignments:
 rule align_reads:
     input: reads="batched_reads/{batch_id}.fofn", reference=config["reference"]["assembly"], suffix=config["reference"]["suffix_array"], ctab=config["reference"]["ctab"]
     output: "alignments/{batch_id}.bam"
-    params: sge_opts="-l mfree=3G -pe serial 12 -N align_batch_{wildcards.batch_id}", threads="8", samtools_threads="4", samtools_memory="4G"
-    shell: "mkdir -p {TMP_DIR}; cd {TMP_DIR}; {BLASR_BIN} {input.reads} {input.reference} -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {TMP_DIR}/{wildcards.batch_id} -o `basename {output}` -; rsync --bwlimit=20000 --remove-source-files -W `basename {output}` `pwd`/{output}"
+    params: sge_opts="-l mfree=3G -pe serial 12 -N align_batch_{batch_id}", threads="8", samtools_threads="4", samtools_memory="4G"
+    shell: "mkdir -p {TMP_DIR}; cd {TMP_DIR}; {BLASR_BIN} {CWD}/{input.reads} {input.reference} -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -; rsync --bwlimit=20000 --remove-source-files -W {wildcards.batch_id}.bam {CWD}/{output}"
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
