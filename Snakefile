@@ -51,18 +51,24 @@ rule assign_batches:
     output: dynamic("batched_reads/{batch_id}.fofn")
     params: sge_opts=""
     run:
-        shell("mkdir -p batched_reads")
+        output_dir = os.path.dirname(output[0])
+        shell("mkdir -p %s" % output_dir)
 
         with open(input[0], "r") as fh:
-            input_files = [line for line in fh]
+            input_files = [os.path.realpath(line.rstrip()) for line in fh]
+
+        sizes_by_file = dict([(fofn, os.path.getsize(fofn))
+                              for fofn in input_files if os.path.exists(fofn)])
 
         # Total batches is either the number of batches requested or number of
         # input files (when fewer files exist than batches requested).
-        total_input_files = len(input_files)
-        files_per_batch = config["alignment"]["files_per_batch"]
+        total_input_files = len(sizes_by_file.keys())
+        size_per_batch = config["alignment"]["size_per_batch"]
+        total_file_sizes = 0
 
-        for files_processed in range(total_input_files):
-            batch_id = math.floor(float(files_processed) / files_per_batch)
-            current_output = open("batched_reads/%s.fofn" % batch_id, "a")
-            current_output.write(input_files[files_processed])
+        for fofn, fofn_size in sizes_by_file.items():
+            batch_id = math.floor(float(total_file_sizes) / size_per_batch)
+            current_output = open("%s/%s.fofn" % (output_dir, batch_id), "a")
+            current_output.write("%s\n" % fofn)
             current_output.close()
+            total_file_sizes += fofn_size
