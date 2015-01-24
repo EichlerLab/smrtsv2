@@ -60,14 +60,13 @@ rule assign_batches:
         sizes_by_file = dict([(fofn, os.path.getsize(fofn))
                               for fofn in input_files if os.path.exists(fofn)])
 
-        # Total batches is either the number of batches requested or number of
-        # input files (when fewer files exist than batches requested).
-        total_input_files = len(sizes_by_file.keys())
-        size_per_batch = config["alignment"]["size_per_batch"]
+        # Assign batches based on the total size of the files per batch. This
+        # should produce roughly equally-sized output files.
+        size_per_batch = float(config["alignment"]["size_per_batch"])
         total_file_sizes = 0
 
         for fofn, fofn_size in sizes_by_file.items():
-            batch_id = math.floor(float(total_file_sizes) / size_per_batch)
+            batch_id = math.floor(total_file_sizes / size_per_batch)
             current_output = open("%s/%s.fofn" % (output_dir, batch_id), "a")
             current_output.write("%s\n" % fofn)
             current_output.close()
