@@ -36,10 +36,14 @@ rule align_reads:
     output: "alignments/{batch_id}.bam"
     params: sge_opts="-l disk_free=70G -l mfree=3G -pe serial 12 -N align_batch_{batch_id}", threads="8", samtools_threads="4", samtools_memory="4G"
     shell:
-        "mkdir -p {TMP_DIR};"
-        "cd {TMP_DIR};"
-        "{BLASR_BIN} {CWD}/{input.reads} {input.reference} -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -;"
-        "rsync --bwlimit=20000 --remove-source-files -W {wildcards.batch_id}.bam {CWD}/{output}"
+        "mkdir -p {TMP_DIR}/{wildcards.batch_id};"
+        "cd {TMP_DIR}/{wildcards.batch_id};"
+        "rsync --bwlimit=20000 -LW --no-relative --files-from={CWD}/{input.reads} / .;"
+        """find ./ -name "*.bax.h5" > input.fofn;"""
+        "{BLASR_BIN} input.fofn {input.reference} -unaligned /dev/null -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50 -clipping subread | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -;"
+        "samtools index {wildcards.batch_id}.bam;"
+        "rsync --bwlimit=20000 --remove-source-files -W {wildcards.batch_id}.bam* {CWD}/`dirname {output}`/;"
+        "rm -rf {TMP_DIR}/{wildcards.batch_id}"
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
