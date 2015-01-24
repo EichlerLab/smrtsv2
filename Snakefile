@@ -34,7 +34,7 @@ rule collect_alignments:
 rule align_reads:
     input: reads="batched_reads/{batch_id}.fofn", reference=config["reference"]["assembly"], suffix=config["reference"]["suffix_array"], ctab=config["reference"]["ctab"]
     output: "alignments/{batch_id}.bam"
-    params: sge_opts="-l mfree=3G -pe serial 12 -N align_batch_{batch_id}", threads="8", samtools_threads="4", samtools_memory="4G"
+    params: sge_opts="-l disk_free=70G -l mfree=3G -pe serial 12 -N align_batch_{batch_id}", threads="8", samtools_threads="4", samtools_memory="4G"
     shell:
         "mkdir -p {TMP_DIR};"
         "cd {TMP_DIR};"
