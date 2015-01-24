@@ -9,7 +9,7 @@ import os
 #
 # Define internal constants.
 #
-BLASR_BIN = "/net/eichler/vol5/home/mchaisso/software/blasr_2/cpp/alignment/bin/blasr"
+BLASR_BIN = "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/blasr_jlhudd/alignment/bin/blasr"
 CWD = os.getcwd()
 
 #
