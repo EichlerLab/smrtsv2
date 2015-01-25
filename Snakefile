@@ -31,7 +31,7 @@ rule collect_alignments:
 
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
-    input: dynamic("aligned_reads_{event_type}/{batch_id}.bed")
+    input: dynamic("aligned_reads_{{event_type}}/{batch_id}.bed")
     output: "merged_support_for_{event_type}.bed"
     params: sge_opts=""
     shell: "sort -k 1,1 -k 2,2n -m {input} | python scripts/MergeGapSupport.py > {output}"
