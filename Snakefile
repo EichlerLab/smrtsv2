@@ -35,7 +35,8 @@ rule find_gaps_in_aligned_reads:
     shell:
         "samtools view -h -F 0x4 {input.alignments} "
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
-            "| python scripts/rmdup.py /dev/stdin /dev/stdout > {output}"
+            "| python scripts/rmdup.py /dev/stdin /dev/stdout "
+            "| sort -k 1,1 -k 2,2n > {output}"
 
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
