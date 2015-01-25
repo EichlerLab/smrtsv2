@@ -32,6 +32,7 @@ rule collect_alignments:
 rule find_gaps_in_aligned_reads:
     input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{batch_id}.bed"
+    params: sge_opts=""
     shell:
         "samtools view -h -F 0x4 {input.alignments} "
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
