@@ -24,7 +24,7 @@ TMP_DIR = config["tmp_dir"]
 
 # Create a list of BAM files for downstream analysis.
 rule collect_alignments:
-    input: dynamic("gaps_in_aligned_reads/{batch_id}.bed")
+    input: dynamic("alignments/{batch_id}.bam")
     output: "alignments.txt"
     params: sge_opts=""
     shell: "echo {input} > {output}"
