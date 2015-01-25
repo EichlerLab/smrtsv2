@@ -31,10 +31,10 @@ rule collect_alignments:
 
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
-    input: "aligned_reads_{event_type}/{batch_id}.bed"
-    output: "merged_support_for_{event_type}/{batch_id}.bed"
+    input: dynamic("aligned_reads_{event_type}/{batch_id}.bed")
+    output: "merged_support_for_{event_type}.bed"
     params: sge_opts=""
-    shell: "python scripts/MergeGapSupport.py --table {input} --out {output}"
+    shell: "sort -k 1,1 -k 2,2n -m {input} | python scripts/MergeGapSupport.py > {output}"
 
 # Classify insertions and deletions into their own output files.
 rule classify_gaps_in_aligned_reads:
