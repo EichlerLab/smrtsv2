@@ -24,10 +24,18 @@ TMP_DIR = config["tmp_dir"]
 
 # Create a list of BAM files for downstream analysis.
 rule collect_alignments:
-    input: dynamic("alignments/{batch_id}.bam")
+    input: dynamic("gaps_in_aligned_reads/{batch_id}.bed")
     output: "alignments.txt"
     params: sge_opts=""
     shell: "echo {input} > {output}"
+
+rule find_gaps_in_aligned_reads:
+    input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
+    output: "gaps_in_aligned_reads/{batch_id}.bed"
+    shell:
+        "samtools view -h -F 0x4 {input.alignments} "
+            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
+            "| python scripts/rmdup.py /dev/stdin /dev/stdout > {output}"
 
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
