@@ -29,6 +29,21 @@ rule collect_alignments:
     params: sge_opts=""
     shell: "echo {input} > {output}"
 
+# Merge gap support for each type of event.
+rule merge_gap_support_from_aligned_reads:
+    input: "aligned_reads_{event_type}/{batch_id}.bed"
+    output: "merged_support_for_{event_type}/{batch_id}.bed"
+    params: sge_opts=""
+    shell: "python scripts/MergeGapSupport.py --table {input} --out {output}"
+
+# Classify insertions and deletions into their own output files.
+rule classify_gaps_in_aligned_reads:
+    input: "gaps_in_aligned_reads/{batch_id}.bed"
+    output: "aligned_reads_{event_type}/{batch_id}.bed"
+    params: sge_opts=""
+    shell: """awk '$4 == "{wildcards.event_type}"' {input} > {output}"""
+
+# Parse CIGAR string of aligned reads for insertions and deletions.
 rule find_gaps_in_aligned_reads:
     input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{batch_id}.bed"
