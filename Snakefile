@@ -77,7 +77,7 @@ rule assign_batches:
     params: sge_opts=""
     run:
         output_dir = os.path.dirname(output[0])
-        shell("mkdir -p %s" % output_dir)
+        shell("rm -rf %s; mkdir -p %s" % (output_dir, output_dir))
 
         with open(input[0], "r") as fh:
             input_files = [os.path.realpath(line.rstrip()) for line in fh]
