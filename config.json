@@ -3,7 +3,8 @@
         "reads": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/pacbio_variant_caller/input.fofn"
     },
     "alignment": {
-        "size_per_batch": 32212254720
+        "size_per_batch": 32212254720,
+        "mapping_quality": 30
     },
     "reference": {
         "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
