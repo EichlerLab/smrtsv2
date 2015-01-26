@@ -22,13 +22,6 @@ TMP_DIR = config["tmp_dir"]
 # Define rules
 #
 
-# Create a list of BAM files for downstream analysis.
-rule collect_alignments:
-    input: dynamic("alignments/{batch_id}.bam")
-    output: "alignments.txt"
-    params: sge_opts=""
-    shell: "echo {input} > {output}"
-
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
     input: dynamic("aligned_reads_{{event_type}}/{batch_id}.bed")
@@ -52,6 +45,20 @@ rule find_gaps_in_aligned_reads:
         "samtools view -h -q {params.mapping_quality_threshold} -F 0x4 {input.alignments} "
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
             "| sort -k 1,1 -k 2,2n > {output}"
+
+# Create a list of BAM files for downstream analysis.
+rule collect_alignment_summaries:
+    input: dynamic("alignment_lengths/{batch_id}.tab")
+    output: "alignment_lengths.tab"
+    params: sge_opts=""
+    shell: "cat {input} > {output}"
+
+# Summarize alignments by length.
+rule get_alignment_lengths:
+    input: "alignments/{batch_id}.bam"
+    output: "alignment_lengths/{batch_id}.tab"
+    params: sge_opts=""
+    shell: """samtools view {input} | awk 'OFS="\\t" {{ if ($3 == "*") {{ print "unmapped",length($10) }} else {{ print "mapped",$9 }} }}' > {output}"""
 
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
