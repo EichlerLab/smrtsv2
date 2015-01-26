@@ -47,11 +47,10 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{batch_id}.bed"
-    params: sge_opts=""
+    params: sge_opts="", mapping_quality_threshold="30"
     shell:
-        "samtools view -h -F 0x4 {input.alignments} "
+        "samtools view -h -q {params.mapping_quality_threshold} -F 0x4 {input.alignments} "
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
-            "| python scripts/rmdup.py /dev/stdin /dev/stdout "
             "| sort -k 1,1 -k 2,2n > {output}"
 
 # Sync input reads and reference assembly to local disk, align reads, sort
