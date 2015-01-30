@@ -65,7 +65,7 @@ rule find_gaps_in_aligned_reads:
     params: sge_opts="", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
     shell:
         "samtools view -h -q {params.mapping_quality_threshold} {input.alignments} "
-            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
+            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 "
             "| sort -k 1,1 -k 2,2n > {output}"
 
 # Calculate coverage from all alignments.
