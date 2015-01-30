@@ -62,13 +62,13 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{batch_id}.bed"
-    params: sge_opts="-l mfree=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
+    params: sge_opts="-l mfree=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
         "samtools view -q {params.mapping_quality_threshold} {input.alignments} "
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed; "
-        "rsync -arvz --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed {output}"
+        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed {output}"
 
 # Calculate coverage from all alignments.
 rule calculate_coverage:
@@ -77,7 +77,7 @@ rule calculate_coverage:
     params: sge_opts="-l mfree=2G", bwlimit="20000"
     run:
         bam_inputs = " -in ".join(input)
-        command = "scripts/mcst/coverage {TMP_DIR}/{output} -in %s; rsync -arv --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{output} {output}" % bam_inputs
+        command = "scripts/mcst/coverage {TMP_DIR}/{output} -in %s; rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{output} {output}" % bam_inputs
         print(command)
         shell(command)
 
