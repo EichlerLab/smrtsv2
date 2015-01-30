@@ -22,6 +22,28 @@ TMP_DIR = config["tmp_dir"]
 # Define rules
 #
 
+# Merge filtered candidates.
+rule merge_filtered_candidates:
+    input: "filtered_candidates_for_{event_type}.bed"
+    output: "merged_filtered_candidates_for_{event_type}.bed"
+    params: sge_opts="", merge_distance="1"
+    shell: "bedtools merge -i {input} -d {params.merge_distance} > {output}"
+
+# Filter candidates by support and coverage.
+rule filter_candidates:
+    input: "coverage_and_merged_support_for_{event_type}.bed"
+    output: "filtered_candidates_for_{event_type}.bed"
+    params: sge_opts="", min_length="50", min_coverage="5", max_coverage="100"
+    shell: "awk '$3 - $2 >= {params.min_length} && $9 >= {params.min_coverage} && $9 <= {params.max_coverage}' {input} > {output}"
+    #shell: "python scripts/FilterSupport.py --Mc {params.max_coverage} {input} > {output}"
+
+# Annotate merged gap support with alignment coverage.
+rule annotate_coverage_of_merged_gap_support:
+    input: support="merged_support_for_{event_type}.bed", coverage="coverage.bed"
+    output: "coverage_and_merged_support_for_{event_type}.bed"
+    params: sge_opts=""
+    shell: "bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3,4,5,6,7,8 -c 12 -o mean > {output}"
+
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
     input: dynamic("aligned_reads_{{event_type}}/{batch_id}.bed")
