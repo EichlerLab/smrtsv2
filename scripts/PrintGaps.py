@@ -62,7 +62,7 @@ lineNumber = 0
 for samFileName in args.sam:
     samFile = open(samFileName)
 
-    for line in samFile.readlines():
+    for line in samFile:
         lineNumber = lineNumber + 1
         if (line[0] == "@"):
             if (args.outsam is not None):
