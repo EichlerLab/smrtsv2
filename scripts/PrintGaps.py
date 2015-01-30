@@ -196,6 +196,7 @@ for samFileName in args.sam:
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
                         sys.stderr.write("ERROR! tpos (%s) is past the end of %s (%s)\n" % (tPos, chrName, fai[chrName][0]))
+                        continue
                     delStart = max(tPos - args.context, 0)
                     delEnd   = min(tPos + args.context + l, fai[chrName][0])
                     #delSeq = genomeDict[chrName].seq[delStart:delEnd].tostring()
