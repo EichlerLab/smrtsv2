@@ -188,8 +188,7 @@ for samFileName in args.sam:
                         if (args.qpos):
                             outFile.write("\t{}\t{}".format(qPos, qPos + len(gapSeq)))
                         outFile.write("\n")
-                                        
-                            
+
                 qPos += l
             if (op == D):
                 if (l > args.minLength):
@@ -205,7 +204,7 @@ for samFileName in args.sam:
                     if (args.qpos):
                         outFile.write("\t{}\t{}".format(qPos, qPos))
                     outFile.write("\n")
-                                    
+
                 tPos += l
             if (op == H):
                 pass
