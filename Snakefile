@@ -64,9 +64,11 @@ rule find_gaps_in_aligned_reads:
     output: "gaps_in_aligned_reads/{batch_id}.bed"
     params: sge_opts="-l mfree=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
     shell:
-        "samtools view -h -q {params.mapping_quality_threshold} {input.alignments} "
-            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 "
-            "| sort -k 1,1 -k 2,2n > {output}"
+        "mkdir -p `dirname {output}`; "
+        "mkdir -p {TMP_DIR}; "
+        "samtools view -q {params.mapping_quality_threshold} {input.alignments} "
+            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed; "
+        "rsync -arvz --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed {output}"
 
 # Calculate coverage from all alignments.
 rule calculate_coverage:
