@@ -180,6 +180,7 @@ for samFileName in args.sam:
                     fracs = [float(gapSeq.count(n))/(len(gapSeq)+1) for n in nucs]
                     doPrint = True
                     for frac in fracs:
+                        # TODO: Define or replace magic number.
                         if (frac > 0.85):
                             doPrint = False
                     if (doPrint):
