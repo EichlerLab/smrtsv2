@@ -117,7 +117,14 @@ int main(int argc, char* argv[]) {
 			bam_destroy1(b);
 			b = bam_init1();
 		}
-		bam_header_destroy(header);
+
+        // Destroy the header as long as this isn't the last BAM to be
+        // processed. The header of the last BAM will be used to create the
+        // output for overall coverage.
+        if (bamI < bamFileNames.size() - 1) {
+            bam_header_destroy(header);
+        }
+
 		bam_close(in);
 	}
 
@@ -133,6 +140,8 @@ int main(int argc, char* argv[]) {
 
 		}
 	}
-  outFile.close();
+
+    bam_header_destroy(header);
+    outFile.close();
 }
 
