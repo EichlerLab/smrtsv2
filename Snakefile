@@ -74,10 +74,10 @@ rule find_gaps_in_aligned_reads:
 rule calculate_coverage:
     input: dynamic("alignments/{batch_id}.bam")
     output: "coverage.bed"
-    params: sge_opts="-l mfree=8G"
+    params: sge_opts="-l mfree=2G", bwlimit="20000"
     run:
         bam_inputs = " -in ".join(input)
-        command = "~mchaisso/projects/mcst/coverage {output} -in %s" % bam_inputs
+        command = "scripts/mcst/coverage {TMP_DIR}/{output} -in %s; rsync -arv --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{output} {output}" % bam_inputs
         print(command)
         shell(command)
 
