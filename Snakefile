@@ -46,6 +46,17 @@ rule find_gaps_in_aligned_reads:
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 10 --condense 20 "
             "| sort -k 1,1 -k 2,2n > {output}"
 
+# Calculate coverage from all alignments.
+rule calculate_coverage:
+    input: dynamic("alignments/{batch_id}.bam")
+    output: "coverage.bed"
+    params: sge_opts="-l mfree=8G"
+    run:
+        bam_inputs = " -in ".join(input)
+        command = "~mchaisso/projects/mcst/coverage {output} -in %s" % bam_inputs
+        print(command)
+        shell(command)
+
 # Create a list of BAM files for downstream analysis.
 rule collect_alignment_summaries:
     input: dynamic("alignment_lengths/{batch_id}.tab")
