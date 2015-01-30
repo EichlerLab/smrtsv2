@@ -137,7 +137,7 @@ for samFileName in args.sam:
             i = j + 1
             niter +=1
             if (niter > len(aln.ops)):
-                print "ERROR! too many interations."
+                sys.stderr.write("ERROR! too many interations.\n")
         for i in range(len(packedOps)):
             op = packedOps[i]
             l  = packedLengths[i]
@@ -153,7 +153,7 @@ for samFileName in args.sam:
                     gapSeq = aln.seq[max(0,qPos-args.context):min(qPos+l+args.context, len(aln.seq))]
                     tsd = "notsd"
                     if (len(gapSeq) == 0):
-                        print "ERROR, gap seq is of zero length"
+                        sys.stderr.write("ERROR, gap seq is of zero length\n")
                     if (args.tsd):
                         # try and find the target site duplications, this may be on either side of the alignemnt
                         tsdSuffix = gapSeq[-args.tsd:]
@@ -195,7 +195,7 @@ for samFileName in args.sam:
                     foundGap = True
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
-                        print "ERROR! tpos is past the genome end." + str(tPos) + " " + str(fai[chrName][0])
+                        sys.stderr.write("ERROR! tpos (%s) is past the end of %s (%s)\n" % (tPos, chrName, fai[chrName][0]))
                     delStart = max(tPos - args.context, 0)
                     delEnd   = min(tPos + args.context + l, fai[chrName][0])
                     #delSeq = genomeDict[chrName].seq[delStart:delEnd].tostring()
