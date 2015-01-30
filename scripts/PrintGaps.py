@@ -36,9 +36,9 @@ else:
 
 if (args.gapFree is not None):
     gapFree = open(args.gapFree, 'w')
-    
+
 fai = Tools.ReadFAIFile(args.genome + ".fai")
-    
+
 #genomeDict = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
 
 if (args.outsam is not None):
@@ -70,11 +70,11 @@ for samFileName in args.sam:
             continue
         if (len(line) <= 1):
             continue
-        
+
         aln = Tools.SAMEntry(line)
         if (aln.title is None):
             continue
-    
+
         if (args.onTarget == True):
             srcChrom = aln.title.split(":")[0]
             if (srcChrom != aln.tName):
@@ -83,7 +83,7 @@ for samFileName in args.sam:
             continue
         if (aln.mapqv < args.minq):
             continue
-    
+
         tPos = aln.tStart
         qPos = 0
         #
@@ -108,12 +108,12 @@ for samFileName in args.sam:
                 if (l > maxGap):
                     maxGap = l
                     maxGapType = op
-                    
+
             if (op == I or op == D and i < len(aln.ops) - 2 and aln.ops[i+2][0] == op):
                 matchLen = 0
                 gapLen   = 0
                 while (j+2 < len(aln.ops) and aln.ops[j+2][0] == op and aln.ops[j+1][0] == M and aln.lengths[j+1] < args.condense):
-    
+
                     matchLen += aln.lengths[j+1]
                     gapLen   += aln.lengths[j+2]
                     j+=2
@@ -122,18 +122,18 @@ for samFileName in args.sam:
                     newMatch = (M, matchLen)
                     packedOps.append(op)
                     packedLengths.append(l+gapLen)
-                        
+
                     packedOps.append(M)
                     packedLengths.append(matchLen)
-    
+
                 else:
                     packedLengths.append(l)
                     packedOps.append(op)
-    
+
             else:
                 packedLengths.append(l)
                 packedOps.append(op)
-    
+
             i = j + 1
             niter +=1
             if (niter > len(aln.ops)):
@@ -141,7 +141,7 @@ for samFileName in args.sam:
         for i in range(len(packedOps)):
             op = packedOps[i]
             l  = packedLengths[i]
-    
+
             if (op == M or op == N or op == S):
                 tPos += l
                 qPos += l
@@ -192,7 +192,7 @@ for samFileName in args.sam:
                 qPos += l
             if (op == D):
                 if (l > args.minLength):
-                    foundGap = True                    
+                    foundGap = True
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
                         print "ERROR! tpos is past the genome end." + str(tPos) + " " + str(fai[chrName][0])
@@ -210,16 +210,16 @@ for samFileName in args.sam:
                 pass
         if (foundGap == False and args.gapFree is not None):
             gapFree.write(aln.tName + "\t" + str(aln.tStart) + "\t" + str(aln.tEnd) + "\t" + aln.title + "\n")
-            
+
         if (args.outsam is not None):
             packedCigar= ''.join([str(v[0]) + str(v[1]) for v in zip(packedLengths, packedOps)])
             vals = line.split()
             packedLine = '\t'.join(vals[0:5]) + "\t" + packedCigar + '\t'.join(vals[6:]) + "\n"
             outsam.write(packedLine)
-            
+
 if (args.gapFree is not None):
     gapFree.close()
-    
+
 outFile.close()
 if (args.outsam is not None):
     outsam.close()
