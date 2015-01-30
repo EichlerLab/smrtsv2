@@ -62,7 +62,7 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{batch_id}.bed"
-    params: sge_opts="-l mfree=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
+    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
