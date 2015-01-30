@@ -12,11 +12,11 @@
 #include <iomanip>
 
 using namespace std;
-typedef struct {  
-    int beg, end;  
-    samfile_t *in;  
-} tmpstruct_t;  
-  
+typedef struct {
+    int beg, end;
+    samfile_t *in;
+} tmpstruct_t;
+
 
 
 int GetTLen(const bam1_t *b) {
@@ -35,7 +35,7 @@ int GetTLen(const bam1_t *b) {
 }
 
 int main(int argc, char* argv[]) {
-	
+
 
 	bam_index_t *idx;
 	bam_plbuf_t *buf;
@@ -81,25 +81,25 @@ int main(int argc, char* argv[]) {
 	int readIndex =0 ;
 	long totalNumBases = 0;
 	for (bamI = 0; bamI < bamFileNames.size(); bamI++) {
-		
+
 		BGZF *in;
 		in = bam_open(bamFileNames[bamI].c_str(), "rb");
-		
+
 
 		header = bam_header_read(in);
 		if (bamI == 0) {
-			
+
 
 			coverage.resize(header->n_targets);
 			for (i = 0; i < header->n_targets; i++) {
 				coverage[i].resize(header->target_len[i]/bin + (header->target_len[i]%bin== 0? 0 : 1), 0);
 			}
 		}
-	
+
 		bam1_t *b =  bam_init1();
-	
+
 		while (bam_read1(in, b) >= 0) {
-		
+
 			int tStart = b->core.pos;
 			int tEnd   = b->core.pos + GetTLen(b);
 			if (b->core.qual >= minQuality) {
@@ -127,10 +127,10 @@ int main(int argc, char* argv[]) {
 		for (p = 0; p < lastBinIndex - 1; p++) {
 			outFile << header->target_name[i] << "\t" << p*bin << "\t" << (p+1)*bin << "\t" << std::setw(4) << float(coverage[i][p]) / bin << endl;
 		}
-		int lastBinLength = header->target_len[i] - (lastBinIndex -1) * bin; 
+		int lastBinLength = header->target_len[i] - (lastBinIndex -1) * bin;
 		if (lastBinLength > 0) {
 			outFile << header->target_name[i] << "\t" << p *bin << "\t" << header->target_len[i] << "\t" << float(coverage[i][p]) / lastBinLength << endl;
-		
+
 		}
 	}
   outFile.close();
