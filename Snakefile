@@ -62,7 +62,7 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{batch_id}.bed"
-    params: sge_opts="", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
+    params: sge_opts="-l mfree=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
     shell:
         "samtools view -h -q {params.mapping_quality_threshold} {input.alignments} "
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 "
