@@ -24,7 +24,7 @@ prevLine = ""
 prevVals = None
 prevCoords = None
 lineIndex = 0
-for line in inFile.readlines():
+for line in inFile:
     vals = line.split()
     (chrom, start, end ) = (vals[0], int(vals[1]), int(vals[2]))
 #    vals[3] = 1
