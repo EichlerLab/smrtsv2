@@ -52,7 +52,8 @@ for line in inFile:
     try:
         read = '/'.join(vals[7].split('/')[0:2])
     except:
-        print "Error joining " + str(vals)
+        sys.stderr.write("Error joining %s\n" % vals)
+        raise
 
     op   = vals[3]
 #    (intvStart, intvEnd) = vals[3].split(',')
