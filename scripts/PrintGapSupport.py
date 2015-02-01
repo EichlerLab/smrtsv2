@@ -34,7 +34,7 @@ def Overlap(a, b, pct):
     overlap = min(a[1], b[1]) - max(a[0], b[0])
     if (float(overlap) / span >= pct):
         return True
-    
+
 intv = None
 prevChrom = ""
 prevRead  = ""
@@ -47,13 +47,13 @@ for line in inFile:
     if (len(vals) == 7):
         vals.append(vals[6])
         vals[7] = "notsd"
-        
+
     curChrom = vals[0]
     try:
         read = '/'.join(vals[7].split('/')[0:2])
     except:
         print "Error joining " + str(vals)
-        
+
     op   = vals[3]
 #    (intvStart, intvEnd) = vals[3].split(',')
     intvStart = int(vals[1])
@@ -83,15 +83,15 @@ for line in inFile:
 
         names   = [vals[7]]
         intvChrom = curChrom
-        
+
     prevChrom = curChrom
     prevRead = read
     prevOp   = op
 
-        
-    
+
+
 
 if (outFile != sys.stdout):
     outFile.close()
-    
+
 
