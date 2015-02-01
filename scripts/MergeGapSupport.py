@@ -48,8 +48,8 @@ for line in inFile:
                 #            print str(prevVals)
                 outFile.write("\t".join([str(i) for i in prevVals]) + "\n")
     except:
-        print "ERROR at line " + str(lineIndex)
-        sys.exit(0)
+        sys.stderr.write("ERROR at line %s\n"  % lineIndex)
+        raise
     prevVals = vals
     prevCoords = (vals[0], int(vals[1]), int(vals[2]))
     lineIndex += 1
