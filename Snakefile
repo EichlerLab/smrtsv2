@@ -70,16 +70,23 @@ rule find_gaps_in_aligned_reads:
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed; "
         "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed {output}"
 
-# Calculate coverage from all alignments.
-rule calculate_coverage:
-    input: dynamic("alignments/{batch_id}.bam")
+# Collect coverages from all alignments.
+rule merge_coverage_per_batch:
+    input: dynamic("coverage/{batch_id}.bed")
     output: "coverage.bed"
     params: sge_opts="-l mfree=2G", bwlimit="20000"
-    run:
-        bam_inputs = " -in ".join(input)
-        command = "scripts/mcst/coverage {TMP_DIR}/{output} -in %s; rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{output} {output}" % bam_inputs
-        print(command)
-        shell(command)
+    shell: """paste {input} | awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' > {output}"""
+
+# Calculate coverage from each batch.
+rule calculate_coverage_per_batch:
+    input: "alignments/{batch_id}.bam"
+    output: "coverage/{batch_id}.bed"
+    params: sge_opts="-l mfree=2G", bwlimit="20000"
+    shell:
+        "mkdir -p {TMP_DIR}; "
+        "mkdir -p `dirname {output}`; "
+        "scripts/mcst/coverage {TMP_DIR}/{wildcards.batch_id}.bed -in {input}; "
+        "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.batch_id}.bed {output}"
 
 # Create a list of BAM files for downstream analysis.
 rule collect_alignment_summaries:
