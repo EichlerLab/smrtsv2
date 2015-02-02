@@ -17,10 +17,15 @@ CWD = os.getcwd()
 #
 configfile: "config.json"
 TMP_DIR = config["tmp_dir"]
+EVENT_TYPES = ("insertion", "deletion")
 
 #
 # Define rules
 #
+
+# Create list of all final outputs.
+rule all:
+    input: "sv_candidate_summary.pdf"
 
 # Merge filtered candidates.
 rule merge_filtered_candidates:
@@ -28,6 +33,18 @@ rule merge_filtered_candidates:
     output: "merged_filtered_candidates_for_{event_type}.bed"
     params: sge_opts="", merge_distance="1"
     shell: "bedtools merge -i {input} -d {params.merge_distance} > {output}"
+
+# Plot candidate summary.
+rule plot_candidate_summary:
+    input: "sv_candidate_summary.tab"
+    output: "sv_candidate_summary.pdf"
+    shell: "Rscript scripts/plot_SV_candidate_summary.R {input} {output}"
+
+# Summarize filtered candidates by event attributes.
+rule summarize_filtered_candidates:
+    input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
+    output: "sv_candidate_summary.tab"
+    shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $6,$4,$5 }}' {input} > {output}"""
 
 # Filter candidates by support and coverage.
 rule filter_candidates:
