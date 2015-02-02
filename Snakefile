@@ -42,14 +42,14 @@ rule annotate_coverage_of_merged_gap_support:
     input: support="merged_support_for_{event_type}.bed", coverage="coverage.bed"
     output: "coverage_and_merged_support_for_{event_type}.bed"
     params: sge_opts=""
-    shell: "bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3,4,5,6,7,8 -c 12 -o mean > {output}"
+    shell: """bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($13 == ".") {{ $13 = 0 }} print }}' | groupBy -i stdin -g 1,2,3,4,5,6,7,8,9 -c 13 -o mean > {output}"""
 
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
     input: dynamic("aligned_reads_{{event_type}}/{batch_id}.bed")
     output: "merged_support_for_{event_type}.bed"
-    params: sge_opts=""
-    shell: "sort -k 1,1 -k 2,2n -m {input} | python scripts/MergeGapSupport.py > {output}"
+    params: sge_opts="-l mfree=5G"
+    shell: "sort -k 1,1 -k 2,2n -m --buffer-size=4G {input} | python scripts/PrintGapSupport.py /dev/stdin /dev/stdout | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 > {output}"
 
 # Classify insertions and deletions into their own output files.
 rule classify_gaps_in_aligned_reads:
