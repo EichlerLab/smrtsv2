@@ -33,9 +33,9 @@ rule merge_filtered_candidates:
 rule filter_candidates:
     input: "coverage_and_merged_support_for_{event_type}.bed"
     output: "filtered_candidates_for_{event_type}.bed"
-    params: sge_opts="", min_length="50", min_coverage="5", max_coverage="100"
-    shell: "awk '$3 - $2 >= {params.min_length} && $9 >= {params.min_coverage} && $9 <= {params.max_coverage}' {input} > {output}"
-    #shell: "python scripts/FilterSupport.py --Mc {params.max_coverage} {input} > {output}"
+    # TODO: move filter parameters into the config file.
+    params: sge_opts="", min_support="5", max_support="20", min_length="50", min_coverage="5", max_coverage="100"
+    shell: "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}"
 
 # Annotate merged gap support with alignment coverage.
 rule annotate_coverage_of_merged_gap_support:
