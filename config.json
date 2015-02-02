@@ -6,6 +6,13 @@
         "size_per_batch": 32212254720,
         "mapping_quality": 30
     },
+    "detection": {
+        "min_length": 50,
+        "min_support": 5,
+        "max_support": 100,
+        "min_coverage": 5,
+        "max_coverage": 100
+    },
     "reference": {
         "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
         "suffix_array": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.sa",

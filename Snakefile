@@ -33,8 +33,13 @@ rule merge_filtered_candidates:
 rule filter_candidates:
     input: "coverage_and_merged_support_for_{event_type}.bed"
     output: "filtered_candidates_for_{event_type}.bed"
-    # TODO: move filter parameters into the config file.
-    params: sge_opts="", min_support="5", max_support="20", min_length="50", min_coverage="5", max_coverage="100"
+    params:
+        sge_opts="",
+        min_support=str(config["detection"]["min_support"]),
+        max_support=str(config["detection"]["max_support"]),
+        min_length=str(config["detection"]["min_length"]),
+        min_coverage=str(config["detection"]["min_coverage"]),
+        max_coverage=str(config["detection"]["max_coverage"])
     shell: "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}"
 
 # Annotate merged gap support with alignment coverage.
