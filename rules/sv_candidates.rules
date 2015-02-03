@@ -1,0 +1,71 @@
+# Merge filtered candidates.
+rule merge_filtered_candidates:
+    input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
+    output: "assembly_candidates.bed"
+    params: sge_opts="", merge_distance="500"
+    shell: "sort -k 1,1 -k 2,2n -m {input} | bedtools merge -i stdin -d {params.merge_distance} > {output}"
+
+# Plot candidate summary.
+rule plot_candidate_summary:
+    input: "sv_candidate_summary.tab"
+    output: lengths="sv_candidate_lengths.pdf", support="sv_candidate_support.pdf"
+    shell: "Rscript scripts/plot_SV_candidate_summary.R {input} {output.lengths} {output.support}"
+
+# Summarize filtered candidates by event attributes.
+rule summarize_filtered_candidates:
+    input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
+    output: "sv_candidate_summary.tab"
+    shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $6,$4,$5 }}' {input} > {output}"""
+
+# Filter candidates by support and coverage.
+rule filter_candidates:
+    input: "coverage_and_merged_support_for_{event_type}.bed"
+    output: "filtered_candidates_for_{event_type}.bed"
+    params:
+        sge_opts="",
+        min_support=str(config["detection"]["min_support"]),
+        max_support=str(config["detection"]["max_support"]),
+        min_length=str(config["detection"]["min_length"]),
+        min_coverage=str(config["detection"]["min_coverage"]),
+        max_coverage=str(config["detection"]["max_coverage"])
+    shell: "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}"
+
+# Annotate merged gap support with alignment coverage.
+rule annotate_coverage_of_merged_gap_support:
+    input: support="merged_support_for_{event_type}.bed", coverage="coverage.bed"
+    output: "coverage_and_merged_support_for_{event_type}.bed"
+    params: sge_opts=""
+    shell: """bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($13 == ".") {{ $13 = 0 }} print }}' | groupBy -i stdin -g 1,2,3,4,5,6,7,8,9 -c 13 -o mean > {output}"""
+
+# Merge gap support for each type of event.
+rule merge_gap_support_from_aligned_reads:
+    input: dynamic("aligned_reads_{{event_type}}/{batch_id}.bed")
+    output: "merged_support_for_{event_type}.bed"
+    params: sge_opts="-l mfree=5G"
+    shell: "sort -k 1,1 -k 2,2n -m --buffer-size=4G {input} | python scripts/PrintGapSupport.py /dev/stdin /dev/stdout | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 > {output}"
+
+# Classify insertions and deletions into their own output files.
+rule classify_gaps_in_aligned_reads:
+    input: "gaps_in_aligned_reads/{batch_id}.bed"
+    output: "aligned_reads_{event_type}/{batch_id}.bed"
+    params: sge_opts=""
+    shell: """awk '$4 == "{wildcards.event_type}"' {input} > {output}"""
+
+# Collect gaps in one command
+rule collect_gaps:
+    input: dynamic("gaps_in_aligned_reads/{batch_id}.bed")
+    output: "gaps.txt"
+    params: sge_opts=""
+    shell: "echo {input} > {output}"
+
+# Parse CIGAR string of aligned reads for insertions and deletions.
+rule find_gaps_in_aligned_reads:
+    input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
+    output: "gaps_in_aligned_reads/{batch_id}.bed"
+    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
+    shell:
+        "mkdir -p `dirname {output}`; "
+        "mkdir -p {TMP_DIR}; "
+        "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
+            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed; "
+        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed {output}"
