@@ -1,6 +1,6 @@
 {
     "input": {
-        "reads": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/pacbio_variant_caller/input.fofn"
+        "reads": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_from_pacbio.all/input.path.fofn"
     },
     "alignment": {
         "size_per_batch": 32212254720,
