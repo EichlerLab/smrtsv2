@@ -37,8 +37,8 @@ rule merge_filtered_candidates:
 # Plot candidate summary.
 rule plot_candidate_summary:
     input: "sv_candidate_summary.tab"
-    output: "sv_candidate_summary.pdf"
-    shell: "Rscript scripts/plot_SV_candidate_summary.R {input} {output}"
+    output: lengths="sv_candidate_lengths.pdf", support="sv_candidate_support.pdf"
+    shell: "Rscript scripts/plot_SV_candidate_summary.R {input} {output.lengths} {output.support}"
 
 # Summarize filtered candidates by event attributes.
 rule summarize_filtered_candidates:
