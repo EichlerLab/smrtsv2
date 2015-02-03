@@ -1,3 +1,8 @@
+"""
+Rules to identify SV candidates from read alignments confirmation by for local
+assembly.
+"""
+
 # Merge filtered candidates.
 rule merge_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)

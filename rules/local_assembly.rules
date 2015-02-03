@@ -1,3 +1,6 @@
+"""
+Rules for local assembly of genomic regions.
+"""
 
 # Given a set of candidate regions for local assembly, prepare assemblies for
 # each.

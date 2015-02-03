@@ -1,3 +1,7 @@
+"""
+Rules to align PacBio reads to a given reference assembly and summarize
+alignments.
+"""
 
 # Collect coverages from all alignments.
 rule merge_coverage_per_batch:
