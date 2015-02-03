@@ -1,4 +1,10 @@
 {
+    "tmp_dir": "/var/tmp/jlhudd/CHM1",
+    "reference": {
+        "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
+        "suffix_array": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.sa",
+        "ctab": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.ctab"
+    },
     "input": {
         "reads": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_from_pacbio.all/input.path.fofn"
     },
@@ -12,11 +18,5 @@
         "max_support": 100,
         "min_coverage": 5,
         "max_coverage": 100
-    },
-    "reference": {
-        "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
-        "suffix_array": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.sa",
-        "ctab": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.ctab"
-    },
-    "tmp_dir": "/var/tmp/jlhudd/CHM1"
+    }
 }
