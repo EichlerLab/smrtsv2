@@ -3,6 +3,9 @@
 *.bam
 *.tab
 *.txt
+*.pdf
+.snakemake*
+.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
