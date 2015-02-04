@@ -23,8 +23,8 @@ Select a reference assembly to use for variant calling. Prepare a suffix array
 and ctab file for this assembly with the following commands.
 
     export PACBIO_DIR=/net/eichler/vol20/projects/pacbio/opt/smrtanalysis/current/analysis/bin
-	$(PACBIO_DIR)/printTupleCountTable ucsc.hg38.no_alts.fasta > ucsc.hg38.no_alts.fasta.ctab
-	$(PACBIO_DIR)/sawriter ucsc.hg38.no_alts.fasta.sa ucsc.hg38.no_alts.fasta
+	${PACBIO_DIR}/printTupleCountTable ucsc.hg38.no_alts.fasta > ucsc.hg38.no_alts.fasta.ctab
+	${PACBIO_DIR}/sawriter ucsc.hg38.no_alts.fasta.sa ucsc.hg38.no_alts.fasta
 
 ## Create a manifest of input reads
 
