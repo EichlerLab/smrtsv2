@@ -61,8 +61,16 @@ include per alignment batch. The default is 30GB.
 
 The following command will align PacBio reads, parse alignments to identify SV
 candidates, and produce a list of candidate regions for local assembly using no
-more than 20 CPUs at any given time.
+more than 20 CPUs at any given time. All output will be written to the current
+working directory. The `-w` flag instructs Snakemake to wait 20 seconds for
+output files when there is excessive latency on the output filesystem.
 
 ```bash
-snakemake --cluster "qsub {params.sge_opts}" -j 20 assembly_candidates.bed
+snakemake --cluster "qsub {params.sge_opts}" -w 20 -j 20 assembly_candidates.bed
 ```
+
+The caller assumes that the analysis will need to start with raw input reads
+prior to alignment against the reference. The complete pipeline can be visualize
+through Snakemake's DAG as follows.
+
+![Snakemake DAG for the SV caller pipeline][pipeline]
