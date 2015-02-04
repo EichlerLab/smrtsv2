@@ -1,4 +1,4 @@
-SAMTOOLS=$(HOME)/software/samtools/samtools-0.1.18/
+SAMTOOLS=/net/eichler/vol5/home/mchaisso/software/samtools/samtools-0.1.18/
 all: maxq bedq bamacc hardstop splitread coverage
 
 coverage: PrintGenomeCoverage.cpp
