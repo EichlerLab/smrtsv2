@@ -10,6 +10,7 @@ The PacBio variant caller has the following dependencies:
   - anaconda (>= 2.1.0)
   - bamtools (>= 2.3.0)
   - bedtools (>= 2.21.0)
+  - R (>= 3.1.0)
   - samtools (>= 1.1)
   - snakemake (>= 3.2.1)
 
