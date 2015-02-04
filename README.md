@@ -19,6 +19,14 @@ If modules are already installed for these tools, source the configuration file.
 . config.sh
 ```
 
+## Build binaries
+
+Build binaries for custom tools that detect variants in SAM alignments.
+
+```bash
+pushd scripts/mcst; make; popd
+```
+
 ## Prepare a reference
 
 Select a reference assembly to use for variant calling. Prepare a suffix array
