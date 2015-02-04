@@ -73,4 +73,4 @@ The caller assumes that the analysis will need to start with raw input reads
 prior to alignment against the reference. The complete pipeline can be visualize
 through Snakemake's DAG as follows.
 
-![Snakemake DAG for the SV caller pipeline][pipeline]
+![alt text](https://raw.githubusercontent.com/EichlerLab/pacbio_variant_caller/master/pipeline.png?token=AAFNfD2eMQivs1n82iTL6pD7Mo5TorUuks5U27iIwA%3D%3D "Snakemake DAG for the SV caller pipeline")
