@@ -20,7 +20,7 @@ TMP_DIR = config["tmp_dir"]
 EVENT_TYPES = ("insertion", "deletion")
 
 #
-# Include rules
+# Include rules.
 #
 
 include: "rules/alignment.rules"
@@ -28,9 +28,12 @@ include: "rules/sv_candidates.rules"
 include: "rules/local_assembly.rules"
 
 #
-# Define rules
+# Define rules.
 #
 
 # Create list of all final outputs.
 rule all:
-    input: "sv_candidate_lengths.pdf", "sv_candidate_support.pdf", "assembly_candidates.bed"
+    input:
+        "sv_candidate_lengths.pdf",
+        "sv_candidate_support.pdf",
+        "assembly_candidates.bed"
