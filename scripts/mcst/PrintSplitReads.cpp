@@ -199,6 +199,11 @@ int main(int argc, char* argv[]) {
 		bam1_t *b = bam_init1();
 
 		while (bam_read1(in->x.bam, b) > 0) {
+			// Exit loop when the only reads remaining are unmapped.
+			if (b->core.tid < 0) {
+				break;
+			}
+
 			output.chrom = in->header->target_name[b->core.tid];
 			WriteHardStop(b, &output);
 		}
