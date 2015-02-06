@@ -36,4 +36,5 @@ rule all:
     input:
         "sv_candidate_lengths.pdf",
         "sv_candidate_support.pdf",
-        "assembly_candidates.bed"
+        "assembly_candidates.bed",
+        "sv_assemblies.txt"

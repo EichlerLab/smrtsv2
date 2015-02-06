@@ -24,11 +24,17 @@ def _get_bamtools_region(wildcards):
 
 # Collect assemblies.
 rule collect_celera_assemblies:
-    input: dynamic("sv_assembly/{region}/9-terminator/assembly.ctg.fasta")
+    input: dynamic("sv_assembly/{region}/assembly.fasta")
     output: "sv_assemblies.txt"
     params: sge_opts=""
     # TODO: create module for Celera scripts
-    shell: "echo {input} > {output}"
+    shell: "find {input} > {output}"
+
+rule rename_celera_assembly:
+    input: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
+    output: "sv_assembly/{region}/assembly.fasta"
+    params: sge_opts=""
+    shell: "cp {input} {output}"
 
 rule assemble_with_celera:
     input: "sv_assembly/{region}/reads.frg"
