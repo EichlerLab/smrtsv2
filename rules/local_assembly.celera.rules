@@ -23,33 +23,38 @@ def _get_bamtools_region(wildcards):
 #
 
 # Collect assemblies.
-# rule collect_celera_assemblies:
-#     input: dynamic("sv_assembly/{region}.reads.frg")
-#     output: "sv_assemblies.txt"
-#     params: sge_opts=""
-#     # TODO: create module for Celera scripts
-#     shell: "echo {input} > {output}"
+rule collect_celera_assemblies:
+    input: dynamic("sv_assembly/{region}/9-terminator/assembly.ctg.fasta")
+    output: "sv_assemblies.txt"
+    params: sge_opts=""
+    # TODO: create module for Celera scripts
+    shell: "echo {input} > {output}"
+
+rule assemble_with_celera:
+    input: "sv_assembly/{region}/reads.frg"
+    output: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
+    shell: "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d sv_assembly/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {input} ovlThreads=8"
 
 # Prepare fragments file for Celera referencing FASTQ of input reads.
 rule prepare_celera_fragments_file:
-    input: "sv_assembly/{region}.reads.fastq"
-    output: "sv_assembly/{region}.reads.frg"
+    input: "sv_assembly/{region}/reads.fastq"
+    output: "sv_assembly/{region}/reads.frg"
     params: sge_opts=""
     # TODO: create module for Celera scripts
     shell: "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname {wildcards.region} -technology pacbio-raw -reads {input} > {output}"
 
 # Convert reads from FASTA to FASTQ format.
 rule convert_reads_fasta_to_fastq:
-    input: "sv_assembly/{region}.reads.fasta"
-    output: "sv_assembly/{region}.reads.fastq"
+    input: "sv_assembly/{region}/reads.fasta"
+    output: "sv_assembly/{region}/reads.fastq"
     params: sge_opts=""
     # TODO: copy script to scripts/
     shell: "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py {input} {output}"
 
 # Get all subreads for the given region from aligned BAMs.
 rule get_reads_from_region:
-    input: alignments="alignments.fofn", region="sv_assembly/{region}.bed"
-    output: "sv_assembly/{region}.reads.fasta"
+    input: alignments="alignments.fofn", region="sv_assembly/{region}/region.bed"
+    output: "sv_assembly/{region}/reads.fasta"
     params: sge_opts="", region=_get_bamtools_region, mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
     shell:
         """bamtools filter -list {input.alignments} -region {params.region} -mapQuality ">={params.mapping_quality_threshold}" """
@@ -59,12 +64,12 @@ rule get_reads_from_region:
 # Given a set of candidate regions for local assembly, prepare to assemble each.
 rule split_candidate_regions:
     input: "assembly_candidates.bed"
-    output: dynamic("sv_assembly/{region}.bed")
+    output: dynamic("sv_assembly/{region}/region.bed")
     params: sge_opts=""
     run:
-        shell("mkdir -p sv_assembly")
         with open(input[0], "r") as fh:
             for line in fh:
                 region = line.rstrip().replace("\t", "-")
-                with open("sv_assembly/%s.bed" % region, "w") as oh:
+                shell("mkdir -p sv_assembly/%s" % region)
+                with open("sv_assembly/%s/region.bed" % region, "w") as oh:
                     oh.write(line)
