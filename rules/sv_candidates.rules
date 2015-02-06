@@ -7,8 +7,9 @@ assembly.
 rule merge_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "assembly_candidates.bed"
-    params: sge_opts="", merge_distance="500"
-    shell: "sort -k 1,1 -k 2,2n -m {input} | bedtools merge -i stdin -d {params.merge_distance} > {output}"
+    # TODO: consider moving these parameters into config file
+    params: sge_opts="", merge_distance="500", slop="5000", chromosome_lengths=config["reference"]["chromosome_lengths"]
+    shell: "sort -k 1,1 -k 2,2n -m {input} | bedtools merge -i stdin -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
 
 # Plot candidate summary.
 rule plot_candidate_summary:
