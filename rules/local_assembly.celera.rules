@@ -33,6 +33,8 @@ rule collect_celera_assemblies:
 rule assemble_with_celera:
     input: "sv_assembly/{region}/reads.frg"
     output: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
+    params: sge_opts="-l mfree=3G -pe serial 8"
+    # TODO: write assemblies to /var/tmp and sync to shared drive.
     shell: "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d sv_assembly/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {input} ovlThreads=8"
 
 # Prepare fragments file for Celera referencing FASTQ of input reads.
