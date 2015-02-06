@@ -1,6 +1,7 @@
 """
 Rules for local assembly of genomic regions.
 """
+print("Local assembly with default tool")
 
 # Given a set of candidate regions for local assembly, prepare assemblies for
 # each.
