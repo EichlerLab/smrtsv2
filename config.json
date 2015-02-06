@@ -3,7 +3,8 @@
     "reference": {
         "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
         "suffix_array": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.sa",
-        "ctab": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.ctab"
+        "ctab": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.ctab",
+        "chromosome_lengths": "/net/eichler/vol2/eee_shared/assemblies/hg38/chromInfo.txt"
     },
     "input": {
         "reads": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_from_pacbio.all/input.path.fofn"
@@ -21,6 +22,8 @@
     },
     "assembly": {
         "assembler": "celera",
+        "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
+        "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
         "mapping_quality": 30
     }
 }
