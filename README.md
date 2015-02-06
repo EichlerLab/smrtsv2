@@ -10,6 +10,7 @@ The PacBio variant caller has the following dependencies:
   - anaconda (>= 2.1.0)
   - bamtools (>= 2.3.0)
   - bedtools (>= 2.21.0)
+  - BioPython (>= 1.6.5)
   - R (>= 3.1.0)
   - samtools (>= 1.1)
   - snakemake (>= 3.2.1)
@@ -31,12 +32,14 @@ pushd scripts/mcst; make; popd
 ## Prepare a reference
 
 Select a reference assembly to use for variant calling. Prepare a suffix array
-and ctab file for this assembly with the following commands.
+and ctab file for this assembly with the following commands. Finally, create a
+samtools index of the FASTA file.
 
 ```bash
 export PACBIO_DIR=/net/eichler/vol20/projects/pacbio/opt/smrtanalysis/current/analysis/bin
 ${PACBIO_DIR}/printTupleCountTable ucsc.hg38.no_alts.fasta > ucsc.hg38.no_alts.fasta.ctab
 ${PACBIO_DIR}/sawriter ucsc.hg38.no_alts.fasta.sa ucsc.hg38.no_alts.fasta
+samtools faidx ucsc.hg38.no_alts.fasta
 ```
 
 ## Create a manifest of input reads

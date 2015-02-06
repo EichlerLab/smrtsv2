@@ -18,5 +18,9 @@
         "max_support": 100,
         "min_coverage": 5,
         "max_coverage": 100
+    },
+    "assembly": {
+        "assembler": "celera",
+        "mapping_quality": 30
     }
 }
