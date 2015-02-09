@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 
 
 	output.outFilePtr = &outFile;
-	output.minq = 0;
+	output.minq = 30;
 	output.minClipping = minClippingLength;
 
 	bam1_t *entry = new bam1_t;
