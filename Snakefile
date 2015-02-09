@@ -25,7 +25,7 @@ EVENT_TYPES = ("insertion", "deletion")
 
 # TODO: fix bug caused by Snakemake not understanding more than one dynamic
 # output type per file.
-# include: "rules/alignment.rules"
+include: "rules/alignment.rules"
 include: "rules/sv_candidates.rules"
 
 if config["assembly"]["assembler"] == "celera":
