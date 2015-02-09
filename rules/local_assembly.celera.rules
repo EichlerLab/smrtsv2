@@ -12,11 +12,11 @@ ASSEMBLY_DIR = "sv_assembly"
 # Define utility functions.
 #
 
-def _get_bamtools_region(wildcards):
+def _get_bamtools_region(region):
     """
     Convert filesystem-safe filename of "chrom-start-end" to a bamtools-specific region of "chrom:start..end"
     """
-    return wildcards["region"].replace("-", ":", 1).replace("-", "..", 1)
+    return region.replace("-", ":", 1).replace("-", "..", 1)
 
 #
 # Define rules.
@@ -30,54 +30,100 @@ rule collect_celera_assemblies:
     # TODO: create module for Celera scripts
     shell: "find {input} > {output}"
 
-rule rename_celera_assembly:
-    input: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
-    output: "sv_assembly/{region}/assembly.fasta"
-    params: sge_opts=""
-    shell: "cp {input} {output}"
-
-rule assemble_with_celera:
-    input: "sv_assembly/{region}/reads.frg"
-    output: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
-    params: sge_opts="-l mfree=3G -pe serial 8"
-    # TODO: write assemblies to /var/tmp and sync to shared drive.
-    shell: "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d sv_assembly/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {input} ovlThreads=8"
-
-# Prepare fragments file for Celera referencing FASTQ of input reads.
-rule prepare_celera_fragments_file:
-    input: "sv_assembly/{region}/reads.fastq"
-    output: "sv_assembly/{region}/reads.frg"
-    params: sge_opts=""
-    # TODO: create module for Celera scripts
-    shell: "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname {wildcards.region} -technology pacbio-raw -reads {input} > {output}"
-
-# Convert reads from FASTA to FASTQ format.
-rule convert_reads_fasta_to_fastq:
-    input: "sv_assembly/{region}/reads.fasta"
-    output: "sv_assembly/{region}/reads.fastq"
-    params: sge_opts=""
-    # TODO: copy script to scripts/
-    shell: "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py {input} {output}"
-
-# Get all subreads for the given region from aligned BAMs.
-rule get_reads_from_region:
+rule complete_assemble_with_celera:
     input: alignments="alignments.fofn", region="sv_assembly/{region}/region.bed"
-    output: "sv_assembly/{region}/reads.fasta"
-    params: sge_opts="", region=_get_bamtools_region, mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
+    output: "sv_assembly/{region}/assembly.fasta"
+    params: sge_opts="-l mfree=4G -pe serial 8", region=_get_bamtools_region, mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
+    # TODO: write assemblies to /var/tmp and sync to shared drive.
     shell:
-        """bamtools filter -list {input.alignments} -region {params.region} -mapQuality ">={params.mapping_quality_threshold}" """
-        """| samtools view - """
-        """| awk '{{ print ">"$1; print $10 }}' > {output}"""
+        "mkdir -p {TMP_DIR}/{wildcards.region}; "
+        "bamtools filter -list {input.alignments} -region {params.region} -mapQuality \">={params.mapping_quality_threshold}\" "
+            "| samtools view - "
+            "| awk '{{ print \">\"$1; print $10 }}' > {TMP_DIR}/{wildcards.region}/reads.fasta; "
+        "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py {TMP_DIR}/{wildcards.region}/reads.fasta {TMP_DIR}/{wildcards.region}/reads.fastq; "
+        "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname {wildcards.region} -technology pacbio-raw -reads {TMP_DIR}/{wildcards.region}/reads.fastq > {TMP_DIR}/{wildcards.region}/reads.frg; "
+        "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d {TMP_DIR}/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {TMP_DIR}/{wildcards.region}/reads.frg ovlThreads=8; "
+        "cp {TMP_DIR}/{wildcards.region}/9-terminator/assembly.ctg.fasta {TMP_DIR}/{wildcards.region}/assembly.fasta; "
+        "rsync -Wr --remove-source-files {TMP_DIR}/{wildcards.region} sv_assembly/; "
+        "rm -rf {TMP_DIR}/{wildcards.region}"
+
+# rule rename_celera_assembly:
+#     input: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
+#     output: "sv_assembly/{region}/assembly.fasta"
+#     params: sge_opts=""
+#     shell: "cp {input} {output}"
+
+# rule assemble_with_celera:
+#     input: "sv_assembly/{region}/reads.frg"
+#     output: "sv_assembly/{region}/9-terminator/assembly.ctg.fasta"
+#     params: sge_opts="-l mfree=3G -pe serial 8"
+#     # TODO: write assemblies to /var/tmp and sync to shared drive.
+#     shell: "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d sv_assembly/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {input} ovlThreads=8"
+
+# # Prepare fragments file for Celera referencing FASTQ of input reads.
+# rule prepare_celera_fragments_file:
+#     input: "sv_assembly/{region}/reads.fastq"
+#     output: "sv_assembly/{region}/reads.frg"
+#     params: sge_opts=""
+#     # TODO: create module for Celera scripts
+#     shell: "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname {wildcards.region} -technology pacbio-raw -reads {input} > {output}"
+
+# # Convert reads from FASTA to FASTQ format.
+# rule convert_reads_fasta_to_fastq:
+#     input: "sv_assembly/{region}/reads.fasta"
+#     output: "sv_assembly/{region}/reads.fastq"
+#     params: sge_opts=""
+#     # TODO: copy script to scripts/
+#     shell: "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py {input} {output}"
+
+# # Get all subreads for the given region from aligned BAMs.
+# rule get_reads_from_region:
+#     input: alignments="alignments.fofn", region="sv_assembly/{region}/region.bed"
+#     output: "sv_assembly/{region}/reads.fasta"
+#     params: sge_opts="", region=_get_bamtools_region, mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
+#     shell:
+#         """bamtools filter -list {input.alignments} -region {params.region} -mapQuality ">={params.mapping_quality_threshold}" """
+#         """| samtools view - """
+#         """| awk '{{ print ">"$1; print $10 }}' > {output}"""
+
+# # Given a set of candidate regions for local assembly, prepare to assemble each.
+# rule split_candidate_regions:
+#     input: "assembly_candidates.bed"
+#     output: dynamic("sv_assembly/{region}/region.bed")
+#     params: sge_opts=""
+#     run:
+#         with open(input[0], "r") as fh:
+#             for line in fh:
+#                 region = line.rstrip().replace("\t", "-")
+#                 shell("mkdir -p sv_assembly/%s" % region)
+#                 with open("sv_assembly/%s/region.bed" % region, "w") as oh:
+#                     oh.write(line)
 
 # Given a set of candidate regions for local assembly, prepare to assemble each.
 rule split_candidate_regions:
-    input: "assembly_candidates.bed"
-    output: dynamic("sv_assembly/{region}/region.bed")
-    params: sge_opts=""
+    input: candidates="assembly_candidates.bed", alignments="alignments.fofn"
+    output: "assembly_scripts.sh"
+    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
     run:
-        with open(input[0], "r") as fh:
-            for line in fh:
-                region = line.rstrip().replace("\t", "-")
-                shell("mkdir -p sv_assembly/%s" % region)
-                with open("sv_assembly/%s/region.bed" % region, "w") as oh:
-                    oh.write(line)
+        with open(input["candidates"], "r") as fh:
+            with open(output[0], "w") as oh:
+                for line in fh:
+                    region = line.rstrip().replace("\t", "-")
+                    bamtools_region = _get_bamtools_region(region)
+                    quiver_region = region.replace("-", ":", 1)
+                    command = [
+        "source `pwd`/config.sh",
+        "mkdir -p sv_assembly/%(region)s",
+        "mkdir -p %(TMP_DIR)s/%(region)s",
+        "bamtools filter -list %(alignments)s -region %(bamtools_region)s -mapQuality \">=%(mapping_quality_threshold)s\" | samtools view - | awk '{ print \">\"$1; print $10 }' > %(TMP_DIR)s/%(region)s/reads.fasta",
+        "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py %(TMP_DIR)s/%(region)s/reads.fasta %(TMP_DIR)s/%(region)s/reads.fastq",
+        "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname %(region)s -technology pacbio-raw -reads %(TMP_DIR)s/%(region)s/reads.fastq > %(TMP_DIR)s/%(region)s/reads.frg",
+        "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d %(TMP_DIR)s/%(region)s ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 %(TMP_DIR)s/%(region)s/reads.frg ovlThreads=8",
+        "cp %(TMP_DIR)s/%(region)s/9-terminator/assembly.ctg.fasta %(TMP_DIR)s/%(region)s/assembly.fasta",
+        "source ~mchaisso/scripts/setup_pacbio.sh",
+        "export PYTHONPATH=/net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts:$PYTHONPATH",
+        "python scripts/RegionToConsensusBAMs.py %(alignments)s --region %(quiver_region)s --delta 30000 --tmpdir %(TMP_DIR)s  --reference %(TMP_DIR)s/%(region)s/assembly.fasta --consensus %(TMP_DIR)s/%(region)s/consensus.fasta --p5c3",
+        "rsync -Wr --remove-source-files %(TMP_DIR)s/%(region)s sv_assembly/",
+        "rm -rf %(TMP_DIR)s/%(region)s\n"]
+                    command = "; ".join(command)
+                    oh.write(command % {"region": region, "bamtools_region": bamtools_region, "quiver_region": quiver_region, "TMP_DIR": TMP_DIR, "alignments": input["alignments"], "mapping_quality_threshold": params["mapping_quality_threshold"]})
