@@ -60,9 +60,9 @@ rule classify_gaps_in_aligned_reads:
 # Collect gaps in one command
 rule collect_hardstops:
     input: dynamic("hardstops_in_aligned_reads/{batch_id}.bed")
-    output: "hardstops.txt"
-    params: sge_opts=""
-    shell: "echo {input} > {output}"
+    output: "hardstops.bed"
+    params: sge_opts="-l mfree=4G"
+    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 # Parse CIGAR string of aligned reads for clipped alignments.
 rule find_hardstops_in_aligned_reads:
