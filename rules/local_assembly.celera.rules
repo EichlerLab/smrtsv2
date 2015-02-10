@@ -1,6 +1,8 @@
 """
 Rules for local assembly of genomic regions.
 """
+import os
+
 print("Local assembly with Celera")
 
 #
@@ -109,6 +111,10 @@ rule split_candidate_regions:
             with open(output[0], "w") as oh:
                 for line in fh:
                     region = line.rstrip().replace("\t", "-")
+                    # Skip regions that already have a consensus FASTA.
+                    if os.path.exists("sv_assembly/%s/consensus.fasta" % region):
+                        continue
+
                     bamtools_region = _get_bamtools_region(region)
                     quiver_region = region.replace("-", ":", 1)
                     command = [
