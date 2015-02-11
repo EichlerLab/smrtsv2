@@ -10,11 +10,11 @@
 #include <numeric>
 
 using namespace std;
-typedef struct {  
-    int beg, end;  
-    samfile_t *in;  
-} tmpstruct_t;  
-  
+typedef struct {
+    int beg, end;
+    samfile_t *in;
+} tmpstruct_t;
+
 
 class Output {
 public:
@@ -54,7 +54,7 @@ int GetClipping(const bam1_t *b, int &leftClip, int &rightClip) {
 	int qlen = 0;
 	int i;
 	leftClip = rightClip = 0;
-	
+
 	if (len > 0) {
 		int first = 0;
 		int op = cigar[first] & 0xf;
@@ -92,9 +92,9 @@ const int MIN_ALIGNED_LENGTH = 500;
 int numFound = 0;
 int WriteHardStop(const bam1_t *b, void *data) {
   Output *output = (Output*) data;
-	// 
+	//
 	// determine overlap with exon
-	// 
+	//
 	if (b->core.qual < output->minq) {
 		return 0;
 	}
@@ -108,13 +108,13 @@ int WriteHardStop(const bam1_t *b, void *data) {
 	if (leftClipping > output->minClipping and rightClipping > output->minClipping) {
 		(*output->outFilePtr) << output->chrom << "\t" << tStart << "\t" << tEnd << "\t" << bam1_qname(b) << "\t" << leftClipping << "\tboth" << "\t" << leftClipping << "\t" << rightClipping << "\t" << GetStrand(b) << endl;
 
-	}		
+	}
 	else if (leftClipping > output->minClipping) {
 		(*output->outFilePtr) << output->chrom << "\t" << tStart << "\t" << tEnd << "\t" << bam1_qname(b) << "\t" << leftClipping << "\tleft" << "\t" << leftClipping << "\t" << rightClipping  << "\t" << GetStrand(b) << endl;
 		++numFound;
 	}
 	else if (rightClipping > output->minClipping) {
-		(*output->outFilePtr) << output->chrom << "\t" << tStart << "\t" << tEnd << "\t" << bam1_qname(b) << "\t" << rightClipping << "\tright\t" << leftClipping << "\t" << rightClipping << "\t" << GetStrand(b) << endl;		
+		(*output->outFilePtr) << output->chrom << "\t" << tStart << "\t" << tEnd << "\t" << bam1_qname(b) << "\t" << rightClipping << "\tright\t" << leftClipping << "\t" << rightClipping << "\t" << GetStrand(b) << endl;
 		++numFound;
 	}
 	if (numProcessed > 0 and numProcessed % 10000 == 0) {
@@ -141,7 +141,7 @@ int GetQLen(const bam1_t *b) {
 
 
 int main(int argc, char* argv[]) {
-	
+
 
 	bam_index_t *idx;
 	bam_plbuf_t *buf;
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
 	}
 	string outFileName;
 	string region;
-	samfile_t *in;  
+	samfile_t *in;
 	in = samopen(argv[1], "rb", 0);
 
 	int minClippingLength = atoi(argv[2]);
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
 	if (argc == 5) {
 		region = argv[4];
 	}
-	
+
 	Output output;
 
 	ofstream outFile(outFileName.c_str());
@@ -181,9 +181,9 @@ int main(int argc, char* argv[]) {
 	int i;
 
 
-	tmpstruct_t tmp;  
+	tmpstruct_t tmp;
 	int ref;
-	
+
 	if (region != "") {
 		ifstream regionFile(region.c_str());
 		vector<string> regions;
@@ -195,20 +195,20 @@ int main(int argc, char* argv[]) {
 		}
 		else {
 			regions.push_back(region);
-		}			
+		}
 		int r;
 		for (r = 0; r < regions.size(); r++) {
 			region = regions[r];
 			cout << "Parsing region " << region << endl;
-			bam_parse_region(in->header, region.c_str(), &ref,  
-											 &tmp.beg, &tmp.end); // parse the region  
+			bam_parse_region(in->header, region.c_str(), &ref,
+											 &tmp.beg, &tmp.end); // parse the region
 			output.chrom = in->header->target_name[ref];
 			bam_fetch(in->x.bam, idx, ref, tmp.beg, tmp.end, &output, WriteHardStop);
 		}
 	}
 	else {
 
-		bam1_t *b = bam_init1();	
+		bam1_t *b = bam_init1();
 
 		while (bam_read1(in->x.bam, b) > 0) {
 			output.chrom = in->header->target_name[b->core.tid];
@@ -217,5 +217,5 @@ int main(int argc, char* argv[]) {
 	}
 
 	outFile.close();
-	
+
 }
