@@ -148,8 +148,8 @@ int main(int argc, char* argv[]) {
 
 	bamFile bamFile;
 
-	if (argc < 4) {
-		cout << "usage: hardstop input.bam minClipping out.bed [region]" << endl;
+	if (argc < 5) {
+		cout << "usage: hardstop input.bam minMapQV minClipping out.bed [region]" << endl;
 		exit(1);
 	}
 	string outFileName;
@@ -157,14 +157,15 @@ int main(int argc, char* argv[]) {
 	samfile_t *in;
 	in = samopen(argv[1], "rb", 0);
 
-	int minClippingLength = atoi(argv[2]);
-	outFileName = argv[3];
+	int minMapQV = atoi(argv[2]);
+	int minClippingLength = atoi(argv[3]);
+	outFileName = argv[4];
 
   idx = bam_index_load(argv[1]);
 
 	region = "";
-	if (argc == 5) {
-		region = argv[4];
+	if (argc == 6) {
+		region = argv[5];
 	}
 
 	Output output;
@@ -173,7 +174,7 @@ int main(int argc, char* argv[]) {
 
 
 	output.outFilePtr = &outFile;
-	output.minq = 0;
+	output.minq = minMapQV;
 	output.minClipping = minClippingLength;
 
 	bam1_t *entry = new bam1_t;
