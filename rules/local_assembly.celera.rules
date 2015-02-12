@@ -126,7 +126,7 @@ rule split_candidate_regions:
         "bamtools filter -list %(alignments)s -region %(bamtools_region)s -mapQuality \">=%(mapping_quality_threshold)s\" | samtools view - | awk '{ print \">\"$1; print $10 }' > %(TMP_DIR)s/%(region)s/reads.fasta",
         "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py %(TMP_DIR)s/%(region)s/reads.fasta %(TMP_DIR)s/%(region)s/reads.fastq",
         "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname %(region)s -technology pacbio-raw -reads %(TMP_DIR)s/%(region)s/reads.fastq > %(TMP_DIR)s/%(region)s/reads.frg",
-        "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d %(TMP_DIR)s/%(region)s ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 %(TMP_DIR)s/%(region)s/reads.frg ovlThreads=8",
+        "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d %(TMP_DIR)s/%(region)s ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 %(TMP_DIR)s/%(region)s/reads.frg ovlThreads=4",
         "cp %(TMP_DIR)s/%(region)s/9-terminator/assembly.ctg.fasta %(TMP_DIR)s/%(region)s/assembly.fasta",
         "source ~mchaisso/scripts/setup_pacbio.sh",
         "export PYTHONPATH=/net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts:$PYTHONPATH",
