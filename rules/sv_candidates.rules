@@ -5,11 +5,65 @@ assembly.
 
 # Merge filtered candidates.
 rule merge_filtered_candidates:
-    input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
+    input: "filtered_candidates.tab"
     output: "assembly_candidates.bed"
     # TODO: consider moving these parameters into config file
     params: sge_opts="", merge_distance="500", slop="5000", chromosome_lengths=config["reference"]["chromosome_lengths"]
-    shell: "sort -k 1,1 -k 2,2n -m {input} | bedtools merge -i stdin -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
+    shell: "bedtools merge -i {input} -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
+
+#
+# Hardstops (all classes)
+#
+
+# Count hardstops per genomic bin.
+rule count_hardstops_per_genomic_bin:
+    input: hardstops="hardstop_breakpoints.bed", bins="hardstop_bins.bed"
+    output: "hardstops_per_bin.bed"
+    params: sge_opts="-l mfree=4G"
+    shell: "bedtools intersect -a {input.bins} -b {input.hardstops} -sorted -c > {output}"
+
+# Create hardstop breakpoints from hardstop locations (either left, right, or
+# both). If a read is clipped on the left, use its start position as the
+# breakpoint. If it is clipped on the right, use its end position. If a read is
+# clipped from both sides, print two separate breakpoints using these same rules
+# for left and right breakpoints.
+rule create_hardstop_breakpoints:
+    input: "hardstops.bed"
+    output: "hardstop_breakpoints.bed"
+    shell: """awk 'OFS="\\t" {{
+                  if ($6 == "left") {{ print $1,$2,$2 + 1,$4,$7,"left" }}
+                  else if ($6 == "right") {{ print $1,$3 - 1,$3,$4,$8,"right" }}
+                  else if ($6 == "both") {{ print $1,$2,$2 + 1,$4,$7,"left"; print $1,$3 - 1,$3,$4,$8,"right" }}
+              }}' {input} | sort -k 1,1 -k 2,2n | awk '$1 != "chrY"' > {output}"""
+
+# Collect gaps in one command
+rule collect_hardstops:
+    input: dynamic("hardstops_in_aligned_reads/{batch_id}.bed")
+    output: "hardstops.bed"
+    params: sge_opts="-l mfree=4G"
+    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
+
+# Parse CIGAR string of aligned reads for clipped alignments.
+rule find_hardstops_in_aligned_reads:
+    input: alignments="alignments/{batch_id}.bam"
+    output: "hardstops_in_aligned_reads/{batch_id}.bed"
+    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), min_clipping="500", bwlimit="20000"
+    shell:
+        "mkdir -p `dirname {output}`; "
+        "mkdir -p {TMP_DIR}; "
+        "scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.batch_id}.bed; "
+        "sort -k 1,1 -k 2,2n -o {TMP_DIR}/hardstops.{wildcards.batch_id}.bed {TMP_DIR}/hardstops.{wildcards.batch_id}.bed; "
+        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.batch_id}.bed {output}"
+
+rule create_genomic_bins:
+    input: config["reference"]["chromosome_lengths"]
+    output: "hardstop_bins.bed"
+    params: sge_opts="", bin_size="500"
+    shell: "bedtools makewindows -g {input} -w {params.bin_size} | sort -k 1,1 -k 2,2n > {output}"
+
+#
+# Small SVs (insertions and deletions)
+#
 
 # Plot candidate summary.
 rule plot_candidate_summary:
@@ -22,6 +76,12 @@ rule summarize_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "sv_candidate_summary.tab"
     shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $6,$4,$5 }}' {input} > {output}"""
+
+# Summarize filtered candidates by event attributes.
+rule combine_filtered_candidates:
+    input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
+    output: "filtered_candidates.tab"
+    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
 
 # Filter candidates by support and coverage.
 rule filter_candidates:
@@ -56,24 +116,6 @@ rule classify_gaps_in_aligned_reads:
     output: "aligned_reads_{event_type}/{batch_id}.bed"
     params: sge_opts=""
     shell: """awk '$4 == "{wildcards.event_type}"' {input} > {output}"""
-
-# Collect gaps in one command
-rule collect_hardstops:
-    input: dynamic("hardstops_in_aligned_reads/{batch_id}.bed")
-    output: "hardstops.bed"
-    params: sge_opts="-l mfree=4G"
-    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
-
-# Parse CIGAR string of aligned reads for clipped alignments.
-rule find_hardstops_in_aligned_reads:
-    input: alignments="alignments/{batch_id}.bam"
-    output: "hardstops_in_aligned_reads/{batch_id}.bed"
-    params: sge_opts="-l mfree=4G", min_clipping="500", bwlimit="20000"
-    shell:
-        "mkdir -p `dirname {output}`; "
-        "mkdir -p {TMP_DIR}; "
-        "scripts/mcst/splitread {input} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.batch_id}.bed; "
-        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.batch_id}.bed {output}"
 
 # Collect gaps in one command
 rule collect_gaps:
