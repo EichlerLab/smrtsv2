@@ -107,6 +107,8 @@ rule split_candidate_regions:
     output: "assembly_scripts.sh"
     params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
     run:
+        assembly_dir = "assembly_scripts"
+        shell("mkdir -p %s" % assembly_dir)
         with open(input["candidates"], "r") as fh:
             with open(output[0], "w") as oh:
                 for line in fh:
@@ -132,4 +134,9 @@ rule split_candidate_regions:
         "rsync -Wr --remove-source-files %(TMP_DIR)s/%(region)s sv_assembly/",
         "rm -rf %(TMP_DIR)s/%(region)s\n"]
                     command = "; ".join(command)
-                    oh.write(command % {"region": region, "bamtools_region": bamtools_region, "quiver_region": quiver_region, "TMP_DIR": TMP_DIR, "alignments": input["alignments"], "mapping_quality_threshold": params["mapping_quality_threshold"]})
+
+                    assembly_script = "%s/%s.sh" % (assembly_dir, region)
+                    with open(assembly_script, "w") as script_fh:
+                        script_fh.write(command % {"region": region, "bamtools_region": bamtools_region, "quiver_region": quiver_region, "TMP_DIR": TMP_DIR, "alignments": input["alignments"], "mapping_quality_threshold": params["mapping_quality_threshold"]})
+
+                    oh.write("qsub -h -N assemble_%s -l mfree=1G -pe serial 4 -l disk_free=30G -S /bin/bash %s\n" % (region, assembly_script))
