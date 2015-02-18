@@ -18,11 +18,17 @@ ASSEMBLY_DIR = "sv_assembly"
 # Define utility functions.
 #
 
-def _get_bamtools_region(region):
+def _get_bamtools_region(wildcards):
     """
     Convert filesystem-safe filename of "chrom-start-end" to a bamtools-specific region of "chrom:start..end"
     """
-    return region.replace("-", ":", 1).replace("-", "..", 1)
+    return wildcards["region"].replace("-", ":", 1).replace("-", "..", 1)
+
+def _get_quiver_region(wildcards):
+    """
+    Convert filesystem-safe filename of "chrom-start-end" to the more-standard region of "chrom:start-end"
+    """
+    return wildcards["region"].replace("-", ":", 1)
 
 #
 # Define rules.
