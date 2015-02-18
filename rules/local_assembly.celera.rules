@@ -43,10 +43,9 @@ rule collect_celera_assemblies:
     shell: "find {input} > {output}"
 
 rule complete_assemble_with_celera:
-    input: alignments="alignments.fofn", region="sv_assembly/{region}/region.bed"
-    output: "sv_assembly/{region}/assembly.fasta"
-    params: sge_opts="-l mfree=4G -pe serial 8", region=_get_bamtools_region, mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
-    # TODO: write assemblies to /var/tmp and sync to shared drive.
+    input: alignments="alignments.fofn"
+    output: "sv_assembly/{region}/consensus.fasta"
+    params: sge_opts="-l mfree=1G -pe serial 4", region=_get_bamtools_region, mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), quiver_region=_get_quiver_region
     shell:
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "bamtools filter -list {input.alignments} -region {params.region} -mapQuality \">={params.mapping_quality_threshold}\" "
