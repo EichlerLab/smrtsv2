@@ -53,7 +53,7 @@ rule complete_assemble_with_celera:
             "| awk '{{ print \">\"$1; print $10 }}' > {TMP_DIR}/{wildcards.region}/reads.fasta; "
         "~mchaisso/projects/PacBioSequencing/scripts/FastaToFakeFastq.py {TMP_DIR}/{wildcards.region}/reads.fasta {TMP_DIR}/{wildcards.region}/reads.fastq; "
         "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA -libraryname {wildcards.region} -technology pacbio-raw -reads {TMP_DIR}/{wildcards.region}/reads.fastq > {TMP_DIR}/{wildcards.region}/reads.frg; "
-        "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d {TMP_DIR}/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {TMP_DIR}/{wildcards.region}/reads.frg ovlThreads=8; "
+        "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA -p assembly -d {TMP_DIR}/{wildcards.region} ovlErrorRate=0.40 utgGraphErrorRate=0.40 cnsErrorRate=0.40 cgwErrorRate=0.40 unitigger=bogart obtErrorRate=0.30 {TMP_DIR}/{wildcards.region}/reads.frg ovlThreads=4; "
         "cp {TMP_DIR}/{wildcards.region}/9-terminator/assembly.ctg.fasta {TMP_DIR}/{wildcards.region}/assembly.fasta; "
         "rsync -Wr --remove-source-files {TMP_DIR}/{wildcards.region} sv_assembly/; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
