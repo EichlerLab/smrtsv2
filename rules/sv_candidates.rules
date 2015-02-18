@@ -30,6 +30,7 @@ rule count_hardstops_per_genomic_bin:
 rule create_hardstop_breakpoints:
     input: "hardstops.bed"
     output: "hardstop_breakpoints.bed"
+    params: sge_opts="-l mfree=4G"
     shell: """awk 'OFS="\\t" {{
                   if ($6 == "left") {{ print $1,$2,$2 + 1,$4,$7,"left" }}
                   else if ($6 == "right") {{ print $1,$3 - 1,$3,$4,$8,"right" }}
