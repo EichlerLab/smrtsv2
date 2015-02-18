@@ -36,7 +36,7 @@ def _get_quiver_region(wildcards):
 
 # Collect assemblies.
 rule collect_celera_assemblies:
-    input: dynamic("sv_assembly/{region}/assembly.fasta")
+    input: expand("sv_assembly/{region}/consensus.fasta", region=REGIONS_TO_ASSEMBLE)
     output: "sv_assemblies.txt"
     params: sge_opts=""
     # TODO: create module for Celera scripts
