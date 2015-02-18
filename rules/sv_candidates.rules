@@ -3,6 +3,24 @@ Rules to identify SV candidates from read alignments confirmation by for local
 assembly.
 """
 
+# Annotate assembly candidates with coverage.
+rule filter_candidate_regions:
+    input: "assembly_candidates_with_coverage.bed"
+    output: "filtered_assembly_candidates_with_coverage.bed"
+    params: sge_opts=""
+    run:
+        if config["detection"].get("regions_to_exclude"):
+            shell("bedtools intersect -a {input} -b %s -v | awk '$4 <= %s' > {output}" % (config["detection"].get("regions_to_exclude"), config["detection"]["max_coverage"]))
+        else:
+            shell("awk '$4 <= %s' {input} > {output}" % config["detection"]["max_coverage"])
+
+# Annotate assembly candidates with coverage.
+rule annotate_coverage_for_candidates:
+    input: candidates="assembly_candidates.bed", coverage="coverage.bed"
+    output: "assembly_candidates_with_coverage.bed"
+    params: sge_opts=""
+    shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
+
 # Merge filtered candidates.
 rule merge_filtered_candidates:
     input: "filtered_candidates.tab"
