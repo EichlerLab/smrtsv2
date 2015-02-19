@@ -1,0 +1,11 @@
+
+configfile: "config.json"
+
+rule filter_gaps_by_coverage:
+    input: gaps="gaps_to_assemble.bed", coverage="coverage.bed"
+    output: "filtered_gaps_to_assemble.bed"
+    params: sge_opts="", min_coverage=str(config["gap_extension"]["min_coverage"]), max_coverage=str(config["gap_extension"]["max_coverage"])
+    shell:
+        "bedtools intersect -a {input.gaps} -b {input.coverage} -wao -sorted | "
+            "groupBy -i stdin -g 1,2,3 -c 7 -o mean | "
+            "awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage}' > {output}"
