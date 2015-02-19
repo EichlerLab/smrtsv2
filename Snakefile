@@ -34,13 +34,28 @@ else:
     include: "rules/local_assembly.rules"
 
 #
+# Determine which outputs to create.
+#
+
+OUTPUTS = []
+
+if config.get("detection"):
+    OUTPUTS.extend([
+        "sv_candidate_lengths.pdf",
+        "sv_candidate_support.pdf",
+        "assembly_candidates.bed"
+    ])
+
+if config.get("assembly") and config["assembly"].get("regions_to_assemble"):
+    OUTPUTS.append("sv_assemblies.txt")
+
+if config.get("gap_extension") and config["gap_extension"].get("regions_to_assemble"):
+    OUTPUTS.append("gap_assemblies.txt")
+
+#
 # Define rules.
 #
 
 # Create list of all final outputs.
 rule all:
-    input:
-        "sv_candidate_lengths.pdf",
-        "sv_candidate_support.pdf",
-        "assembly_candidates.bed",
-        "sv_assemblies.txt"
+    input: OUTPUTS

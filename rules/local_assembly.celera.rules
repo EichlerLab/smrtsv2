@@ -6,8 +6,11 @@ import os
 print("Local assembly with Celera")
 
 # Load regions to assemble.
-with open(config["assembly"]["regions_to_assemble"], "r") as fh:
-    REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh]
+if config.get("assembly") and config["assembly"].get("regions_to_assemble"):
+    with open(config["assembly"]["regions_to_assemble"], "r") as fh:
+        REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh]
+else:
+    REGIONS_TO_ASSEMBLE = []
 
 #
 # Define internal constants.
