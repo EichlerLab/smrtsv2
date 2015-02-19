@@ -22,6 +22,7 @@
         "min_coverage": 5,
         "max_coverage": 100,
         "min_hardstop_support": 11,
+        "max_inaccessible_support": 5,
         "regions_to_exclude": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/regions_to_exclude.bed"
     },
     "assembly": {
