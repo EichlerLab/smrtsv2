@@ -22,6 +22,26 @@ rule annotate_coverage_for_candidates:
     shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
 
 #
+# Inaccessible regions
+#
+
+rule identify_inaccessible_regions:
+    input: coverage="coverage.bed", excluded_regions="regions_to_exclude_as_inaccessible.bed"
+    output: "inaccessible_regions.bed"
+    params: sge_opts="", max_support=str(config["detection"]["max_inaccessible_support"])
+    shell:
+        "awk '$4 <= {params.max_support}' {input.coverage} | "
+            "sed '/chrY/d;/chrEBV/d' | "
+            "bedtools merge -i stdin -d 1000 | "
+            "bedtools intersect -a stdin -b {input.excluded_regions} -v > {output}"
+
+rule collect_regions_to_exclude_as_inaccessible_regions:
+    input: "merged_hardstops_per_bin.bed", config["reference"]["gaps"], "filtered_candidates.tab", config["reference"]["centromeres"]
+    output: "regions_to_exclude_as_inaccessible.bed"
+    params: sge_opts=""
+    shell: "cut -f 1-3 {input} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 1 > {output}"
+
+#
 # Hardstops (all classes)
 #
 
