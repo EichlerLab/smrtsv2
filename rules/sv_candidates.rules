@@ -113,7 +113,10 @@ rule filter_candidates:
         min_length=str(config["detection"]["min_length"]),
         min_coverage=str(config["detection"]["min_coverage"]),
         max_coverage=str(config["detection"]["max_coverage"])
-    shell: "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}"
+    shell:
+        "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} | "
+            "cut -f 1-3 | "
+            "bedtools merge -i stdin -d 1 > {output}"
 
 # Annotate merged gap support with alignment coverage.
 rule annotate_coverage_of_merged_gap_support:
