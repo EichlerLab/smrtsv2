@@ -33,6 +33,18 @@ rule merge_filtered_candidates:
 # Hardstops (all classes)
 #
 
+# Filter hardstops to exclude reference gaps and small SV candidates. Then merge
+# adjacent bins that pass filters.
+rule filter_and_merge_adjacent_hardstop_bins:
+    input: hardstops="hardstops_per_bin.bed", gaps=config["reference"]["gaps"], small_svs="filtered_candidates.tab"
+    output: "merged_hardstops_per_bin.bed"
+    params: sge_opts="-l mfree=1G", min_support=str(config["detection"]["min_hardstop_support"])
+    shell:
+        "awk '$4 > {params.min_support}' {input.hardstops} | "
+            "bedtools intersect -a stdin -b {input.gaps} -v | "
+            "bedtools intersect -a stdin -b {input.small_svs} -v | "
+            "bedtools merge -i stdin -d 1 > {output}"
+
 # Count hardstops per genomic bin.
 rule count_hardstops_per_genomic_bin:
     input: hardstops="hardstop_breakpoints.bed", bins="hardstop_bins.bed"
