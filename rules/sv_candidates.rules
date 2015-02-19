@@ -94,13 +94,13 @@ rule plot_candidate_summary:
 rule summarize_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "sv_candidate_summary.tab"
-    shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $6,$4,$5 }}' {input} > {output}"""
+    shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $4,$5,$6 }}' {input} > {output}"""
 
 # Summarize filtered candidates by event attributes.
 rule combine_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "filtered_candidates.tab"
-    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
+    shell: "sort -k 1,1 -k 2,2n -m {input} | cut -f 1-4,6 > {output}"
 
 # Filter candidates by support and coverage.
 rule filter_candidates:
@@ -115,8 +115,7 @@ rule filter_candidates:
         max_coverage=str(config["detection"]["max_coverage"])
     shell:
         "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} | "
-            "cut -f 1-3 | "
-            "bedtools merge -i stdin -d 1 > {output}"
+            "bedtools merge -i stdin -d 1 -c 6,4,5 -o distinct,mean,mean > {output}"
 
 # Annotate merged gap support with alignment coverage.
 rule annotate_coverage_of_merged_gap_support:
