@@ -33,6 +33,18 @@ rule merge_filtered_candidates:
 # Hardstops (all classes)
 #
 
+# Filter hardstops to exclude reference gaps and small SV candidates. Then merge
+# adjacent bins that pass filters.
+rule filter_and_merge_adjacent_hardstop_bins:
+    input: hardstops="hardstops_per_bin.bed", gaps=config["reference"]["gaps"], small_svs="filtered_candidates.tab"
+    output: "merged_hardstops_per_bin.bed"
+    params: sge_opts="-l mfree=1G", min_support=str(config["detection"]["min_hardstop_support"])
+    shell:
+        "awk '$4 > {params.min_support}' {input.hardstops} | "
+            "bedtools intersect -a stdin -b {input.gaps} -v | "
+            "bedtools intersect -a stdin -b {input.small_svs} -v | "
+            "bedtools merge -i stdin -d 1 > {output}"
+
 # Count hardstops per genomic bin.
 rule count_hardstops_per_genomic_bin:
     input: hardstops="hardstop_breakpoints.bed", bins="hardstop_bins.bed"
@@ -94,13 +106,13 @@ rule plot_candidate_summary:
 rule summarize_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "sv_candidate_summary.tab"
-    shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $6,$4,$5 }}' {input} > {output}"""
+    shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $4,$5,$6 }}' {input} > {output}"""
 
 # Summarize filtered candidates by event attributes.
 rule combine_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "filtered_candidates.tab"
-    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
+    shell: "sort -k 1,1 -k 2,2n -m {input} | cut -f 1-4,6 > {output}"
 
 # Filter candidates by support and coverage.
 rule filter_candidates:
@@ -113,7 +125,9 @@ rule filter_candidates:
         min_length=str(config["detection"]["min_length"]),
         min_coverage=str(config["detection"]["min_coverage"]),
         max_coverage=str(config["detection"]["max_coverage"])
-    shell: "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}"
+    shell:
+        "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} | "
+            "bedtools merge -i stdin -d 1 -c 6,4,5 -o distinct,mean,mean > {output}"
 
 # Annotate merged gap support with alignment coverage.
 rule annotate_coverage_of_merged_gap_support:
