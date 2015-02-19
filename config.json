@@ -19,10 +19,10 @@
         "max_support": 100,
         "min_coverage": 5,
         "max_coverage": 100,
+        "min_hardstop_support": 11,
         "regions_to_exclude": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/regions_to_exclude.bed"
     },
     "assembly": {
-        "regions_to_assemble": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/pacbio_variant_caller/assembly_candidates.bed",
         "assembler": "celera",
         "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
         "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
