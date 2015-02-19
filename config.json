@@ -19,10 +19,18 @@
         "max_support": 100,
         "min_coverage": 5,
         "max_coverage": 100,
-        "regions_to_exclude": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/CHM13/regions_to_exclude.bed"
+        "regions_to_exclude": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/regions_to_exclude.bed"
     },
     "assembly": {
-        "regions_to_assemble": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/CHM13/filtered_assembly_candidates_with_coverage.bed",
+        "assembler": "celera",
+        "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
+        "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
+        "mapping_quality": 30
+    },
+    "gap_extension": {
+        "min_coverage": 5,
+        "max_coverage": 100,
+        "regions_to_assemble": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/gaps_to_assemble.bed",
         "assembler": "celera",
         "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
         "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
