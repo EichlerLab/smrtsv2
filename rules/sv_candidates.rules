@@ -7,12 +7,12 @@ assembly.
 rule filter_candidate_regions:
     input: "assembly_candidates_with_coverage.bed"
     output: "filtered_assembly_candidates_with_coverage.bed"
-    params: sge_opts=""
+    params: sge_opts="", max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
     run:
         if config["detection"].get("regions_to_exclude"):
-            shell("bedtools intersect -a {input} -b %s -v | awk '$4 <= %s' > {output}" % (config["detection"].get("regions_to_exclude"), config["detection"]["max_coverage"]))
+            shell("bedtools intersect -a {input} -b %s -wa -v | awk '$4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' > {output}" % config["detection"].get("regions_to_exclude"))
         else:
-            shell("awk '$4 <= %s' {input} > {output}" % config["detection"]["max_coverage"])
+            shell("awk '$4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' {input} > {output}")
 
 # Annotate assembly candidates with coverage.
 rule annotate_coverage_for_candidates:
@@ -20,6 +20,14 @@ rule annotate_coverage_for_candidates:
     output: "assembly_candidates_with_coverage.bed"
     params: sge_opts=""
     shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
+
+# Merge filtered candidates.
+rule merge_filtered_candidates:
+    input: "filtered_candidates.tab", "merged_hardstops_per_bin.bed"
+    output: "assembly_candidates.bed"
+    # TODO: consider moving these parameters into config file
+    params: sge_opts="", merge_distance="500", slop="10000", chromosome_lengths=config["reference"]["chromosome_lengths"]
+    shell: "cut -f 1-3 {input} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
 
 #
 # Inaccessible regions
@@ -53,8 +61,8 @@ rule filter_and_merge_adjacent_hardstop_bins:
     params: sge_opts="-l mfree=1G", min_support=str(config["detection"]["min_hardstop_support"])
     shell:
         "awk '$4 > {params.min_support}' {input.hardstops} | "
-            "bedtools intersect -a stdin -b {input.gaps} -v | "
-            "bedtools intersect -a stdin -b {input.small_svs} -v | "
+            "bedtools window -w 1000 -a stdin -b {input.gaps} -v | "
+            "bedtools window -w 1000 -a stdin -b {input.small_svs} -v | "
             "bedtools merge -i stdin -d 1 > {output}"
 
 # Count hardstops per genomic bin.
@@ -107,14 +115,6 @@ rule create_genomic_bins:
 #
 # Small SVs (insertions and deletions)
 #
-
-# Merge filtered candidates.
-rule merge_filtered_candidates:
-    input: "filtered_candidates.tab"
-    output: "assembly_candidates.bed"
-    # TODO: consider moving these parameters into config file
-    params: sge_opts="", merge_distance="500", slop="5000", chromosome_lengths=config["reference"]["chromosome_lengths"]
-    shell: "bedtools merge -i {input} -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
 
 # Plot candidate summary.
 rule plot_candidate_summary:
