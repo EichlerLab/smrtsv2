@@ -21,6 +21,14 @@ rule annotate_coverage_for_candidates:
     params: sge_opts=""
     shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
 
+# Merge filtered candidates.
+rule merge_filtered_candidates:
+    input: "filtered_candidates.tab", "merged_hardstops_per_bin.bed"
+    output: "assembly_candidates.bed"
+    # TODO: consider moving these parameters into config file
+    params: sge_opts="", merge_distance="500", slop="10000", chromosome_lengths=config["reference"]["chromosome_lengths"]
+    shell: "cut -f 1-3 {input} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
+
 #
 # Inaccessible regions
 #
@@ -107,14 +115,6 @@ rule create_genomic_bins:
 #
 # Small SVs (insertions and deletions)
 #
-
-# Merge filtered candidates.
-rule merge_filtered_candidates:
-    input: "filtered_candidates.tab"
-    output: "assembly_candidates.bed"
-    # TODO: consider moving these parameters into config file
-    params: sge_opts="", merge_distance="500", slop="5000", chromosome_lengths=config["reference"]["chromosome_lengths"]
-    shell: "bedtools merge -i {input} -d {params.merge_distance} | bedtools slop -i stdin -g {params.chromosome_lengths} -b {params.slop} > {output}"
 
 # Plot candidate summary.
 rule plot_candidate_summary:
