@@ -61,8 +61,8 @@ rule filter_and_merge_adjacent_hardstop_bins:
     params: sge_opts="-l mfree=1G", min_support=str(config["detection"]["min_hardstop_support"])
     shell:
         "awk '$4 > {params.min_support}' {input.hardstops} | "
-            "bedtools intersect -a stdin -b {input.gaps} -v | "
-            "bedtools intersect -a stdin -b {input.small_svs} -v | "
+            "bedtools window -w 1000 -a stdin -b {input.gaps} -v | "
+            "bedtools window -w 1000 -a stdin -b {input.small_svs} -v | "
             "bedtools merge -i stdin -d 1 > {output}"
 
 # Count hardstops per genomic bin.
