@@ -7,12 +7,12 @@ assembly.
 rule filter_candidate_regions:
     input: "assembly_candidates_with_coverage.bed"
     output: "filtered_assembly_candidates_with_coverage.bed"
-    params: sge_opts=""
+    params: sge_opts="", max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
     run:
         if config["detection"].get("regions_to_exclude"):
-            shell("bedtools intersect -a {input} -b %s -v | awk '$4 <= %s' > {output}" % (config["detection"].get("regions_to_exclude"), config["detection"]["max_coverage"]))
+            shell("bedtools intersect -a {input} -b %s -wa -v | awk '$4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' > {output}" % config["detection"].get("regions_to_exclude"))
         else:
-            shell("awk '$4 <= %s' {input} > {output}" % config["detection"]["max_coverage"])
+            shell("awk '$4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' {input} > {output}")
 
 # Annotate assembly candidates with coverage.
 rule annotate_coverage_for_candidates:
