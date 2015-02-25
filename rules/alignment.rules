@@ -21,7 +21,7 @@ rule calculate_coverage_per_batch:
         "scripts/mcst/coverage {TMP_DIR}/{wildcards.batch_id}.bed -in {input}; "
         "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.batch_id}.bed {output}"
 
-# Create a list of BAM files for downstream analysis.
+# Collect summary of aligned read lengths.
 rule collect_alignment_summaries:
     input: dynamic("alignment_lengths/{batch_id}.tab")
     output: "alignment_lengths.tab"
@@ -29,11 +29,30 @@ rule collect_alignment_summaries:
     shell: "cat {input} > {output}"
 
 # Summarize alignments by length.
+# TODO: get subread lengths at the same time as the aligned lengths.
 rule get_alignment_lengths:
     input: "alignments/{batch_id}.bam"
     output: "alignment_lengths/{batch_id}.tab"
     params: sge_opts=""
     shell: """samtools view {input} | awk 'OFS="\\t" {{ if ($3 == "*") {{ print "unmapped",length($10) }} else {{ print "mapped",$9 }} }}' > {output}"""
+
+# Collect summary of subread lengths prior to alignment.
+rule collect_subread_summaries:
+    input: dynamic("subread_lengths/{batch_id}.txt")
+    output: "subread_lengths.tab"
+    params: sge_opts=""
+    shell: """awk 'OFS="\\t" {{ print "subread",$1 }}' {input} > {output}"""
+
+# Summarize length of subreads using coordinates in the mapped and unmapped
+# subread names.
+rule get_subread_lengths:
+    input: "alignments/{batch_id}.bam"
+    output: "subread_lengths/{batch_id}.txt"
+    params: sge_opts=""
+    shell:
+        "mkdir -p {TMP_DIR}; "
+        """samtools view {input} | awk '{{ num_of_pieces=split($1, pieces, "/"); num_of_coords=split(pieces[3], coords, "_"); print coords[2] - coords[1] }}' > {TMP_DIR}/subreads.{wildcards.batch_id}.txt; """
+        "rsync --remove-source-files {TMP_DIR}/subreads.{wildcards.batch_id}.txt {output}"
 
 # Create a list of BAM files for downstream analysis.
 rule collect_alignments:
