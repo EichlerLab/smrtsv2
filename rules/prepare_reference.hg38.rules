@@ -20,7 +20,7 @@ rule prepare_centromeres_bed:
 
 rule download_centromeres:
     output: temp("centromeres.txt.gz")
-    params: sge_opts="", centromeres_url=config["centromeres"]
+    params: sge_opts="", centromeres_url=config["reference"]["centromeres_url"]
     shell: "wget {params.centromeres_url} -O {output}"
 
 rule prepare_gaps_bed:
