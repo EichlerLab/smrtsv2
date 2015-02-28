@@ -23,14 +23,21 @@
         "max_coverage": 100,
         "min_hardstop_support": 11,
         "max_inaccessible_support": 5,
+        "max_candidate_length": 60000,
         "regions_to_exclude": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/regions_to_exclude.bed"
     },
     "assembly": {
-        "assembler": "celera",
+        "assembler": "mhap_celera",
         "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
         "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
         "mapping_quality": 30
     },
+    "mhap_celera": {
+        "celera_dir": "/net/eichler/vol5/home/mchaisso/software/wgs-8.3rc1/Linux-amd64/bin",
+        "bin_dir": "/net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts",
+        "celera_spec": "/net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts/local_assembly/mhap/pacbio.local_human.spec",
+        "bas_template": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_Chaisson_2014/m130928_232712_42213_c100518541910000001823079209281310_s1_p0.1.bax.h5"
+    }
     "gap_extension": {
         "min_coverage": 5,
         "max_coverage": 100,
