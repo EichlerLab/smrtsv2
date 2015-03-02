@@ -30,6 +30,8 @@ include: "rules/sv_candidates.rules"
 
 if config["assembly"]["assembler"] == "celera":
     include: "rules/local_assembly.celera.rules"
+elif config["assembly"]["assembler"] == "mhap_celera":
+    include: "rules/local_assembly.mhap_celera.rules"
 else:
     include: "rules/local_assembly.rules"
 
