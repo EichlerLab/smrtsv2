@@ -29,18 +29,18 @@ ASSEMBLY_DIR = "mhap_assembly"
 #
 
 # Collect assemblies.
-rule collect_assemblies:
-    input: expand("mhap_assembly/{region}/consensus.fasta", region=REGIONS_TO_ASSEMBLE)
-    output: "sv_assemblies.txt"
+rule collect_assembly_alignments:
+    input: expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE)
+    output: "local_assembly_alignments.sam"
     params: sge_opts=""
     # TODO: create module for Celera scripts
-    shell: "find {input} > {output}"
+    shell: "for file in {input}; do cat $file; done | samtools sort -o {output} -O sam -T `echo {output} | sed 's/.sam//'` > {output}"
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
 rule assemble_region:
     input: "alignments.fofn"
-    output: "{ASSEMBLY_DIR}/{region}/consensus.fasta"
+    output: "{ASSEMBLY_DIR}/{region}/consensus_reference_alignment.sam"
     # Limit run time of the assembly to 2 hours to prevent long-running assembly
     # of overly difficult regions.
     params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00"
