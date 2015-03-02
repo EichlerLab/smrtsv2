@@ -1,46 +1,57 @@
+configfile: "config.json"
 
-configfile: "config.reference.json"
+REFERENCE = config["reference"]["assembly"]
 
-rule identify_gaps_for_assembly:
-    input: gaps="gaps.bed", centromeres="centromeres.bed", chrom_info="chromInfo.txt"
-    output: "gaps_to_assemble.bed"
-    params: sge_opts="", slop="5000"
-    shell:
-        "sed '/heterochromatin/d;/short_arm/d;/telomere/d;/alt/d;/chrY/d' {input.gaps} | "
-            "bedtools window -w 500 -a stdin -b {input.centromeres} -v | "
-            "cut -f 1-3 | "
-            "bedtools slop -i stdin -g {input.chrom_info} -b {params.slop} | "
-            "bedtools merge -i stdin -d 1 > {output}"
+rule prepare_reference:
+    input: [REFERENCE + extension for extension in (".fai", ".sa", ".ctab")]
 
-rule prepare_centromeres_bed:
-    input: "centromeres.txt.gz"
-    output: "centromeres.bed"
+# rule identify_gaps_for_assembly:
+#     input: gaps="gaps.bed", centromeres="centromeres.bed", chrom_info="chromInfo.txt"
+#     output: "gaps_to_assemble.bed"
+#     params: sge_opts="", slop="5000"
+#     shell:
+#         "sed '/heterochromatin/d;/short_arm/d;/telomere/d;/alt/d;/chrY/d' {input.gaps} | "
+#             "bedtools window -w 500 -a stdin -b {input.centromeres} -v | "
+#             "cut -f 1-3 | "
+#             "bedtools slop -i stdin -g {input.chrom_info} -b {params.slop} | "
+#             "bedtools merge -i stdin -d 1 > {output}"
+
+# rule prepare_centromeres_bed:
+#     input: "centromeres.txt.gz"
+#     output: "centromeres.bed"
+#     params: sge_opts=""
+#     shell: "zcat {input} | cut -f 2-4 | sort -k 1,1 -k 2,2n > {output}"
+
+# rule download_centromeres:
+#     output: temp("centromeres.txt.gz")
+#     params: sge_opts="", centromeres_url=config["reference"]["centromeres_url"]
+#     shell: "wget {params.centromeres_url} -O {output}"
+
+# rule prepare_gaps_bed:
+#     input: "gaps.txt.gz"
+#     output: "gaps.bed"
+#     params: sge_opts=""
+#     shell: """zcat {input} | awk 'OFS="\\t" {{ print $2,$3,$4,$8,$7 }}' | sort -k 1,1 -k 2,2n > {output}"""
+
+# rule download_gaps:
+#     output: temp("gaps.txt.gz")
+#     params: sge_opts="", gaps_url=config["gaps"]
+#     shell: "wget {params.gaps_url} -O {output}"
+
+rule prepare_tuple_count_table_for_reference:
+    input: REFERENCE
+    output: "%s.ctab" % REFERENCE
     params: sge_opts=""
-    shell: "zcat {input} | cut -f 2-4 | sort -k 1,1 -k 2,2n > {output}"
+    shell: "printTupleCountTable {input} > {output}"
 
-rule download_centromeres:
-    output: temp("centromeres.txt.gz")
-    params: sge_opts="", centromeres_url=config["reference"]["centromeres_url"]
-    shell: "wget {params.centromeres_url} -O {output}"
-
-rule prepare_gaps_bed:
-    input: "gaps.txt.gz"
-    output: "gaps.bed"
+rule prepare_suffix_array_for_reference:
+    input: REFERENCE
+    output: "%s.sa" % REFERENCE
     params: sge_opts=""
-    shell: """zcat {input} | awk 'OFS="\\t" {{ print $2,$3,$4,$8,$7 }}' | sort -k 1,1 -k 2,2n > {output}"""
+    shell: "sawriter {output} {input}"
 
-rule download_gaps:
-    output: temp("gaps.txt.gz")
-    params: sge_opts="", gaps_url=config["gaps"]
-    shell: "wget {params.gaps_url} -O {output}"
-
-rule prepare_chrom_info:
-    input: "chromInfo.txt.gz"
-    output: "chromInfo.txt"
+rule index_reference:
+    input: REFERENCE
+    output: "%s.fai" % REFERENCE
     params: sge_opts=""
-    shell: "zcat {input} > {output}"
-
-rule download_chrom_info:
-    output: temp("chromInfo.txt.gz")
-    params: sge_opts="", chrom_info_url=config["chrom_info"]
-    shell: "wget {params.chrom_info_url} -O {output}"
+    shell: "samtools faidx {input}"
