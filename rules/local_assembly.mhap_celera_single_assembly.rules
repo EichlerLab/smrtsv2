@@ -1,0 +1,101 @@
+import operator
+
+configfile: "config.json"
+
+CADIR = config["mhap_celera"]["celera_dir"]
+BIN_DIR = config["mhap_celera"]["bin_dir"]
+BLASR_DIR = config["mhap_celera"]["blasr_dir"]
+CELERA_SPEC = config["mhap_celera"]["celera_spec"]
+BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
+
+# User-defined file of alignments with one absolute path to a BAM per line.
+ALIGNMENTS = config["alignments"]
+
+# User-defined region in form of "{chrom}-{start}-{end}"
+REGION = config["region"]
+
+# Convert filesystem-safe filename of "chrom-start-end" to the more-standard
+# region of "chrom:start-end"
+STANDARD_REGION = REGION.replace("-", ":", 1)
+
+# Calculate the size of the given region of format "chrom-start-end" by
+# splitting the region on "-", selecting the last two elements, reversing their
+# order to produce (end, start), converting strings to integers, and applying
+# the subtraction operator.
+REGION_SIZE = str(operator.sub(*map(int, reversed(REGION.split("-")[1:3]))))
+
+#
+# Define rules.
+#
+
+# TODO: add rule to align consensus against reference with BLASR.
+
+rule quiver_assembly:
+    input: assembly="assembly.fasta", alignments="alignment.cmp.h5", assembly_index="assembly.fasta.fai"
+    output: "consensus.fasta"
+    params: sge_opts="", threads="4"
+    shell:
+        "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
+        "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}"
+
+rule convert_assembly_alignments_to_hdf5:
+    input: alignments="alignment.sam", assembly="assembly.fasta", reads="reads.bas.h5"
+    output: "alignment.cmp.h5"
+    params: sge_opts=""
+    shell:
+        "{BLASR_DIR}/pbihdfutils/bin/samtoh5 {input.alignments} {input.assembly} {output} -useShortRefName; "
+        "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && cmph5tools.py sort --deep {output}; "
+        "{BLASR_DIR}/pbihdfutils/bin/loadPulses {input.reads} {output} -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
+        "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && {BIN_DIR}/local_assembly/LoadGenericChemistry.py {BAS_TEMPLATE} {output}"
+
+rule map_reads_to_assembly:
+    input: "reads.bas.h5", "assembly.fasta"
+    output: "alignment.sam"
+    params: sge_opts="", threads="4"
+    shell: "{BLASR_DIR}/alignment/bin/blasr {input} -sam -bestn 1 -out {output} -nproc {params.threads}"
+
+rule index_assembly:
+    input: "assembly.fasta"
+    output: "assembly.fasta.fai"
+    params: sge_opts=""
+    shell: "samtools faidx {input}"
+
+rule assemble_reads:
+    input: "reads.fastq"
+    output: "assembly.fasta"
+    params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00", threads="4", read_length="1000", partitions="50"
+    shell:
+        "module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log; "
+        "cp local/9-terminator/asm.ctg.fasta {output}; "
+
+rule convert_reads_to_bas:
+    input: "reads.bam"
+    output: "reads.bas.h5"
+    params: sge_opts=""
+    shell: "samtools view -h {input} | {BLASR_DIR}/pbihdfutils/bin/samtobas /dev/stdin {output}"
+
+rule convert_reads_to_fastq:
+    input: "reads.fasta"
+    output: "reads.fastq"
+    params: sge_opts=""
+    shell: "{BIN_DIR}/FastaToFakeFastq.py {input} {output}"
+
+rule convert_reads_to_fasta:
+    input: "reads.bam"
+    output: "reads.fasta"
+    params: sge_opts=""
+    shell: """samtools view {input} | awk '{{ print ">"$1; print $10 }}' | /net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts/falcon/FormatFasta.py --fakename > {output}"""
+
+rule convert_reads_to_bam:
+    input: "reads.sam"
+    output: "reads.bam"
+    params: sge_opts=""
+    shell: "samtools view -bS {input} > {output}"
+
+rule get_reads:
+    input: ALIGNMENTS
+    output: "reads.sam"
+    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
+    shell:
+        "head -n 1 {input} | xargs -i samtools view -H {{}} > {output}; "
+        "cat {input} | xargs -i samtools view -q {params.mapping_quality_threshold} {{}} {STANDARD_REGION} >> {output}"
