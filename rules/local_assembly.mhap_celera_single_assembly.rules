@@ -33,6 +33,29 @@ REGION_SIZE = str(operator.sub(*map(int, reversed(REGION.split("-")[1:3]))))
 
 # TODO: add rule to align consensus against reference with BLASR.
 
+rule align_consensus_to_reference_region:
+    input: "consensus.fasta", "reference_region.fasta"
+    output: "consensus_reference_alignment.sam"
+    params: sge_opts=""
+    shell: """{BLASR_BIN} {input} -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4 - 1; print }}' > {output}"""
+
+rule extract_reference_sequence:
+    input: config["reference"]["assembly"], "reference_region.slop.txt"
+    output: temp("reference_region.fasta")
+    params: sge_opts=""
+    shell: "samtools faidx {input[0]} `cat {input[1]}` > {output}"
+
+rule extend_reference_region:
+    input: bed="reference_region.bed", chromosomes=config["reference"]["chromosome_lengths"]
+    output: "reference_region.slop.txt"
+    params: sge_opts="", slop="50000"
+    shell: """bedtools slop -i {input.bed} -g {input.chromosomes} -b {params.slop} | awk '{{ print $1":"$2"-"$3 }}' > {output}"""
+
+rule create_reference_region:
+    output: "reference_region.bed"
+    params: sge_opts=""
+    shell: "echo {REGION} | sed 's/-/\t/g' > {output}"
+
 rule quiver_assembly:
     input: assembly="assembly.fasta", alignments="alignment.cmp.h5", assembly_index="assembly.fasta.fai"
     output: "consensus.fasta"
