@@ -24,6 +24,7 @@ else:
 
 CADIR = config["mhap_celera"]["celera_dir"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
+BLASR_DIR = config["mhap_celera"]["blasr_dir"]
 CELERA_SPEC = config["mhap_celera"]["celera_spec"]
 BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 
@@ -79,23 +80,23 @@ rule assemble_region:
     params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00", region=_get_standard_region, region_size=_get_region_size, mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), threads="4", read_length="1000", partitions="50"
     shell:
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
+	"head -n 1 {input} | xargs -i samtools view -H {{}} > {TMP_DIR}/{wildcards.region}/reads.sam; "
+	"cat {input} | xargs -i samtools view -q {params.mapping_quality_threshold} {{}} {params.region} >> {TMP_DIR}/{wildcards.region}/reads.sam; "
         "pushd {TMP_DIR}/{wildcards.region}; "
-	"head -n 1 {input} | xargs -i samtools view -H {{}} > reads.sam; "
-	"cat {input} | xargs -i samtools view -q {params.mapping_quality_threshold} {{}} {params.region} >> reads.sam; "
         "samtools view -bS reads.sam > reads.bam; "
-        """samtools view reads.bam | awk '{{ print ">"$1; print $10 }}' | /net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts/falcon/FormatFasta.py --fakename  > reads.fasta"""
+        """samtools view reads.bam | awk '{{ print ">"$1; print $10 }}' | /net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts/falcon/FormatFasta.py --fakename  > reads.fasta; """
 	"{BIN_DIR}/FastaToFakeFastq.py reads.fasta reads.fastq; "
 	"module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq reads.fastq genomeSize={params.region_size}; "
 	"cp local/9-terminator/asm.ctg.fasta assembly.fasta; "
-	"samtools view -h reads.bam | samtobas /dev/stdin reads.bas.h5; "
-	"blasr reads.bas.h5 assembly.fasta -sam -bestn 1 -out alignment.sam -nproc {params.threads}; "
-	"samtoh5 alignment.sam assembly.fasta alignment.cmp.h5 -useShortRefName; "
+	"samtools view -h reads.bam | {BLASR_DIR}/pbihdfutils/bin/samtobas /dev/stdin reads.bas.h5; "
+	"{BLASR_DIR}/alignment/bin/blasr reads.bas.h5 assembly.fasta -sam -bestn 1 -out alignment.sam -nproc {params.threads}; "
+	"{BLASR_DIR}/pbihdfutils/bin/samtoh5 alignment.sam assembly.fasta alignment.cmp.h5 -useShortRefName; "
 	"unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && cmph5tools.py sort --deep alignment.cmp.h5; "
-	"loadPulses reads.bas.h5 alignment.cmp.h5 -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
+	"{BLASR_DIR}/pbihdfutils/bin/loadPulses reads.bas.h5 alignment.cmp.h5 -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
 	"unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && {BIN_DIR}/local_assembly/LoadGenericChemistry.py {BAS_TEMPLATE} alignment.cmp.h5; "
 	"samtools faidx assembly.fasta; "
 	"unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && quiver -j {params.threads} --referenceFilename assembly.fasta alignment.cmp.h5 -o consensus.fasta; "
-        "sed -i 's/^>\(.\+\)/>{wildcards.region}|\1/' consensus.fasta;"
+        "sed -i 's/^>\(.\+\)/>{wildcards.region}|\1/' consensus.fasta; "
         "popd; "
         "rsync -rav {TMP_DIR}/{wildcards.region} {ASSEMBLY_DIR}/; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
