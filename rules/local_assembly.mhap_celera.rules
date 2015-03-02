@@ -30,7 +30,7 @@ BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 #
 # Define internal constants.
 #
-ASSEMBLY_DIR = "sv_assembly"
+ASSEMBLY_DIR = "mhap_assembly"
 
 #
 # Define utility functions.
@@ -73,7 +73,7 @@ rule collect_assemblies:
 # TODO: remove dependencies on Eichler modules.
 rule assemble_region:
     input: "alignments.fofn"
-    output: "mhap_assembly/{region}/consensus.fasta"
+    output: "{ASSEMBLY_DIR}/{region}/consensus.fasta"
     # Limit run time of the assembly to 2 hours to prevent long-running assembly
     # of overly difficult regions..
     params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00", region=_get_standard_region, region_size=_get_region_size, mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), threads="4", read_length="1000", partitions="50"
@@ -97,5 +97,5 @@ rule assemble_region:
 	"unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && quiver -j {params.threads} --referenceFilename assembly.fasta alignment.cmp.h5 -o consensus.fasta; "
         "sed -i 's/^>\(.\+\)/>{wildcards.region}|\1/' consensus.fasta;"
         "popd; "
-        "rsync -r {TMP_DIR}/{wildcards.region} sv_assembly/;"
+        "rsync -rav {TMP_DIR}/{wildcards.region} {ASSEMBLY_DIR}/; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
