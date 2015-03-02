@@ -1,5 +1,6 @@
 configfile: "config.json"
 
+PACBIO_DIR = "/net/eichler/vol20/projects/pacbio/opt/smrtanalysis/current/analysis/bin"
 REFERENCE = config["reference"]["assembly"]
 
 rule prepare_reference:
@@ -42,13 +43,13 @@ rule prepare_tuple_count_table_for_reference:
     input: REFERENCE
     output: "%s.ctab" % REFERENCE
     params: sge_opts=""
-    shell: "printTupleCountTable {input} > {output}"
+    shell: "{PACBIO_DIR}/printTupleCountTable {input} > {output}"
 
 rule prepare_suffix_array_for_reference:
     input: REFERENCE
     output: "%s.sa" % REFERENCE
     params: sge_opts=""
-    shell: "sawriter {output} {input}"
+    shell: "{PACBIO_DIR}/sawriter {output} {input}"
 
 rule index_reference:
     input: REFERENCE
