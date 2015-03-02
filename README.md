@@ -31,15 +31,12 @@ pushd scripts/mcst; make; popd
 
 ## Prepare a reference
 
-Select a reference assembly to use for variant calling. Prepare a suffix array
-and ctab file for this assembly with the following commands. Finally, create a
-samtools index of the FASTA file.
+Select a reference assembly to use for variant calling and acquire the FASTA
+sequence for that reference. Prepare a samtools FASTA index, suffix array, and
+tuple count table (ctab) for this sequence with the following command.
 
 ```bash
-export PACBIO_DIR=/net/eichler/vol20/projects/pacbio/opt/smrtanalysis/current/analysis/bin
-${PACBIO_DIR}/printTupleCountTable ucsc.hg38.no_alts.fasta > ucsc.hg38.no_alts.fasta.ctab
-${PACBIO_DIR}/sawriter ucsc.hg38.no_alts.fasta.sa ucsc.hg38.no_alts.fasta
-samtools faidx ucsc.hg38.no_alts.fasta
+snakemake prepare_reference --config reference_fasta=/path/to/reference.fasta
 ```
 
 ## Create a manifest of input reads
