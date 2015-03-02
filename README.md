@@ -33,7 +33,10 @@ pushd scripts/mcst; make; popd
 
 Select a reference assembly to use for variant calling and acquire the FASTA
 sequence for that reference. Prepare a samtools FASTA index, suffix array, and
-tuple count table (ctab) for this sequence with the following command.
+tuple count table (ctab) for this sequence with the following command. This step
+creates the appropriate configuration file entries for the reference in the file
+``reference_config.json``. Add these lines to your existing config file based on
+the template in this repository.
 
 ```bash
 snakemake prepare_reference --config reference_fasta=/path/to/reference.fasta
