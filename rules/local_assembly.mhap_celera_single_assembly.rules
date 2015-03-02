@@ -1,4 +1,5 @@
 import operator
+import os
 
 configfile: "config.json"
 
@@ -66,9 +67,14 @@ rule assemble_reads:
     input: "reads.fastq"
     output: "assembly.fasta"
     params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00", threads="4", read_length="1000", partitions="50"
-    shell:
-        "module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log; "
-        "cp local/9-terminator/asm.ctg.fasta {output}; "
+    run:
+        assembly_output = "local/9-terminator/asm.ctg.fasta"
+        shell("module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
+        if os.path.exists(assembly_output):
+            shell("cp {assembly_output} {output}")
+            shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["assembly"]["log"])
+        else:
+            shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["assembly"]["log"])
 
 rule convert_reads_to_bas:
     input: "reads.bam"
