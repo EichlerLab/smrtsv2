@@ -55,7 +55,7 @@ def _get_region_size(wildcards):
     their order to produce (end, start), converting strings to integers, and
     applying the subtraction operator.
     """
-    return operator.sub(*map(int, reversed(wildcards["region"].split("-")[1:3])))
+    return str(operator.sub(*map(int, reversed(wildcards["region"].split("-")[1:3]))))
 
 #
 # Define rules.
