@@ -2,6 +2,8 @@ import operator
 
 configfile: "config.json"
 
+BLASR_BIN = "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/blasr_jlhudd/alignment/bin/blasr"
+REFERENCE = config["reference"]["assembly"]
 CADIR = config["mhap_celera"]["celera_dir"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
 BLASR_DIR = config["mhap_celera"]["blasr_dir"]
@@ -52,7 +54,7 @@ rule map_reads_to_assembly:
     input: "reads.bas.h5", "assembly.fasta"
     output: "alignment.sam"
     params: sge_opts="", threads="4"
-    shell: "{BLASR_DIR}/alignment/bin/blasr {input} -sam -bestn 1 -out {output} -nproc {params.threads}"
+    shell: "{BLASR_BIN} {input} -sam -bestn 1 -out {output} -nproc {params.threads}"
 
 rule index_assembly:
     input: "assembly.fasta"
