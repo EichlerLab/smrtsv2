@@ -60,13 +60,21 @@ Modify `config.json` to include the correct paths to the reference assembly's
 files and input reads manifest. Also indicated how many bytes of input reads to
 include per alignment batch. The default is 30GB.
 
-## Align reads and call variants
+## Align reads
 
-The following command will align PacBio reads, parse alignments to identify SV
-candidates, and produce a list of candidate regions for local assembly using no
-more than 20 CPUs at any given time. All output will be written to the current
-working directory. The `-w` flag instructs Snakemake to wait 20 seconds for
-output files when there is excessive latency on the output filesystem.
+Align PacBio reads to the prepared reference.
+
+```bash
+snakemake align_reads
+```
+
+## Identify SV candidate regions
+
+Parse alignments to identify SV candidates and produce a list of candidate
+regions for local assembly using no more than 20 CPUs at any given time. All
+output will be written to the current working directory. The `-w` flag instructs
+Snakemake to wait 20 seconds for output files when there is excessive latency on
+the output filesystem.
 
 ```bash
 snakemake --cluster "qsub {params.sge_opts}" -w 20 -j 20 assembly_candidates.bed
