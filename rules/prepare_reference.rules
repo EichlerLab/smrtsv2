@@ -1,7 +1,10 @@
 configfile: "config.json"
 
 PACBIO_DIR = "/net/eichler/vol20/projects/pacbio/opt/smrtanalysis/current/analysis/bin"
-REFERENCE = config["reference_fasta"]
+if "reference_fasta" in config:
+    REFERENCE = config["reference_fasta"]
+else:
+    REFERENCE = config["reference"]["assembly"]
 
 rule prepare_reference:
     input: [REFERENCE + extension for extension in (".fai", ".sa", ".ctab")]
