@@ -92,12 +92,21 @@ rule assemble_reads:
     params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00", threads="4", read_length="1000", partitions="50"
     run:
         assembly_output = "local/9-terminator/asm.ctg.fasta"
-        shell("module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
-        if os.path.exists(assembly_output):
-            shell("cp {assembly_output} {output}")
-            shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["assembly"]["log"])
-        else:
-            shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["assembly"]["log"])
+        assembly_exists = False
+        try:
+            shell("module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
+            if os.path.exists(assembly_output):
+                shell("cp {assembly_output} {output}")
+                shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["assembly"]["log"])
+                assembly_exists = True
+            else:
+                shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["assembly"]["log"])
+        except:
+            shell("""echo -e "{REGION}\tassembly_crashed\t`grep ERROR assembly.log | tr '\n' '|'`" >> %s""" % config["assembly"]["log"])
+
+        # Create an empty assembly for failed regions.
+        if not assembly_exists:
+            shell("echo -e '>{REGION}\nN' > {output}")
 
 rule convert_reads_to_bas:
     input: "reads.bam"
