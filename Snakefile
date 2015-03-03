@@ -49,11 +49,11 @@ if config.get("detection"):
         "assembly_candidates.bed"
     ])
 
-if config.get("assembly") and config["assembly"].get("regions_to_assemble"):
-    OUTPUTS.append("sv_assemblies.txt")
+# if config.get("assembly") and config["assembly"].get("regions_to_assemble"):
+#     OUTPUTS.append("sv_assemblies.txt")
 
-if config.get("gap_extension") and config["gap_extension"].get("regions_to_assemble"):
-    OUTPUTS.append("gap_assemblies.txt")
+# if config.get("gap_extension") and config["gap_extension"].get("regions_to_assemble"):
+#     OUTPUTS.append("gap_assemblies.txt")
 
 #
 # Define rules.
