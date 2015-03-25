@@ -30,10 +30,10 @@ ASSEMBLY_DIR = "mhap_assembly"
 
 # Collect assemblies.
 rule collect_assembly_alignments:
-    input: expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE)
-    output: "local_assembly_alignments.sam"
+    input: alignments=expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE), chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
+    output: "local_assembly_alignments.bam"
     params: sge_opts=""
-    shell: "echo {input} | tr ' ' '\\n' | xargs -i cat {{}} > {output}"
+    shell: "echo {input.alignments} | tr ' ' '\\n' | xargs -i cat {{}} | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
