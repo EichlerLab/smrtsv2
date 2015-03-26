@@ -1,6 +1,8 @@
 """
 Rules for local assembly of genomic regions.
 """
+import csv
+
 print("Local assembly with MHAP/Celera")
 
 #
@@ -23,10 +25,132 @@ else:
 # Define internal constants.
 #
 ASSEMBLY_DIR = "mhap_assembly"
+OVERLAPPING_ASSEMBLY_DIR = "mhap_overlapping_assembly"
+
+BLASR_BIN = config["blasr_bin"]
+BIN_DIR = config["mhap_celera"]["bin_dir"]
+CADIR = config["mhap_celera"]["celera_dir"]
+
+#
+# Define helper functions.
+#
+def _get_overlapping_assembly_outputs(wildcards):
+    with open("overlapping_assemblies.bed") as fh:
+        reader = csv.reader(fh, delimiter="\t")
+        return ["%s/%s-%s-%s/contigs_reference_alignment.sam" % (OVERLAPPING_ASSEMBLY_DIR, row[0], row[1], row[2]) for row in reader]
 
 #
 # Define rules.
 #
+
+# Collect assemblies.
+rule collect_overlapping_assembly_alignments:
+    input: regions="overlapping_assemblies.bed", chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"], alignments=_get_overlapping_assembly_outputs
+    output: "overlapping_assemblies_alignments.bam"
+    params: sge_opts=""
+    shell: "echo {input.alignments} | tr ' ' '\\n' | xargs -i cat {{}} | samtools view -Sbu -t {input.chromosomes} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
+
+rule align_consensus_to_reference_region:
+    input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta", "{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta"
+    output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs_reference_alignment.sam"
+    params: sge_opts=""
+    shell: """{BLASR_BIN} {input} -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4 - 1; print }}' > {output}"""
+
+rule extract_reference_sequence:
+    input: chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
+    output: temp("{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta")
+    params: sge_opts="", slop="50000"
+    shell: """echo {wildcards.region} | sed 's/-/\\t/g' | bedtools slop -i stdin -g {input.chromosomes} -b {params.slop} | awk '{{ print $1":"$2"-"$3 }}' | xargs -i samtools faidx {input.reference} {{}} > {output}"""
+
+rule assemble_overlapping_region:
+    input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.frg"
+    output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta"
+    # Limit run time of the assembly to 2 hours to prevent long-running assembly
+    # of overly difficult regions.
+    params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00", threads="4"
+    run:
+        assembly_region_dir = "%s/%s" % (OVERLAPPING_ASSEMBLY_DIR, wildcards.region)
+        assembly_output_dir = "%s/local" % assembly_region_dir
+        assembly_output = "%s/9-terminator/region.utg.fasta" % assembly_output_dir
+        assembly_exists = False
+        try:
+            shell("{CADIR}/runCA -p region -d {assembly_output_dir} {input} ovlThreads={params.threads} doOverlapBasedTrimming=0 doDeDuplication=0 &> {assembly_region_dir}/assembly.log")
+            if os.path.exists(assembly_output):
+                shell("cp {assembly_output} {output}")
+                shell("""echo -e "{wildcards.region}\tassembly_exists" >> %s""" % config["assembly"]["log"])
+                assembly_exists = True
+            else:
+                shell("""echo -e "{wildcards.region}\tno_assembly_exists" >> %s""" % config["assembly"]["log"])
+        except:
+            shell("""echo -e "{wildcards.region}\tassembly_crashed\t`grep ERROR assembly.log | tr '\n' '|'`" >> %s""" % config["assembly"]["log"])
+
+        # Create an empty assembly for failed regions.
+        if not assembly_exists:
+            shell("echo -e '>{wildcards.region}\nN' > {output}")
+
+rule get_celera_fragments_for_overlapping_region:
+    input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fastq"
+    output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.frg"
+    params: sge_opts=""
+    shell: "{CADIR}/fastqToCA -libraryname region -technology pacbio-corrected -reads {input} > {output}"
+
+rule get_fastq_for_overlapping_region:
+    input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fasta"
+    output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fastq"
+    params: sge_opts=""
+    shell: "{BIN_DIR}/FastaToFakeFastq.py {input} {output}"
+
+rule get_fasta_for_overlapping_region:
+    input: regions="overlapping_assemblies.bed", assemblies="local_assemblies.fasta"
+    output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fasta"
+    params:
+        sge_opts="",
+        chrom=lambda wildcards: wildcards["region"].split("-")[0],
+        start=lambda wildcards: wildcards["region"].split("-")[1],
+        end=lambda wildcards: wildcards["region"].split("-")[2]
+    shell: """awk '$1 == "{params.chrom}" && $2 == {params.start} && $3 == {params.end}' {input.regions} | cut -f 5 | tr ',' '\\n' | while read contig; do samtools faidx {input.assemblies} "$contig"; done > {output}"""
+
+# Extract non-overlapping assemblies.
+rule extract_nonoverlapping_assemblies:
+    input: regions="nonoverlapping_assemblies.bed", assemblies="local_assemblies.fasta", index="local_assemblies.fasta.fai"
+    output: "nonoverlapping_assemblies.fasta"
+    params: sge_opts=""
+    shell: """cut -f 5 {input.regions} | while read contig; do samtools faidx {input.assemblies} "$contig"; done > {output}"""
+
+# Partition non-overlapping assemblies.
+rule find_nonoverlapping_assemblies:
+    input: "local_assembly_overlaps.bed"
+    output: "nonoverlapping_assemblies.bed"
+    params: sge_opts=""
+    shell: "awk '$4 == 1' {input} > {output}"
+
+# Partition overlapping assemblies.
+rule find_overlapping_assemblies:
+    input: "local_assembly_overlaps.bed"
+    output: "overlapping_assemblies.bed"
+    params: sge_opts=""
+    shell: "awk '$4 > 1' {input} > {output}"
+
+# Identify overlapping assemblies.
+rule find_assembly_overlaps:
+    input: "local_assembly_alignments.bam"
+    output: "local_assembly_overlaps.bed"
+    params: sge_opts=""
+    shell: "bedtools bamtobed -i {input} | awk '$5 > 0' | sed 's/\/0_[0-9]\+//' | bedtools merge -i stdin -d 1 -c 4,4 -o count_distinct,distinct > {output}"
+
+# Index local assemblies FASTA.
+rule index_fasta_from_assemblies:
+    input: "local_assemblies.fasta"
+    output: "local_assemblies.fasta.fai"
+    params: sge_opts=""
+    shell: "samtools faidx {input}"
+
+# Create FASTA from assemblies BAM.
+rule create_fasta_from_assemblies:
+    input: "local_assembly_alignments.bam"
+    output: "local_assemblies.fasta"
+    params: sge_opts=""
+    shell: """samtools view {input} | sed 's/\/0_[0-9]\+//' | awk 'OFS="\\t" {{ print ">"$1; print $10 }}' > {output}"""
 
 # Collect assemblies.
 rule collect_assembly_alignments:
