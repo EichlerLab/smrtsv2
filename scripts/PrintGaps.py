@@ -13,7 +13,8 @@ ap.add_argument("genome", help="Genome file with a .fai")
 ap.add_argument("sam", help="Sam file of alignment.", nargs="+")
 ap.add_argument("--onTarget", help="Assume the query encodes the position of the aligned sequence, and make sure at least the chromosomes match.", default=False, action='store_true')
 ap.add_argument("--gapFree", help="Print sequences without gaps.", default=None)
-ap.add_argument("--minLength", help="Minimum gapLength.", default=30, type=int)
+ap.add_argument("--minLength", help="Minimum gap length.", default=30, type=int)
+ap.add_argument("--maxLength", help="Maximum gap length.", default=None, type=int)
 ap.add_argument("--outFile", help="Print output here, default= stdout", default=None)
 ap.add_argument("--context", help="Print surrounding context", default=0, type=int)
 ap.add_argument("--condense", help="Pack indels if the matches separating them is less than this value.", default=10, type=int)
@@ -21,7 +22,9 @@ ap.add_argument("--tsd", help="Attempt to find Target Site Duplications at most 
 ap.add_argument("--outsam", help="Write the modified condensed sam to a file.", default=None)
 ap.add_argument("--minq", help="Minimal mapping quality to consider (10)",default=10,type=int)
 ap.add_argument("--qpos", help="Write query position of gaps", default=False,action='store_true')
-
+ap.add_argument("--snv", help="Print SNVs to this file.", default=None)
+ap.add_argument("--contigBed", help="Print where contigs map.", default=None)
+ap.add_argument("--status", help="Print how far along the alignments are.", default=False, action='store_true')
 args = ap.parse_args()
 
 genome = file(args.genome, 'r')
@@ -37,12 +40,19 @@ else:
 if (args.gapFree is not None):
     gapFree = open(args.gapFree, 'w')
 
+if (args.contigBed is not None):
+    contigBed = open(args.contigBed, 'w')
+
 fai = Tools.ReadFAIFile(args.genome + ".fai")
 
 #genomeDict = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
 
 if (args.outsam is not None):
     outsam = open(args.outsam, 'w')
+
+snvOut = None
+if (args.snv is not None):
+    snvOut = open(args.snv, 'w')
 
 fai = Tools.ReadFAIFile(args.genome + ".fai")
 genomeFile = open(args.genome, 'r')
@@ -59,6 +69,8 @@ if (args.sam[0].find(".fofn") >= 0):
     samFiles = [line.strip() for line in fofnFile.readlines()]
     args.sam = samFiles
 lineNumber = 0
+contextLength = 8
+#import pdb
 for samFileName in args.sam:
     samFile = open(samFileName)
 
@@ -84,6 +96,9 @@ for samFileName in args.sam:
         if (aln.mapqv < args.minq):
             continue
 
+        if (args.contigBed is not None):
+            contigBed.write("{}\t{}\t{}\t{}\n".format(aln.tName, aln.tStart, aln.tStart + aln.tlen, aln.title))
+
         tPos = aln.tStart
         qPos = 0
         #
@@ -100,6 +115,7 @@ for samFileName in args.sam:
         #print str(aln.ops)
 
         foundGap = False
+
         while (i < len(aln.lengths)):
             l = aln.lengths[i]
             op = aln.ops[i]
@@ -137,23 +153,46 @@ for samFileName in args.sam:
             i = j + 1
             niter +=1
             if (niter > len(aln.ops)):
-                sys.stderr.write("ERROR! too many interations.\n")
+                print "ERROR! too many interations."
+
         for i in range(len(packedOps)):
             op = packedOps[i]
             l  = packedLengths[i]
 
-            if (op == M or op == N or op == S):
+            if (op == N or op == S):
+                # Inside match block (if op == M)
                 tPos += l
                 qPos += l
+            if (op == M):
+                # Inside match block (if op == M)
+                if (args.snv is not None):
+                    targetSeq = Tools.ExtractSeq((aln.tName, tPos-1,tPos+l-1), genomeFile, fai)
+                    querySeq  = aln.seq[qPos:qPos+l]
+                    nMis = 0
+
+                    for mp in range(0,len(targetSeq)):
+                        if (querySeq[mp].upper() != targetSeq[mp].upper() and targetSeq[mp].upper() != 'N' and querySeq[mp].upper() != 'N'):
+                            nMis +=1
+                            snvOut.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(aln.tName, tPos+mp, tPos+mp+1, targetSeq[mp], querySeq[mp], aln.title ))
+                tPos += l
+                qPos += l
+
             if (op == I):
-                if (l > args.minLength):
+                if (l > args.minLength and (args.maxLength is None or l < args.maxLength)):
                     #                    print "gap at " + str(i) + " " + str(op) + " " + str(l) + " " + str(qPos) + " qlen: " + str(len(aln.seq))
                     foundGap = True
                     chrName = aln.tName
-                    gapSeq = aln.seq[max(0,qPos-args.context):min(qPos+l+args.context, len(aln.seq))]
+                    #gapSeq = aln.seq[max(0,qPos-args.context):min(qPos+l+args.context, len(aln.seq))]
+                    gapSeq = aln.seq[qPos:qPos+l]
+
+                    context= aln.seq[qPos+l:min(qPos+l+args.context, len(aln.seq))]
+                    if (context == "A"*len(context) or context == "T"*len(context)):
+                        homopolymer="T"
+                    else:
+                        homopolymer="F"
                     tsd = "notsd"
                     if (len(gapSeq) == 0):
-                        sys.stderr.write("ERROR, gap seq is of zero length\n")
+                        print "ERROR, gap seq is of zero length"
                     if (args.tsd):
                         # try and find the target site duplications, this may be on either side of the alignemnt
                         tsdSuffix = gapSeq[-args.tsd:]
@@ -173,35 +212,46 @@ for samFileName in args.sam:
                             tsd = ss
                         elif (pScore > sScore ):
                             tsd = ps
-                        #print "sp ss: " + str(sScore) + " " + sp + " " + ss + " " + tsdSuffix + " " + targetPrefix
-                        #print "pp ps: " + str(pScore) + " " + pp + " " + ps + " " + tsdPrefix + " " + targetSuffix
 
                     nucs = ['A', 'C', 'G', 'T']
                     fracs = [float(gapSeq.count(n))/(len(gapSeq)+1) for n in nucs]
                     doPrint = True
                     for frac in fracs:
-                        # TODO: Define or replace magic number.
                         if (frac > 0.85):
                             doPrint = False
                     if (doPrint):
-                        outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + l, "insertion", l, gapSeq, tsd, aln.title))
+                        outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + l, "insertion", l, gapSeq, tsd, aln.title, qPos, qPos + l))
+                        if (args.context > 0):
+                            outFile.write("\t{}".format(homopolymer))
                         if (args.qpos):
                             outFile.write("\t{}\t{}".format(qPos, qPos + len(gapSeq)))
                         outFile.write("\n")
 
+
                 qPos += l
             if (op == D):
-                if (l > args.minLength):
+                if (l > args.minLength and (args.maxLength is None or l < args.maxLength)):
                     foundGap = True
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
-                        sys.stderr.write("ERROR! tpos (%s) is past the end of %s (%s)\n" % (tPos, chrName, fai[chrName][0]))
-                        continue
+                        print "ERROR! tpos is past the genome end." + str(tPos) + " " + str(fai[chrName][0])
+                    #delStart = max(tPos - args.context, 0)
+                    #delEnd   = min(tPos + args.context + l, fai[chrName][0])
                     delStart = max(tPos - args.context, 0)
                     delEnd   = min(tPos + args.context + l, fai[chrName][0])
+                    context= aln.seq[qPos+l:min(qPos+l+args.context, len(aln.seq))]
+                    if (context == "A"*len(context) or context == "T"*len(context)):
+                        homopolymer="T"
+                    else:
+                        homopolymer="F"
+
                     #delSeq = genomeDict[chrName].seq[delStart:delEnd].tostring()
                     delSeq = Tools.ExtractSeq([chrName, delStart, delEnd], genomeFile, fai)
-                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}".format(chrName, tPos, tPos + l, "deletion", l, delSeq, aln.title))
+
+                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + l, "deletion", l, delSeq, aln.title, qPos, qPos + l))
+                    if (args.context > 0):
+                        outFile.write("\t{}".format(homopolymer))
+
                     if (args.qpos):
                         outFile.write("\t{}\t{}".format(qPos, qPos))
                     outFile.write("\n")
@@ -209,6 +259,7 @@ for samFileName in args.sam:
                 tPos += l
             if (op == H):
                 pass
+
         if (foundGap == False and args.gapFree is not None):
             gapFree.write(aln.tName + "\t" + str(aln.tStart) + "\t" + str(aln.tEnd) + "\t" + aln.title + "\n")
 
