@@ -4,7 +4,7 @@ assembly.
 """
 
 # Annotate assembly candidates with coverage.
-rule filter_candidate_regions:
+rule detect_svs:
     input: "assembly_candidates_with_coverage.bed"
     output: "filtered_assembly_candidates_with_coverage.bed"
     params: sge_opts="", max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
