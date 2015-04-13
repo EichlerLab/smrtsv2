@@ -46,6 +46,9 @@ def _get_overlapping_assembly_outputs(wildcards):
 #
 # Define rules.
 #
+rule assemble_with_mhap:
+    input: "merged_assemblies.fasta.fai"
+    params: sge_opts=""
 
 # Index local assemblies FASTA.
 rule index_fasta_from_assemblies:
