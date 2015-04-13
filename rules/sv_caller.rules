@@ -7,7 +7,7 @@ rule call_svs:
     params: sge_opts=""
 
 rule merge_sv_calls:
-    input: expand("sv_calls/annotated.{sv_type}.bed", sv_type=SV_TYPES)
+    input: expand("sv_calls/all_annotated.{sv_type}.bed", sv_type=SV_TYPES)
     output: "sv_calls.bed"
     params: sge_opts=""
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
