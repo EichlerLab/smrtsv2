@@ -2,6 +2,7 @@
 Rules for local assembly of genomic regions.
 """
 import csv
+import os
 
 print("Local assembly with MHAP/Celera")
 
@@ -35,18 +36,48 @@ CADIR = config["mhap_celera"]["celera_dir"]
 # Define helper functions.
 #
 def _get_overlapping_assembly_outputs(wildcards):
-    with open("overlapping_assemblies.bed") as fh:
-        reader = csv.reader(fh, delimiter="\t")
-        return ["%s/%s-%s-%s/contigs_reference_alignment.sam" % (OVERLAPPING_ASSEMBLY_DIR, row[0], row[1], row[2]) for row in reader]
+    if os.path.exists("overlapping_assemblies.bed"):
+        with open("overlapping_assemblies.bed") as fh:
+            reader = csv.reader(fh, delimiter="\t")
+            return ["%s/%s-%s-%s/contigs_reference_alignment.sam" % (OVERLAPPING_ASSEMBLY_DIR, row[0], row[1], row[2]) for row in reader]
+    else:
+        return []
 
 #
 # Define rules.
 #
 
+# Index local assemblies FASTA.
+rule index_fasta_from_assemblies:
+    input: "merged_assemblies.fasta"
+    output: "merged_assemblies.fasta.fai"
+    params: sge_opts=""
+    shell: "samtools faidx {input}"
+
+# Create FASTA from assemblies BAM.
+rule create_fasta_from_assemblies:
+    input: "merged_assemblies.bam"
+    output: "merged_assemblies.fasta"
+    params: sge_opts=""
+    shell: """samtools view {input} | sed 's/\/0_[0-9]\+//' | awk 'OFS="\\t" {{ print ">"$1; print $10 }}' > {output}"""
+
+#
 # Collect assemblies.
+#
+
+rule merge_overlapping_and_nonoverlapping_alignments:
+    input: "overlapping_assemblies.bam", "nonoverlapping_assemblies.bam"
+    output: "merged_assemblies.bam"
+    params: sge_opts=""
+    shell: "samtools merge {output} {input}"
+
+#
+# Analyze overlapping local assemblies.
+#
+
 rule collect_overlapping_assembly_alignments:
     input: regions="overlapping_assemblies.bed", chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"], alignments=_get_overlapping_assembly_outputs
-    output: "overlapping_assemblies_alignments.bam"
+    output: "overlapping_assemblies.bam"
     params: sge_opts=""
     shell: "echo {input.alignments} | tr ' ' '\\n' | xargs -i cat {{}} | samtools view -Sbu -t {input.chromosomes} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
 
@@ -54,7 +85,7 @@ rule align_consensus_to_reference_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta", "{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs_reference_alignment.sam"
     params: sge_opts=""
-    shell: """{BLASR_BIN} {input} -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4 - 1; print }}' > {output}"""
+    shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4 - 1; print }}' | awk 'OFS="\\t" {{ $1=$3"-"$4"-"$4+length($10)"|"$1"|merged"; print }}' > {output}"""
 
 rule extract_reference_sequence:
     input: chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
@@ -110,19 +141,23 @@ rule get_fasta_for_overlapping_region:
         end=lambda wildcards: wildcards["region"].split("-")[2]
     shell: """awk '$1 == "{params.chrom}" && $2 == {params.start} && $3 == {params.end}' {input.regions} | cut -f 5 | tr ',' '\\n' | while read contig; do samtools faidx {input.assemblies} "$contig"; done > {output}"""
 
-# Extract non-overlapping assemblies.
-rule extract_nonoverlapping_assemblies:
-    input: regions="nonoverlapping_assemblies.bed", assemblies="local_assemblies.fasta", index="local_assemblies.fasta.fai"
-    output: "nonoverlapping_assemblies.fasta"
+#
+# Analyze non-overlapping local assemblies.
+#
+
+# Extract alignments for non-overlapping assemblies.
+rule extract_nonoverlapping_assembly_alignments:
+    input: alignments="local_assembly_alignments.bam", regions="nonoverlapping_assemblies.bed", chromosomes=config["reference"]["chromosome_lengths"]
+    output: "nonoverlapping_assemblies.bam"
     params: sge_opts=""
-    shell: """cut -f 5 {input.regions} | while read contig; do samtools faidx {input.assemblies} "$contig"; done > {output}"""
+    shell: "samtools view {input.alignments} | sort -k 1,1 | join -1 5 -2 1 {input.regions} /dev/stdin | sed 's/\s\+/\\t/g' | cut -f 1,6- | samtools view -Sbu -t {input.chromosomes} - | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
 
 # Partition non-overlapping assemblies.
 rule find_nonoverlapping_assemblies:
     input: "local_assembly_overlaps.bed"
     output: "nonoverlapping_assemblies.bed"
     params: sge_opts=""
-    shell: "awk '$4 == 1' {input} > {output}"
+    shell: "awk '$4 == 1' {input} | sort -k 5,5 > {output}"
 
 # Partition overlapping assemblies.
 rule find_overlapping_assemblies:
@@ -138,26 +173,12 @@ rule find_assembly_overlaps:
     params: sge_opts=""
     shell: "bedtools bamtobed -i {input} | awk '$5 > 0' | sed 's/\/0_[0-9]\+//' | bedtools merge -i stdin -d 1 -c 4,4 -o count_distinct,distinct > {output}"
 
-# Index local assemblies FASTA.
-rule index_fasta_from_assemblies:
-    input: "local_assemblies.fasta"
-    output: "local_assemblies.fasta.fai"
-    params: sge_opts=""
-    shell: "samtools faidx {input}"
-
-# Create FASTA from assemblies BAM.
-rule create_fasta_from_assemblies:
-    input: "local_assembly_alignments.bam"
-    output: "local_assemblies.fasta"
-    params: sge_opts=""
-    shell: """samtools view {input} | sed 's/\/0_[0-9]\+//' | awk 'OFS="\\t" {{ print ">"$1; print $10 }}' > {output}"""
-
 # Collect assemblies.
 rule collect_assembly_alignments:
     input: alignments=expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE), chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
     output: "local_assembly_alignments.bam"
     params: sge_opts=""
-    shell: "echo {input.alignments} | tr ' ' '\\n' | xargs -i cat {{}} | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
+    shell: "echo {input.alignments} | tr ' ' '\\n' | xargs -i cat {{}} | sed 's/\/0_[0-9]\+//' | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
