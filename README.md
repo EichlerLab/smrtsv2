@@ -77,10 +77,7 @@ snakemake align_reads
 ## Identify SV candidate regions
 
 Parse alignments to identify SV candidates and produce a list of candidate
-regions for local assembly using no more than 20 CPUs at any given time. All
-output will be written to the current working directory. The `-w` flag instructs
-Snakemake to wait 20 seconds for output files when there is excessive latency on
-the output filesystem.
+regions for local assembly.
 
 ```bash
 snakemake detect_svs
