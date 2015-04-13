@@ -3,6 +3,12 @@
 Structural variant caller for PacBio reads based on methods from [Chaisson et
 al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.html).
 
+The pipeline currently assumes that the analysis will need to start with raw
+input reads prior to alignment against the reference. The complete pipeline can
+be visualize through Snakemake's DAG as follows.
+
+![alt text](https://raw.githubusercontent.com/EichlerLab/pacbio_variant_caller/master/pipeline.png?token=AAFNfPFB6lw3rKXVpwn9my7m5fNDJM-Mks5VNXa3wA%3D%3D "Snakemake DAG for the SV caller pipeline")
+
 ## Install dependencies
 
 The PacBio variant caller has the following dependencies:
@@ -77,11 +83,27 @@ Snakemake to wait 20 seconds for output files when there is excessive latency on
 the output filesystem.
 
 ```bash
-snakemake --cluster "qsub {params.sge_opts}" -w 20 -j 20 assembly_candidates.bed
+snakemake detect_svs
 ```
 
-The caller assumes that the analysis will need to start with raw input reads
-prior to alignment against the reference. The complete pipeline can be visualize
-through Snakemake's DAG as follows.
+## Assemble SV candidate regions
 
-![alt text](https://raw.githubusercontent.com/EichlerLab/pacbio_variant_caller/master/pipeline.png?token=AAFNfD2eMQivs1n82iTL6pD7Mo5TorUuks5U27iIwA%3D%3D "Snakemake DAG for the SV caller pipeline")
+Assemble SV candidate regions with MHAP/Celera. Local assemblies that map to
+overlapping regions of the reference will be reassembled together to create a
+single representative contig for the region. The final assemblies are in
+`merged_assemblies.fasta` and their alignments against the reference are in
+`merged_assemblies.bam`.
+
+```bash
+snakemake assemble_with_mhap
+```
+
+## Distributing analyses on a cluster
+
+SMRT SV is designed to run on a grid engine-style cluster like UGE with 1 or
+more CPUs. For example, to run the SV signature detection method with 20 cores,
+run `snakemake` with the following parameters.
+
+```bash
+snakemake --cluster "qsub {params.sge_opts}" -j 20
+```
