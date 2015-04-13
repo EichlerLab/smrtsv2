@@ -5,7 +5,7 @@ al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.ht
 
 The pipeline currently assumes that the analysis will need to start with raw
 input reads prior to alignment against the reference. The complete pipeline can
-be visualize through Snakemake's DAG as follows.
+be visualized through Snakemake's DAG as follows.
 
 ![alt text](https://raw.githubusercontent.com/EichlerLab/pacbio_variant_caller/master/pipeline.png?token=AAFNfPFB6lw3rKXVpwn9my7m5fNDJM-Mks5VNXa3wA%3D%3D "Snakemake DAG for the SV caller pipeline")
 
