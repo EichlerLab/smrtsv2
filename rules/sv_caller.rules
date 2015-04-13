@@ -7,14 +7,38 @@ rule call_svs:
     params: sge_opts=""
 
 rule merge_sv_calls:
-    input: expand("sv_calls/{sv_type}.bed", sv_type=SV_TYPES)
+    input: expand("sv_calls/annotated.{sv_type}.bed", sv_type=SV_TYPES)
     output: "sv_calls.bed"
     params: sge_opts=""
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
+rule filter_annotated_sv_calls:
+    input: "sv_calls/all_annotated.{sv_type}.bed"
+    output: "sv_calls/annotated.{sv_type}.bed"
+    params: sge_opts=""
+    shell: "grep -v NONE {input} | awk '$10 >= 0.70' > {output}"
+
+rule annotate_sv_calls:
+    input: calls="sv_calls/calls.{sv_type}.bed", repeats="sv_calls/{sv_type}/rm/{sv_type}.fasta.out", masked_fasta="sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
+    output: "sv_calls/all_annotated.{sv_type}.bed"
+    params: sge_opts=""
+    shell: "scripts/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"
+
+rule repeatmask_sv_fasta:
+    input: "sv_calls/{sv_type}/{sv_type}.fasta"
+    output: "sv_calls/{sv_type}/rm/{sv_type}.fasta.out", "sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
+    params: sge_opts="-pe serial 8 -l mfree=1G", threads="8"
+    shell: "RepeatMasker -dir `dirname {output[0]}` -xsmall -no_is -e wublast -s -pa {params.threads} {input}"
+
+rule create_sv_fasta:
+    input: "sv_calls/calls.{sv_type}.bed"
+    output: "sv_calls/{sv_type}/{sv_type}.fasta"
+    params: sge_opts=""
+    shell: "scripts/GapBedToFasta.py {input} {output}"
+
 rule identify_calls_by_type:
     input: "sv_calls/gaps.bed"
-    output: "sv_calls/{sv_type}.bed"
+    output: "sv_calls/calls.{sv_type}.bed"
     params: sge_opts="", window_for_duplicates="100"
     shell: "grep {wildcards.sv_type} {input} | sort -k 1,1 -k 2,2n | scripts/rmdup.py /dev/stdin /dev/stdout --leftjustify --window {params.window_for_duplicates} | scripts/FilterEventListByAssembledTarget.py /dev/stdin {output}"
 
