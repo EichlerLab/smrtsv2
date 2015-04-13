@@ -95,6 +95,15 @@ single representative contig for the region. The final assemblies are in
 snakemake assemble_with_mhap
 ```
 
+## Call SVs from local assemblies
+
+Call SVs from local assemblies based on gaps in their alignments back to the
+reference. The final output is in `sv_calls.bed`.
+
+```bash
+snakemake call_svs
+```
+
 ## Distributing analyses on a cluster
 
 SMRT SV is designed to run on a grid engine-style cluster like UGE with 1 or
