@@ -14,8 +14,7 @@ be visualized through Snakemake's DAG as follows.
 The PacBio variant caller has the following dependencies:
 
   - anaconda (>= 2.1.0)
-  - bamtools (>= 2.3.0)
-  - bedtools (>= 2.21.0)
+  - bedtools (>= 2.23.0)
   - BioPython (>= 1.6.5)
   - R (>= 3.1.0)
   - samtools (>= 1.1)
