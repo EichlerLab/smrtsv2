@@ -1,4 +1,5 @@
 {
+    "reads": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_from_pacbio.all/input.path.fofn",
     "tmp_dir": "/var/tmp/jlhudd/CHM1",
     "reference": {
         "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
@@ -7,9 +8,6 @@
         "chromosome_lengths": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/pacbio_variant_caller/chromInfo.no_alts_chrY.txt",
         "gaps": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/CHM13_redux/gaps.bed",
         "centromeres": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/CHM13_redux/centromeres.bed"
-    },
-    "input": {
-        "reads": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_from_pacbio.all/input.path.fofn"
     },
     "alignment": {
         "size_per_batch": 32212254720,
