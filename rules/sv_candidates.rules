@@ -2,6 +2,20 @@
 Rules to identify SV candidates from read alignments confirmation by for local
 assembly.
 """
+import os
+
+# Load alignments.
+if config.get("alignments"):
+    with open(config["alignments"], "r") as fh:
+        ALIGNMENTS = sorted([line.rstrip() for line in fh])
+
+    PATHS_BY_ALIGNMENT_NAME = dict([(os.path.basename(alignment).rstrip(".bam"), alignment) for alignment in ALIGNMENTS])
+    ALIGNMENT_NAMES = sorted(PATHS_BY_ALIGNMENT_NAME.keys())
+else:
+    ALIGNMENT_NAMES = []
+
+def _get_bam_path_for_batch(wildcards):
+    return PATHS_BY_ALIGNMENT_NAME.get(wildcards.alignment_name)
 
 # Annotate assembly candidates with coverage.
 rule detect_svs:
@@ -89,22 +103,22 @@ rule create_hardstop_breakpoints:
 
 # Collect gaps in one command
 rule collect_hardstops:
-    input: dynamic("hardstops_in_aligned_reads/{batch_id}.bed")
+    input: expand("hardstops_in_aligned_reads/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
     output: "hardstops.bed"
     params: sge_opts="-l mfree=4G"
     shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
 
 # Parse CIGAR string of aligned reads for clipped alignments.
 rule find_hardstops_in_aligned_reads:
-    input: alignments="alignments/{batch_id}.bam"
-    output: "hardstops_in_aligned_reads/{batch_id}.bed"
+    input: alignments=_get_bam_path_for_batch
+    output: "hardstops_in_aligned_reads/{alignment_name}.bed"
     params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), min_clipping="500", bwlimit="20000"
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
-        "scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.batch_id}.bed; "
-        "sort -k 1,1 -k 2,2n -o {TMP_DIR}/hardstops.{wildcards.batch_id}.bed {TMP_DIR}/hardstops.{wildcards.batch_id}.bed; "
-        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.batch_id}.bed {output}"
+        "scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
+        "sort -k 1,1 -k 2,2n -o {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
+        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {output}"
 
 rule create_genomic_bins:
     input: config["reference"]["chromosome_lengths"]
@@ -158,33 +172,44 @@ rule annotate_coverage_of_merged_gap_support:
 
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
-    input: dynamic("aligned_reads_{{event_type}}/{batch_id}.bed")
+    input: expand("aligned_reads_{{event_type}}/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
     output: "merged_support_for_{event_type}.bed"
     params: sge_opts="-l mfree=5G"
     shell: "sort -k 1,1 -k 2,2n -m --buffer-size=4G {input} | python scripts/PrintGapSupport.py /dev/stdin /dev/stdout | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 > {output}"
 
 # Classify insertions and deletions into their own output files.
 rule classify_gaps_in_aligned_reads:
-    input: "gaps_in_aligned_reads/{batch_id}.bed"
-    output: "aligned_reads_{event_type}/{batch_id}.bed"
+    input: "gaps_in_aligned_reads/{alignment_name}.bed"
+    output: "aligned_reads_{event_type}/{alignment_name}.bed"
     params: sge_opts=""
     shell: """awk '$4 == "{wildcards.event_type}"' {input} > {output}"""
 
-# Collect gaps in one command
-rule collect_gaps:
-    input: dynamic("gaps_in_aligned_reads/{batch_id}.bed")
-    output: "gaps.txt"
-    params: sge_opts=""
-    shell: "echo {input} > {output}"
-
 # Parse CIGAR string of aligned reads for insertions and deletions.
 rule find_gaps_in_aligned_reads:
-    input: alignments="alignments/{batch_id}.bam", reference=config["reference"]["assembly"]
-    output: "gaps_in_aligned_reads/{batch_id}.bed"
-    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
+    input: alignments=_get_bam_path_for_batch, reference=config["reference"]["assembly"]
+    output: "gaps_in_aligned_reads/{alignment_name}.bed"
+    params: sge_opts="-l mfree=4G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
-            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed; "
-        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.batch_id}.bed {output}"
+            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed; "
+        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed {output}"
+
+# Collect coverages from all alignments.
+rule merge_coverage_per_batch:
+    input: expand("coverage/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
+    output: "coverage.bed"
+    params: sge_opts="-l mfree=2G", bwlimit="20000"
+    shell: """paste {input} | awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' > {output}"""
+
+# Calculate coverage from each batch.
+rule calculate_coverage_per_batch:
+    input: _get_bam_path_for_batch
+    output: "coverage/{alignment_name}.bed"
+    params: sge_opts="-l mfree=2G", bwlimit="20000"
+    shell:
+        "mkdir -p {TMP_DIR}; "
+        "mkdir -p `dirname {output}`; "
+        "scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
+        "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}"
