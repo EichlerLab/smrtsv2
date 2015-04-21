@@ -188,11 +188,12 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]["assembly"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=4G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
+    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000", patterns_to_exclude="random|chrUn|chrY|chrM"
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
+            """| grep -v -P "({params.patterns_to_exclude})" """
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed; "
         "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed {output}"
 
