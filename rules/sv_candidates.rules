@@ -181,7 +181,7 @@ rule merge_gap_support_from_aligned_reads:
 rule classify_gaps_in_aligned_reads:
     input: "gaps_in_aligned_reads/{alignment_name}.bed"
     output: "aligned_reads_{event_type}/{alignment_name}.bed"
-    params: sge_opts=""
+    params: sge_opts="-l mfree=4G"
     shell: """awk '$4 == "{wildcards.event_type}"' {input} > {output}"""
 
 # Parse CIGAR string of aligned reads for insertions and deletions.
