@@ -16,7 +16,7 @@ def GetStrand(value):
         return 1
     else:
         return 0
-    
+
 
 def IsPrimary(value):
     if (value & 256 != 0):
@@ -54,7 +54,7 @@ class Reference:
         self.name = name
         self.length = length
         self.index = index
-        
+
 
 class SAMHeader:
     def __init__(self):
@@ -119,7 +119,7 @@ def SAMToAccuracy(cigar, readseq, refseq):
             t += cigar[i][1]
             nDel += cigar[i][1]
     return float(nMatch - (nMisMatch + nIns + nDel))/nMatch
-    
+
 class SAMEntry:
     def __init__(self, line):
         v = ParseSamLine(line)
@@ -147,11 +147,11 @@ class SAMEntry:
             prefixSoftClip = self.lengths[0]
         elif (l > 2 and self.ops[1] == 'S'):
             prefixSoftClip = self.lengths[1]
-            
+
 
         # The SAM alignment is in the direction of the target, so
         # the soft clipped end is the beginning of the reverse
-        # strand. 
+        # strand.
         l = len(self.ops)
         if (l > 2 and self.ops[-1] == 'S' and self.ops[-2] != 'S'):
             suffixSoftClip = self.lengths[-1]
@@ -167,13 +167,13 @@ class SAMEntry:
         self.tEnd = self.tPos + self.tLen
         self.line = line
         self.fullReadLength = GetKV("XQ:i:",vals[11:])
-        self.vals = vals        
+        self.vals = vals
         if (self.fullReadLength is not None):
             self.fullReadLength = int(self.fullReadLength)
 
     def PrintIntervals(self, out):
         out.write("{},{}\t{},{}\n".format(self.tStart , self.tEnd, self.qStart, self.qEnd))
-        
+
 titlei = 0
 flagi = 1
 tnamei = 2
@@ -185,7 +185,7 @@ readleni = 7
 seqi = 8
 tleni = 9
 
-            
+
 def ParseSamLine(line):
     try:
         vals = line.split()
@@ -197,26 +197,26 @@ def ParseSamLine(line):
         seq   = vals[9]
         idx = 11
         readlen = len(vals[9])
-    
+
         start = GetKV("XS:i:", vals[11:])
         if (start is not None):
             start = int(start)
         else:
             start = 0
         end   = GetKV("XE:i:", vals[11:])
-    
+
         if (end is not None):
             end = int(end)
         else:
             end = len(seq)
-        
+
         tLen = int(vals[8])
     except:
         print "Error parsing"
         print line
         return None
-        
-        
+
+
     #       0      1     2      3     4      5      6    7,     8      9
     return (title, flag, tName, tPos, mapqv, start, end, readlen, seq, tLen)
 
@@ -233,7 +233,7 @@ def BuildAlignOpStrings(ops, lengths, qPos, tPos, qSeq):
                 if (qPos >= len(qSeq)):
                     print "error at " + str(i)  + " of " + str(len(ops))
                     continue
-                    
+
                 qStr += qSeq[qPos]
                 tStr += "M"
                 qPos += 1
@@ -258,10 +258,10 @@ def Overlap( a, b):
         i,j = 0,1
     else:
         i,j = 1,0
-    
+
     if (v[i][1] < v[j][0]):
         return 0.0
-    
+
     if (v[i][0] < v[j][0]):
         overlap = v[i][1] - v[j][0]
     else:
@@ -269,7 +269,7 @@ def Overlap( a, b):
 
     return abs(float(overlap))
 
-    
+
 def GapBetweenIntervals(a,b):
     if a[1] < b[1]:
         return b[0] - a[1]
@@ -288,7 +288,7 @@ def ReadFAIFile(faiFileName):
 
 
 def ParseRegionStr(regionStr):
-    
+
     a = regionStr.split(':')
     if (len(a) != 2):
         return None
@@ -335,7 +335,7 @@ def BedToRegion(bedline):
 def AddPreSuf(region, fai, pre, suf):
     newRegion = (region[0], max(0, region[1] - pre), min(fai[region[0]][0], region[2] + suf))
     return newRegion
-    
+
 def AddSlop(region, fai, slop):
     newRegion = (region[0], max(0, region[1] - slop), min(fai[region[0]][0], region[2] + slop))
     return newRegion
@@ -363,7 +363,7 @@ def ExtractSeq(region, seqFile, fai):
         sys.exit(0)
 
     seqFile.seek(startFilePos)
-    
+
     seqNewLine = seqFile.read(endFilePos - startFilePos)
     seq = seqNewLine.replace("\n","")
     return seq
@@ -376,7 +376,7 @@ def FindBasFile(barcode, zmw, dirname):
 	    suffix = ".2.bax.h5"
 	else:
 	    suffix = ".3.bax.h5"
-	
+
 	fileName = dirname + "/" + barcode + suffix
 	if (os.path.exists(fileName)):
 	    return fileName
