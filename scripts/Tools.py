@@ -343,7 +343,7 @@ def AddSlop(region, fai, slop):
 
 def ExtractSeq(region, seqFile, fai):
     if (region[0] not in fai):
-        print region[0] + " missing from index file."
+        sys.stderr.write(region[0] + " missing from index file.\n")
         sys.exit(0)
     chrStart   = fai[region[0]][1]
     seqLength  = fai[region[0]][2]
@@ -355,7 +355,12 @@ def ExtractSeq(region, seqFile, fai):
     startFilePos = chrStart + startLine * lineLength + startLinePos
     endFilePos   = chrStart + endLine * lineLength  + endLinePos
     if (startFilePos < 0):
-        print "ERROR! seeking before 0"
+        sys.stderr.write("ERROR! seeking before 0\n")
+        sys.exit(0)
+
+    if endFilePos < startFilePos:
+        sys.stderr.write("ERROR! End position is less than start position\n")
+        sys.exit(0)
 
     seqFile.seek(startFilePos)
     
