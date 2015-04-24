@@ -4,7 +4,6 @@ import sys
 import argparse
 import Tools
 import Align
-import pdb
 from  Bio import SeqIO
 
 
@@ -70,12 +69,12 @@ if (args.sam[0].find(".fofn") >= 0):
     args.sam = samFiles
 lineNumber = 0
 contextLength = 8
-#import pdb
 for samFileName in args.sam:
     samFile = open(samFileName)
 
     for line in samFile:
         lineNumber = lineNumber + 1
+        sys.stderr.write(str(lineNumber) + "\n")
         if (line[0] == "@"):
             if (args.outsam is not None):
                 outsam.write(line)
@@ -158,9 +157,10 @@ for samFileName in args.sam:
         for i in range(len(packedOps)):
             op = packedOps[i]
             l  = packedLengths[i]
+            if (op == S):
+                qPos += l
 
-            if (op == N or op == S):
-                # Inside match block (if op == M)
+            if (op == N):
                 tPos += l
                 qPos += l
             if (op == M):
