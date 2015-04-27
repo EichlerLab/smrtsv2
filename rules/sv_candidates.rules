@@ -134,18 +134,21 @@ rule create_genomic_bins:
 rule plot_candidate_summary:
     input: "sv_candidate_summary.tab"
     output: lengths="sv_candidate_lengths.pdf", support="sv_candidate_support.pdf"
+    params: sge_opts=""
     shell: "Rscript scripts/plot_SV_candidate_summary.R {input} {output.lengths} {output.support}"
 
 # Summarize filtered candidates by event attributes.
 rule summarize_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "sv_candidate_summary.tab"
+    params: sge_opts=""
     shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $4,$5,$6 }}' {input} > {output}"""
 
 # Summarize filtered candidates by event attributes.
 rule combine_filtered_candidates:
     input: expand("filtered_candidates_for_{event_type}.bed", event_type=EVENT_TYPES)
     output: "filtered_candidates.tab"
+    params: sge_opts=""
     shell: "sort -k 1,1 -k 2,2n -m {input} | cut -f 1-4,6 > {output}"
 
 # Filter candidates by support and coverage.
