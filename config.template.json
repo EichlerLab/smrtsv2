@@ -1,16 +1,18 @@
 {
-    "reads": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_from_pacbio.all/input.path.fofn",
-    "tmp_dir": "/var/tmp/jlhudd/CHM1",
+    "reads": "/path/to/input.bax.fofn",
+    "alignments": "/path/to/alignments.fofn",
+    "blasr_bin": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/blasr_jlhudd/alignment/bin/blasr",
+    "tmp_dir": "/var/tmp",
     "reference": {
-        "assembly": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
-        "suffix_array": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.sa",
-        "ctab": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/blasr/ucsc.hg38.no_alts.fasta.ctab",
-        "chromosome_lengths": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/pacbio_variant_caller/chromInfo.no_alts_chrY.txt",
-        "gaps": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/CHM13_redux/gaps.bed",
-        "centromeres": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/CHM13_redux/centromeres.bed"
+        "assembly": "/path/to/assemblies/hg38/ucsc.hg38.no_alts.fasta",
+        "suffix_array": "/path/to/assemblies/hg38/ucsc.hg38.no_alts.fasta.sa",
+        "ctab": "/path/to/assemblies/hg38/ucsc.hg38.no_alts.fasta.ctab",
+        "chromosome_lengths": "/path/to/assemblies/hg38/chromInfo.no_alts.txt",
+        "gaps": "/path/to/assemblies/hg38/gaps.bed",
+        "centromeres": "/path/to/assemblies/hg38/centromeres.bed"
     },
     "alignment": {
-        "size_per_batch": 32212254720,
+        "size_per_batch": 214748364800,
         "mapping_quality": 30
     },
     "detection": {
@@ -22,27 +24,30 @@
         "min_hardstop_support": 11,
         "max_inaccessible_support": 5,
         "max_candidate_length": 60000,
-        "regions_to_exclude": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/regions_to_exclude.bed"
+        "regions_to_exclude": "/path/to/regions_to_exclude_like_centromeres.bed"
     },
     "assembly": {
         "assembler": "mhap_celera",
-        "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
-        "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
-        "mapping_quality": 30
+        "runCA": "/path/to/celera/bin/runCA",
+        "fastqToCA": "/path/to/celera/bin/fastqToCA",
+        "mapping_quality": 30,
+        "regions_to_assemble": "/path/to/working/directory/filtered_assembly_candidates_with_coverage.bed",
+        "log": "/path/to/working/directory/assembly.log"
     },
     "mhap_celera": {
-        "celera_dir": "/net/eichler/vol5/home/mchaisso/software/wgs-8.3rc1/Linux-amd64/bin",
-        "bin_dir": "/net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts",
-        "celera_spec": "/net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts/local_assembly/mhap/pacbio.local_human.spec",
-        "bas_template": "/net/eichler/vol20/projects/pacbio/nobackups/CHM1_Chaisson_2014/m130928_232712_42213_c100518541910000001823079209281310_s1_p0.1.bax.h5"
-    }
+        "celera_dir": "/path/to/celera/bin",
+        "bin_dir": "/path/to/mhap/celera/scripts",
+        "celera_spec": "/path/to/celera/specifications/pacbio.local_human.spec",
+        "bas_template": "/path/to/representative/hdf5/file/for/chemistry/m130928_232712_42213_c100518541910000001823079209281310_s1_p0.1.bax.h5",
+        "blasr_dir": "/path/to/blasr/bin"
+    },
     "gap_extension": {
         "min_coverage": 5,
         "max_coverage": 100,
-        "regions_to_assemble": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/test_sv_caller/pacbio_variant_caller/gaps_to_assemble.bed",
-        "assembler": "celera",
-        "runCA": "~mchaisso/software/wgs-8.1/Linux-amd64/bin/runCA",
-        "fastqToCA": "~mchaisso/software/source/celera-svn/wgs/Linux-amd64/bin/fastqToCA",
+        "regions_to_assemble": "/path/to/working/directory/gaps_to_assemble.bed",
+        "assembler": "mhap_celera",
+        "runCA": "/path/to/celera/bin/runCA",
+        "fastqToCA": "/path/to/celera/bin/fastqToCA",
         "mapping_quality": 30
     }
 }
