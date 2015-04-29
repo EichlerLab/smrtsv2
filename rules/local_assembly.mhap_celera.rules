@@ -190,7 +190,7 @@ rule assemble_region:
     output: "{ASSEMBLY_DIR}/{region}/consensus_reference_alignment.sam"
     # Limit run time of the assembly to 2 hours to prevent long-running assembly
     # of overly difficult regions.
-    params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00"
+    params: sge_opts="-l mfree=3G -pe serial 4 -l disk_free=10G -l h_rt=02:00:00"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
