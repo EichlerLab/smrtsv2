@@ -94,7 +94,7 @@ rule assemble_reads:
         try:
             shell("module load perl/latest && module load java/8u25 && {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
             if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
-                shell("cp {assembly_output} {output}")
+                shell("cat {assembly_output} > {output}")
                 shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["assembly"]["log"])
                 assembly_exists = True
             else:
