@@ -16,7 +16,7 @@ print("Local assembly with MHAP/Celera")
 # the entire genome.
 
 # Load regions to assemble.
-if config.get("assembly") and config["assembly"].get("regions_to_assemble"):
+if not os.path.exists("local_assembly_alignments.bam") and config.get("assembly") and config["assembly"].get("regions_to_assemble"):
     with open(config["assembly"]["regions_to_assemble"], "r") as fh:
         REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh if line.rstrip()]
 else:
