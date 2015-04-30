@@ -44,6 +44,12 @@ def _get_overlapping_assembly_outputs(wildcards):
         return []
 
 #
+# Settings for rules
+#
+
+localrules: get_fasta_for_overlapping_region, get_fastq_for_overlapping_region, get_celera_fragments_for_overlapping_region, extract_reference_sequence
+
+#
 # Define rules.
 #
 rule assemble_with_mhap:
