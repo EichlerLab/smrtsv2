@@ -16,7 +16,7 @@ print("Local assembly with MHAP/Celera")
 # the entire genome.
 
 # Load regions to assemble.
-if config.get("assembly") and config["assembly"].get("regions_to_assemble"):
+if not os.path.exists("local_assembly_alignments.bam") and config.get("assembly") and config["assembly"].get("regions_to_assemble"):
     with open(config["assembly"]["regions_to_assemble"], "r") as fh:
         REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh if line.rstrip()]
 else:
@@ -42,6 +42,12 @@ def _get_overlapping_assembly_outputs(wildcards):
             return ["%s/%s-%s-%s/contigs_reference_alignment.sam" % (OVERLAPPING_ASSEMBLY_DIR, row[0], row[1], row[2]) for row in reader]
     else:
         return []
+
+#
+# Settings for rules
+#
+
+localrules: get_fasta_for_overlapping_region, get_fastq_for_overlapping_region, get_celera_fragments_for_overlapping_region, extract_reference_sequence
 
 #
 # Define rules.
@@ -88,7 +94,7 @@ rule align_consensus_to_reference_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta", "{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs_reference_alignment.sam"
     params: sge_opts="-l mfree=2G"
-    shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4 - 1; print }}' | awk 'OFS="\\t" {{ $1=$3"-"$4"-"$4+length($10)"|"$1"|merged"; print }}' > {output}"""
+    shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' | awk 'OFS="\\t" {{ $1=$3"-"$4"-"$4+length($10)"|"$1"|merged"; print }}' > {output}"""
 
 rule extract_reference_sequence:
     input: chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
