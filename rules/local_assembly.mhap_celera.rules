@@ -187,7 +187,7 @@ rule build_local_assemblies_fasta:
 rule collect_assembly_alignments:
     input: alignments=expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE), chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
     output: "local_assembly_alignments.bam"
-    params: sge_opts="-l mfree=20G"
+    params: sge_opts="-l mfree=30G"
     run:
         list_filename = output[0].replace("bam", "list.txt")
         with open(list_filename, "w") as oh:
