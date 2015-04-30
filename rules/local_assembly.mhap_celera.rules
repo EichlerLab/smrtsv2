@@ -176,6 +176,13 @@ rule find_assembly_overlaps:
     params: sge_opts=""
     shell: "bedtools bamtobed -i {input} | awk '$5 > 0' | sed 's/\/0_[0-9]\+//' | bedtools merge -i stdin -d 1 -c 4,4 -o count_distinct,distinct > {output}"
 
+# Get FASTA for assemblies.
+rule build_local_assemblies_fasta:
+    input: "local_assembly_alignments.bam"
+    output: "local_assemblies.fasta"
+    params: sge_opts=""
+    shell: """samtools view {input} | awk 'OFS="\\t" {{ print ">"$1; print $10 }}' > {output}"""
+
 # Collect assemblies.
 rule collect_assembly_alignments:
     input: alignments=expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE), chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
