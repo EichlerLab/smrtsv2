@@ -124,9 +124,9 @@ rule assemble_overlapping_region:
         except Exception as error:
             shell("""echo -e "{wildcards.region}\tassembly_crashed\t`grep ERROR assembly.log | tr '\n' '|'`\t%s" >> %s""" % (error, config["assembly"]["log"]))
 
-        # Create an empty assembly for failed regions.
+        # Use the original assemblies if the meta-assembly failed.
         if not assembly_exists:
-            shell("echo -e '>{wildcards.region}\nN' > {output}")
+            shell("cat `echo {input} | sed 's/.frg/.fasta/'` > {output}")
 
 rule get_celera_fragments_for_overlapping_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fastq"
