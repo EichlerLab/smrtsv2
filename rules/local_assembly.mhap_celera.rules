@@ -187,8 +187,14 @@ rule build_local_assemblies_fasta:
 rule collect_assembly_alignments:
     input: alignments=expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE), chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
     output: "local_assembly_alignments.bam"
-    params: sge_opts=""
-    shell: """find ./mhap_assembly -maxdepth 2 -name "consensus_reference_alignment.sam" | while read file; do sed 's/\/0_[0-9]\+//' $file; done | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"""
+    params: sge_opts="-l mfree=20G"
+    run:
+        list_filename = output[0].replace("bam", "list.txt")
+        with open(list_filename, "w") as oh:
+            for i in input.alignments:
+                oh.write("%s\n" % i)
+
+        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | awk 'OFS="\\t" {{ $4 = $4 + 1; print }}' | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
