@@ -94,7 +94,7 @@ rule align_consensus_to_reference_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta", "{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs_reference_alignment.sam"
     params: sge_opts="-l mfree=2G"
-    shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4 - 1; print }}' | awk 'OFS="\\t" {{ $1=$3"-"$4"-"$4+length($10)"|"$1"|merged"; print }}' > {output}"""
+    shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' | awk 'OFS="\\t" {{ $1=$3"-"$4"-"$4+length($10)"|"$1"|merged"; print }}' > {output}"""
 
 rule extract_reference_sequence:
     input: chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
