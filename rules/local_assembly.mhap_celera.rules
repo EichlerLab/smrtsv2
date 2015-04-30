@@ -114,7 +114,7 @@ rule assemble_overlapping_region:
         assembly_output = "%s/9-terminator/region.utg.fasta" % assembly_output_dir
         assembly_exists = False
         try:
-            shell("{CADIR}/runCA -p region -d {assembly_output_dir} {input} ovlThreads={params.threads} doOverlapBasedTrimming=0 doDeDuplication=0 &> {assembly_region_dir}/assembly.log")
+            shell(". config.sh; {CADIR}/runCA -p region -d {assembly_output_dir} {input} ovlThreads={params.threads} doOverlapBasedTrimming=0 doDeDuplication=0 &> {assembly_region_dir}/assembly.log")
             if os.path.exists(assembly_output):
                 shell("cp {assembly_output} {output}")
                 shell("""echo -e "{wildcards.region}\tassembly_exists" >> %s""" % config["assembly"]["log"])
