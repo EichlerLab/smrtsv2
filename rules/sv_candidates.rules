@@ -30,7 +30,7 @@ rule detect_svs:
 
 # Annotate assembly candidates with coverage.
 rule annotate_coverage_for_candidates:
-    input: candidates="assembly_candidates.bed", coverage="coverage.bed"
+    input: candidates="assembly_candidates_and_windows.bed", coverage="coverage.bed"
     output: "assembly_candidates_with_coverage.bed"
     params: sge_opts=""
     shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
