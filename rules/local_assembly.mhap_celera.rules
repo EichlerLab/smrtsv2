@@ -87,8 +87,14 @@ rule merge_overlapping_and_nonoverlapping_alignments:
 rule collect_overlapping_assembly_alignments:
     input: regions="overlapping_assemblies.bed", chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"], alignments=_get_overlapping_assembly_outputs
     output: "overlapping_assemblies.bam"
-    params: sge_opts=""
-    shell: "echo {input.alignments} | tr ' ' '\\n' | xargs -i cat {{}} | samtools view -Sbu -t {input.chromosomes} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
+    params: sge_opts="-l mfree=10G"
+    run:
+        list_filename = output[0].replace("bam", "list.txt")
+        with open(list_filename, "w") as oh:
+            for i in input.alignments:
+                oh.write("%s\n" % i)
+
+        shell("""mkdir -p {TMP_DIR}; while read file; do cat $file; done < %s | samtools view -Sbu -t {input.chromosomes} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
 
 rule align_consensus_to_reference_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta", "{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta"
