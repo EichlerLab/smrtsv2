@@ -164,7 +164,7 @@ rule get_fasta_for_overlapping_region:
 rule extract_nonoverlapping_assembly_alignments:
     input: alignments="local_assembly_alignments.bam", regions="nonoverlapping_assemblies.bed", chromosomes=config["reference"]["chromosome_lengths"]
     output: "nonoverlapping_assemblies.bam"
-    params: sge_opts=""
+    params: sge_opts="-l mfree=6G"
     shell: "samtools view {input.alignments} | sort -k 1,1 | join -1 5 -2 1 {input.regions} /dev/stdin | sed 's/\s\+/\\t/g' | cut -f 1,6- | samtools view -Sbu -t {input.chromosomes} - | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}"
 
 # Partition non-overlapping assemblies.
