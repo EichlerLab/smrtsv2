@@ -135,5 +135,6 @@ rule get_reads:
     output: "reads.sam"
     params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
     shell:
+        "sleep $[ ( $RANDOM % 5 ) ]m; "
         "head -n 1 {input} | xargs -i samtools view -H {{}} > {output}; "
         "cat {input} | xargs -i samtools view -q {params.mapping_quality_threshold} {{}} {STANDARD_REGION} >> {output}"
