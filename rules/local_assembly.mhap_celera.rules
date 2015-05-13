@@ -219,9 +219,10 @@ rule assemble_region:
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
+        "mkdir -p {ASSEMBLY_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
         "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ANALYSIS_DIR/{input} region={wildcards.region}; "
         "popd; "
-        "rsync -ra {TMP_DIR}/{wildcards.region} {ASSEMBLY_DIR}/; "
+        "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log {ASSEMBLY_DIR}/{wildcards.region}/; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
