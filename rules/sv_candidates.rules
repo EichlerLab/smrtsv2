@@ -4,8 +4,8 @@ assembly.
 """
 import os
 
-# Load alignments.
-if config.get("alignments"):
+# Load alignments if they already exist.
+if config.get("alignments") and os.path.exists(config.get("alignments")):
     with open(config["alignments"], "r") as fh:
         ALIGNMENTS = sorted([line.rstrip() for line in fh])
 
