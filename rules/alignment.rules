@@ -2,6 +2,7 @@
 Rules to align PacBio reads to a given reference assembly and summarize
 alignments.
 """
+localrules: assign_batches
 
 # Create a list of BAM files for downstream analysis.
 rule align_reads:
