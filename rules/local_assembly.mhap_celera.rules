@@ -225,4 +225,5 @@ rule assemble_region:
         "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ANALYSIS_DIR/{input} region={wildcards.region}; "
         "popd; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log {ASSEMBLY_DIR}/{wildcards.region}/; "
+        "touch {ASSEMBLY_DIR}/{wildcards.region}/consensus_reference_alignment.sam; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
