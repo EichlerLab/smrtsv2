@@ -115,3 +115,10 @@ run `snakemake` with the following parameters.
 ```bash
 snakemake --cluster "qsub {params.sge_opts}" -j 20
 ```
+
+If the DRMAA library is available, use this to get better control over job
+execution on the cluster.
+
+```bash
+snakemake --drmaa " -q all.q -V -cwd -e ./log -o ./log {params.sge_opts}" -j 20 -w 30
+```
