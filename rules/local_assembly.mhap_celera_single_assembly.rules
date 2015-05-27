@@ -11,6 +11,10 @@ BLASR_DIR = config["mhap_celera"]["blasr_dir"]
 CELERA_SPEC = config["mhap_celera"]["celera_spec"]
 BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 
+# By default delay jobs for a random amount of time up to this value to prevent
+# too much I/O from simultaneous assemblies.
+DEFAULT_MAX_DELAY = 5
+
 # User-defined file of alignments with one absolute path to a BAM per line.
 ALIGNMENTS = config["alignments"]
 
@@ -133,8 +137,8 @@ rule convert_reads_to_bam:
 rule get_reads:
     input: ALIGNMENTS
     output: "reads.sam"
-    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
+    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), max_delay=str(config["assembly"].get("minutes_to_delay_jobs", DEFAULT_MAX_DELAY))
     shell:
-        "sleep $[ ( $RANDOM % 5 ) ]m; "
+        "sleep $[ ( $RANDOM % {params.max_delay} ) ]m; "
         "head -n 1 {input} | xargs -i samtools view -H {{}} > {output}; "
         "cat {input} | xargs -i samtools view -q {params.mapping_quality_threshold} {{}} {STANDARD_REGION} >> {output}"
