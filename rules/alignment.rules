@@ -41,7 +41,7 @@ rule get_subread_and_alignment_lengths:
 rule align_batch:
     input: reads="batched_reads/{batch_id}.fofn", reference=config["reference"]["assembly"], suffix=config["reference"]["suffix_array"], ctab=config["reference"]["ctab"]
     output: "alignments/{batch_id}.bam"
-    params: sge_opts="-l disk_free=70G -l mfree=3.25G -pe serial 12 -N align_batch_{batch_id}", threads="10", samtools_threads="2", samtools_memory="4G", bwlimit="20000"
+    params: sge_opts="-l disk_free=200G -l mfree=3.25G -pe serial 12 -N align_batch_{batch_id}", threads="10", samtools_threads="2", samtools_memory="4G", bwlimit="30000"
     shell:
         "mkdir -p {TMP_DIR}/{wildcards.batch_id}; "
         "cd {TMP_DIR}/{wildcards.batch_id}; "
