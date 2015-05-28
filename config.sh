@@ -1,5 +1,6 @@
 module load anaconda/2.1.0
 module load bedtools/2.23.0
+module load blasr/dev
 module load freebayes/0.9.14
 module load samtools/1.1
 
