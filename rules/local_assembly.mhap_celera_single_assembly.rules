@@ -3,13 +3,17 @@ import os
 
 configfile: "config.json"
 
-BLASR_BIN = "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/blasr_jlhudd/alignment/bin/blasr"
 REFERENCE = config["reference"]["assembly"]
 CADIR = config["mhap_celera"]["celera_dir"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
 BLASR_DIR = config["mhap_celera"]["blasr_dir"]
+BLASR_BIN = "%s/blasr" % BLASR_DIR
 CELERA_SPEC = config["mhap_celera"]["celera_spec"]
 BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
+
+# By default delay jobs for a random amount of time up to this value to prevent
+# too much I/O from simultaneous assemblies.
+DEFAULT_MAX_DELAY = 5
 
 # User-defined file of alignments with one absolute path to a BAM per line.
 ALIGNMENTS = config["alignments"]
@@ -67,9 +71,9 @@ rule convert_assembly_alignments_to_hdf5:
     output: "alignment.cmp.h5"
     params: sge_opts=""
     shell:
-        "{BLASR_DIR}/pbihdfutils/bin/samtoh5 {input.alignments} {input.assembly} {output} -useShortRefName; "
+        "{BLASR_DIR}/samtoh5 {input.alignments} {input.assembly} {output} -useShortRefName; "
         "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && cmph5tools.py sort --deep {output}; "
-        "{BLASR_DIR}/pbihdfutils/bin/loadPulses {input.reads} {output} -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
+        "{BLASR_DIR}/loadPulses {input.reads} {output} -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
         "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && {BIN_DIR}/local_assembly/LoadGenericChemistry.py {BAS_TEMPLATE} {output}"
 
 rule map_reads_to_assembly:
@@ -110,7 +114,7 @@ rule convert_reads_to_bas:
     input: "reads.bam"
     output: "reads.bas.h5"
     params: sge_opts=""
-    shell: "samtools view -h {input} | {BLASR_DIR}/pbihdfutils/bin/samtobas /dev/stdin {output}"
+    shell: "samtools view -h {input} | {BLASR_DIR}/samtobas /dev/stdin {output}"
 
 rule convert_reads_to_fastq:
     input: "reads.fasta"
@@ -133,8 +137,8 @@ rule convert_reads_to_bam:
 rule get_reads:
     input: ALIGNMENTS
     output: "reads.sam"
-    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
+    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), max_delay=str(config["assembly"].get("minutes_to_delay_jobs", DEFAULT_MAX_DELAY))
     shell:
-        "sleep $[ ( $RANDOM % 5 ) ]m; "
+        "sleep $[ ( $RANDOM % {params.max_delay} ) ]m; "
         "head -n 1 {input} | xargs -i samtools view -H {{}} > {output}; "
         "cat {input} | xargs -i samtools view -q {params.mapping_quality_threshold} {{}} {STANDARD_REGION} >> {output}"

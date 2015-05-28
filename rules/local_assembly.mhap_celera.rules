@@ -215,7 +215,7 @@ rule assemble_region:
     output: "{ASSEMBLY_DIR}/{region}/consensus_reference_alignment.sam"
     # Limit run time of the assembly to 45 minutes to prevent long-running
     # assembly of overly difficult regions.
-    params: sge_opts="-l mfree=3G -pe serial 4 -l disk_free=10G -l h_rt=00:45:00"
+    params: sge_opts="-l mfree=3G -pe serial 4 -l disk_free=10G -l s_rt=00:45:00"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
@@ -225,4 +225,5 @@ rule assemble_region:
         "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ANALYSIS_DIR/{input} region={wildcards.region}; "
         "popd; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log {ASSEMBLY_DIR}/{wildcards.region}/; "
+        "touch {ASSEMBLY_DIR}/{wildcards.region}/consensus_reference_alignment.sam; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
