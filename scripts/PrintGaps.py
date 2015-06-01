@@ -57,7 +57,7 @@ fai = Tools.ReadFAIFile(args.genome + ".fai")
 if (args.outsam is not None):
     outsam = open(args.outsam, 'w')
 
-snvOut = None
+snvOut = None    
 if (args.snv is not None):
     snvOut = open(args.snv, 'w')
 
@@ -77,6 +77,9 @@ if (args.sam[0].find(".fofn") >= 0):
     args.sam = samFiles
 lineNumber = 0
 contextLength = 8
+#import pdb
+import re
+coordRe = re.compile(".*(chr.*)\.(\d+)-(\d+).*")
 for samFileName in args.sam:
     samFile = open(samFileName)
 
@@ -95,9 +98,21 @@ for samFileName in args.sam:
             continue
 
         if (args.onTarget == True):
-            srcChrom = aln.title.split(":")[0]
-            if (srcChrom != aln.tName):
-                continue
+            coordReMatch = coordRe.match(aln.title)
+            if (coordReMatch is not None):
+                coordMatchGroups = coordReMatch.groups()
+                srcChrom = coordMatchGroups[0]
+                srcStart = int(coordMatchGroups[1])
+                srcEnd   = int(coordMatchGroups[2])
+                aln.tStart -=1
+                aln.tEnd -=1
+                if (srcChrom != aln.tName):
+                    print "off target chromosome: " + srcChrom + " " + aln.tName
+                    continue
+                if (((srcStart >= aln.tStart and srcStart < aln.tEnd) or (srcEnd >= aln.tStart and srcEnd < aln.tEnd) or (srcStart < aln.tStart and srcEnd > aln.tEnd )) == False):
+                    print "no overlap " + srcChrom + " " + str(srcStart) + " " + str(srcEnd) + " alignment: " + str(aln.tStart) + " "+ str(aln.tEnd)
+                    continue
+
         if (aln.flag & 256 != 0):
             continue
         if (aln.mapqv < args.minq):
@@ -106,6 +121,8 @@ for samFileName in args.sam:
         if (args.contigBed is not None):
             contigBed.write("{}\t{}\t{}\t{}\n".format(aln.tName, aln.tStart, aln.tStart + aln.tlen, aln.title))
 
+        if (args.minContigLength > len(aln.seq)):
+            continue
         tPos = aln.tStart
         qPos = 0
         #
@@ -117,58 +134,82 @@ for samFileName in args.sam:
         niter = 0
         maxGap = 0
         maxGapType = 0
-        packedOps = []
-        packedLengths = []
         #print str(aln.ops)
 
         foundGap = False
 
-        while (i < len(aln.lengths)):
-            l = aln.lengths[i]
-            op = aln.ops[i]
-            j = i
-            if (op == I or op == D):
-                if (l > maxGap):
-                    maxGap = l
-                    maxGapType = op
+        if (args.removeAdjacentIndels):
+            for i in range(1,len(aln.lengths)-1):
+                if (aln.ops[i-1] != 'M' and
+                    aln.ops[i+1] != 'M' and
+                    aln.ops[i-1] != aln.ops[i+1] and
+                    aln.ops[i] == 'M' and
+                    aln.lengths[i-1] == aln.lengths[i+1] and
+                    aln.lengths[i] < 4):
+                    aln.lengths[i-1] = 0
+                    aln.lengths[i+1] = 0
+                    
+            newLengths = []
+            newOps = []
+            for i in range(0,len(aln.lengths)):
+                if (aln.lengths[i] != 0):
+                    newLengths.append(aln.lengths[i])
+                    newOps.append(aln.ops[i])
+            aln.lengths = newLengths
+            aln.ops = newOps
 
-            if (op == I or op == D and i < len(aln.ops) - 2 and aln.ops[i+2][0] == op):
-                matchLen = 0
-                gapLen   = 0
-                while (j+2 < len(aln.ops) and aln.ops[j+2][0] == op and aln.ops[j+1][0] == M and aln.lengths[j+1] < args.condense):
-
-                    matchLen += aln.lengths[j+1]
-                    gapLen   += aln.lengths[j+2]
-                    j+=2
-                if (j > i):
-                    newIndel = (op, l+gapLen)
-                    newMatch = (M, matchLen)
-                    packedOps.append(op)
-                    packedLengths.append(l+gapLen)
-
-                    packedOps.append(M)
-                    packedLengths.append(matchLen)
-
+        packedOps = []
+        packedLengths = []
+        i = 0
+        if (args.condense > 0):
+            while (i < len(aln.lengths)):
+                l = aln.lengths[i]
+                op = aln.ops[i]
+                j = i
+                if (op == I or op == D):
+                    if (l > maxGap):
+                        maxGap = l
+                        maxGapType = op
+                    
+                if (op == I or op == D and i < len(aln.ops) - 2 and aln.ops[i+2][0] == op):
+                    matchLen = 0
+                    gapLen   = 0
+                    while (j+2 < len(aln.ops) and aln.ops[j+2][0] == op and aln.ops[j+1][0] == M and aln.lengths[j+1] < args.condense):
+    
+                        matchLen += aln.lengths[j+1]
+                        gapLen   += aln.lengths[j+2]
+                        j+=2
+                    if (j > i):
+                        newIndel = (op, l+gapLen)
+                        newMatch = (M, matchLen)
+                        packedOps.append(op)
+                        packedLengths.append(l+gapLen)
+                        
+                        packedOps.append(M)
+                        packedLengths.append(matchLen)
+    
+                    else:
+                        packedLengths.append(l)
+                        packedOps.append(op)
+    
                 else:
                     packedLengths.append(l)
                     packedOps.append(op)
-
-            else:
-                packedLengths.append(l)
-                packedOps.append(op)
-
-            i = j + 1
-            niter +=1
-            if (niter > len(aln.ops)):
-                sys.stderr.write("ERROR! too many interations.\n")
+            
+                i = j + 1
+                niter +=1
+                if (niter > len(aln.ops)):
+                    print "ERROR! too many interations."
+        else:
+            packedOps = aln.ops
+            packedLengths = aln.lengths
 
         for i in range(len(packedOps)):
             op = packedOps[i]
             l  = packedLengths[i]
-            if (op == S):
-                qPos += l
-
-            if (op == N):
+    
+            if (op == N or op == S):
+                # Inside match block (if op == M)
                 tPos += l
                 qPos += l
             if (op == M):
@@ -186,7 +227,7 @@ for samFileName in args.sam:
                 qPos += l
 
             if (op == I):
-                if (l > args.minLength and (args.maxLength is None or l < args.maxLength)):
+                if (l >= args.minLength and (args.maxLength is None or l < args.maxLength)):
                     #                    print "gap at " + str(i) + " " + str(op) + " " + str(l) + " " + str(qPos) + " qlen: " + str(len(aln.seq))
                     foundGap = True
                     chrName = aln.tName
@@ -238,8 +279,8 @@ for samFileName in args.sam:
 
                 qPos += l
             if (op == D):
-                if (l > args.minLength and (args.maxLength is None or l < args.maxLength)):
-                    foundGap = True
+                if (l >= args.minLength and (args.maxLength is None or l < args.maxLength)):
+                    foundGap = True                    
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
                         sys.stderr.write("ERROR! tpos is past the genome end." + str(tPos) + " " + str(fai[chrName][0]) + "\n")
