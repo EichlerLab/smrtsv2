@@ -49,7 +49,7 @@ blacklist = {}
 if (args.blacklist is not None):
     bl = open(args.blacklist)
     blacklist = { i.strip() : true for i in bl.readlines() }
-    
+
 fai = Tools.ReadFAIFile(args.genome + ".fai")
 
 #genomeDict = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
@@ -57,7 +57,7 @@ fai = Tools.ReadFAIFile(args.genome + ".fai")
 if (args.outsam is not None):
     outsam = open(args.outsam, 'w')
 
-snvOut = None    
+snvOut = None
 if (args.snv is not None):
     snvOut = open(args.snv, 'w')
 
@@ -148,7 +148,7 @@ for samFileName in args.sam:
                     aln.lengths[i] < 4):
                     aln.lengths[i-1] = 0
                     aln.lengths[i+1] = 0
-                    
+
             newLengths = []
             newOps = []
             for i in range(0,len(aln.lengths)):
@@ -170,12 +170,12 @@ for samFileName in args.sam:
                     if (l > maxGap):
                         maxGap = l
                         maxGapType = op
-                    
+
                 if (op == I or op == D and i < len(aln.ops) - 2 and aln.ops[i+2][0] == op):
                     matchLen = 0
                     gapLen   = 0
                     while (j+2 < len(aln.ops) and aln.ops[j+2][0] == op and aln.ops[j+1][0] == M and aln.lengths[j+1] < args.condense):
-    
+
                         matchLen += aln.lengths[j+1]
                         gapLen   += aln.lengths[j+2]
                         j+=2
@@ -184,18 +184,18 @@ for samFileName in args.sam:
                         newMatch = (M, matchLen)
                         packedOps.append(op)
                         packedLengths.append(l+gapLen)
-                        
+
                         packedOps.append(M)
                         packedLengths.append(matchLen)
-    
+
                     else:
                         packedLengths.append(l)
                         packedOps.append(op)
-    
+
                 else:
                     packedLengths.append(l)
                     packedOps.append(op)
-            
+
                 i = j + 1
                 niter +=1
                 if (niter > len(aln.ops)):
@@ -207,7 +207,7 @@ for samFileName in args.sam:
         for i in range(len(packedOps)):
             op = packedOps[i]
             l  = packedLengths[i]
-    
+
             if (op == N or op == S):
                 # Inside match block (if op == M)
                 tPos += l
@@ -280,7 +280,7 @@ for samFileName in args.sam:
                 qPos += l
             if (op == D):
                 if (l >= args.minLength and (args.maxLength is None or l < args.maxLength)):
-                    foundGap = True                    
+                    foundGap = True
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
                         sys.stderr.write("ERROR! tpos is past the genome end." + str(tPos) + " " + str(fai[chrName][0]) + "\n")
