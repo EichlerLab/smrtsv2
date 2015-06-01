@@ -45,6 +45,11 @@ if (args.gapFree is not None):
 if (args.contigBed is not None):
     contigBed = open(args.contigBed, 'w')
 
+blacklist = {}
+if (args.blacklist is not None):
+    bl = open(args.blacklist)
+    blacklist = { i.strip() : true for i in bl.readlines() }
+    
 fai = Tools.ReadFAIFile(args.genome + ".fai")
 
 #genomeDict = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
