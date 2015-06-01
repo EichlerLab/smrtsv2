@@ -85,7 +85,7 @@ for samFileName in args.sam:
 
     for line in samFile:
         lineNumber = lineNumber + 1
-        sys.stderr.write(str(lineNumber) + "\n")
+
         if (line[0] == "@"):
             if (args.outsam is not None):
                 outsam.write(line)
