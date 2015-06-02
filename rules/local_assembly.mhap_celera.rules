@@ -43,6 +43,9 @@ def _get_overlapping_assembly_outputs(wildcards):
     else:
         return []
 
+def _get_assembly_alignments(wildcards):
+    return ["mhap_assembly/{chromosome}/{region}/consensus_reference_alignment.sam".format(chromosome=region.split("-")[0], region=region) for region in REGIONS_TO_ASSEMBLE]
+
 #
 # Settings for rules
 #
@@ -197,7 +200,7 @@ rule build_local_assemblies_fasta:
 
 # Collect assemblies.
 rule collect_assembly_alignments:
-    input: alignments=expand("mhap_assembly/{region}/consensus_reference_alignment.sam", region=REGIONS_TO_ASSEMBLE), chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
+    input: alignments=_get_assembly_alignments, chromosome_lengths=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
     output: "local_assembly_alignments.bam"
     params: sge_opts="-l mfree=30G"
     run:
@@ -212,18 +215,17 @@ rule collect_assembly_alignments:
 # TODO: remove dependencies on Eichler modules.
 rule assemble_region:
     input: "alignments.fofn"
-    output: "{ASSEMBLY_DIR}/{region}/consensus_reference_alignment.sam"
+    output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
     # Limit run time of the assembly to 45 minutes to prevent long-running
     # assembly of overly difficult regions.
     params: sge_opts="-l mfree=3G -pe serial 4 -l disk_free=10G -l s_rt=00:45:00"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
-        "mkdir -p {ASSEMBLY_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
         "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ANALYSIS_DIR/{input} region={wildcards.region}; "
         "popd; "
-        "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log {ASSEMBLY_DIR}/{wildcards.region}/; "
-        "touch {ASSEMBLY_DIR}/{wildcards.region}/consensus_reference_alignment.sam; "
+        "mkdir -p `dirname {output[0]}`; "
+        "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
         "rm -rf {TMP_DIR}/{wildcards.region}"
