@@ -24,7 +24,9 @@
         "min_hardstop_support": 11,
         "max_inaccessible_support": 5,
         "max_candidate_length": 60000,
-        "regions_to_exclude": "/path/to/regions_to_exclude_like_centromeres.bed"
+        "regions_to_exclude": "/path/to/regions_to_exclude_like_centromeres.bed",
+        "tile_window_size": 60000,
+        "tile_window_slide": 20000
     },
     "assembly": {
         "assembler": "mhap_celera",
