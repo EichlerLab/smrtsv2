@@ -103,12 +103,14 @@ rule align_consensus_to_reference_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/assembly.fasta", "{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs_reference_alignment.sam"
     params: sge_opts="-l mfree=4G"
+    priority: 30
     shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' | awk 'OFS="\\t" {{ $1=$3"-"$4"-"$4+length($10)"|"$1"|merged"; print }}' > {output}"""
 
 rule extract_reference_sequence:
     input: chromosomes=config["reference"]["chromosome_lengths"], reference=config["reference"]["assembly"]
     output: temp("{OVERLAPPING_ASSEMBLY_DIR}/{region}/reference_region.fasta")
     params: sge_opts="", slop="50000"
+    priority: 25
     shell: """echo {wildcards.region} | sed 's/-/\\t/g' | bedtools slop -i stdin -g {input.chromosomes} -b {params.slop} | awk '{{ print $1":"$2"-"$3 }}' | xargs -i samtools faidx {input.reference} {{}} > {output}"""
 
 rule assemble_overlapping_region:
@@ -117,6 +119,7 @@ rule assemble_overlapping_region:
     # Limit run time of the assembly to 2 hours to prevent long-running assembly
     # of overly difficult regions.
     params: sge_opts="-l mfree=4G -pe serial 4 -l disk_free=10G", threads="4"
+    priority: 20
     run:
         assembly_region_dir = "%s/%s" % (OVERLAPPING_ASSEMBLY_DIR, wildcards.region)
         assembly_output_dir = "%s/local" % assembly_region_dir
@@ -141,17 +144,20 @@ rule get_celera_fragments_for_overlapping_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fastq"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.frg"
     params: sge_opts=""
+    priority: 15
     shell: "{CADIR}/fastqToCA -libraryname region -technology pacbio-corrected -reads {input} > {output}"
 
 rule get_fastq_for_overlapping_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fasta"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fastq"
     params: sge_opts=""
+    priority: 10
     shell: "scripts/FastaToFakeFastq.py {input} {output}"
 
 rule get_fasta_for_overlapping_region:
     input: regions="overlapping_assemblies.bed", assemblies="local_assemblies.fasta"
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fasta"
+    priority: 5
     params:
         sge_opts="",
         chrom=lambda wildcards: wildcards["region"].split("-")[0],
