@@ -120,5 +120,5 @@ If the DRMAA library is available, use this to get better control over job
 execution on the cluster.
 
 ```bash
-snakemake --drmaa " -q all.q -V -cwd -e ./log -o ./log {params.sge_opts} -w n" -j 20 -w 30 align_reads
+snakemake --drmaa " -q all.q -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash" -j 20 -w 30 align_reads
 ```
