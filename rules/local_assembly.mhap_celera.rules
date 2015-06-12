@@ -224,7 +224,6 @@ rule assemble_region:
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
     params: sge_opts="-l mfree=3G -pe serial 4 -l disk_free=10G"
     shell:
-        "trap 'touch {output}; exit 0' SIGUSR1; "
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
