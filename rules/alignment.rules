@@ -15,7 +15,7 @@ rule align_reads:
 rule plot_alignment_summaries:
     input: "alignment_lengths.tab"
     output: "alignment_lengths.pdf"
-    params: sge_opts=""
+    params: sge_opts="-l mfree=8G"
     shell: "Rscript plot_read_lengths_by_type.R {input} {output}"
 
 # Collect summary of aligned read lengths.
