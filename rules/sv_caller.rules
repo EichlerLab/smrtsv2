@@ -1,6 +1,7 @@
 configfile: "config.json"
 
 SV_TYPES = ("insertion", "deletion")
+LOCAL_ASSEMBLY_ALIGNMENTS = config.get("local_assembly_alignments", "merged_assemblies.bam")
 
 rule call_svs:
     input: "sv_calls.bed"
@@ -43,7 +44,7 @@ rule identify_calls_by_type:
     shell: "grep {wildcards.sv_type} {input} | sort -k 1,1 -k 2,2n | scripts/rmdup.py /dev/stdin /dev/stdout --leftjustify --window {params.window_for_duplicates} | scripts/FilterEventListByAssembledTarget.py /dev/stdin {output}"
 
 rule find_calls_by_gaps_in_alignments:
-    input: reference=config["reference"]["assembly"], alignments="merged_assemblies.bam"
+    input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/gaps.bed"
     params: sge_opts="", tsd_length="20", indel_pack_distance="20"
     shell: "samtools view -h {input.alignments} | scripts/PrintGaps.py {input.reference} /dev/stdin --condense {params.indel_pack_distance} --tsd {params.tsd_length} --outFile {output}"

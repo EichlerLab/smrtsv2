@@ -104,7 +104,7 @@ rule assemble_reads:
             else:
                 shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["assembly"]["log"])
         except:
-            shell("""echo -e "{REGION}\tassembly_crashed\t`grep ERROR assembly.log | tr '\n' '|'`" >> %s""" % config["assembly"]["log"])
+            shell("""echo -e "{REGION}\tassembly_crashed" >> %s""" % config["assembly"]["log"])
 
         # Create an empty assembly for failed regions.
         if not assembly_exists:

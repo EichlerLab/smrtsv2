@@ -19,6 +19,40 @@ rule prepare_reference:
     "ctab": "%s"
 }}' > {output}""" % files)
 
+rule combine_low_complexity_and_simple_repeats:
+    input: "low_complexity_repeats.bed", "simple_repeats.bed"
+    output: "strs_in_reference.bed"
+    params: sge_opts=""
+    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
+
+rule get_low_complexity_repeats:
+    input: "repeats.bed"
+    output: "low_complexity_repeats.bed"
+    params: sge_opts=""
+    shell: """awk '$4 == "Low_complexity"' {input} > {output}"""
+
+rule prepare_repeatmasker_repeats_bed:
+    input: "rmsk.txt.gz"
+    output: "repeats.bed"
+    params: sge_opts=""
+    shell: "zcat {input} | cut -f 6-8,12 | sort -k 1,1 -k 2,2n > {output}"
+
+rule get_repeatmasker_repeats:
+    output: "rmsk.txt.gz"
+    params: sge_opts=""
+    shell: "wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/{output} -O {output}"
+
+rule prepare_simple_repeats_bed:
+    input: "simpleRepeat.txt.gz"
+    output: "simple_repeats.bed"
+    params: sge_opts=""
+    shell: "zcat {input} | cut -f 2-5 | sort -k 1,1 -k 2,2n > {output}"
+
+rule get_simple_repeats:
+    output: "simpleRepeat.txt.gz"
+    params: sge_opts=""
+    shell: "wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/{output} -O {output}"
+
 # rule identify_gaps_for_assembly:
 #     input: gaps="gaps.bed", centromeres="centromeres.bed", chrom_info="chromInfo.txt"
 #     output: "gaps_to_assemble.bed"
