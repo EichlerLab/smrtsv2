@@ -77,7 +77,14 @@ rule remove_indel_events_in_homopolymers:
     input: "indel_calls/{indel_type}/gaps.bed"
     output: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
     params: sge_opts=""
-    shell: """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | scripts/PrintSNVSupport.py /dev/stdin /dev/stdout | scripts/BedMod.py /dev/stdin {output} --leftjustify 1"""
+    run:
+        command = """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | scripts/PrintSNVSupport.py /dev/stdin /dev/stdout"""
+        if wildcards.indel_type == "insertion":
+            command = "%s | scripts/BedMod.py /dev/stdin {output} --leftjustify 1" % command
+        else:
+            command = "%s > {output}" % command
+
+        shell(command)
 
 rule split_indels_by_type:
     input: "indel_calls/gaps.tiled.bed"
