@@ -359,7 +359,7 @@ def ExtractSeq(region, seqFile, fai):
         sys.exit(0)
 
     if endFilePos < startFilePos:
-        sys.stderr.write("ERROR! End position is less than start position\n")
+        sys.stderr.write("ERROR! End position is less than start position (%s:%s-%s)\n" % (region[0], region[1], region[2]))
         sys.exit(0)
 
     seqFile.seek(startFilePos)
