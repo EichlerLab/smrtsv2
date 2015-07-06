@@ -13,7 +13,7 @@ rule combine_annotations_for_indel_type:
     input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt", "indel_calls/{indel_type}/exons.txt", "indel_calls/{indel_type}/strs.txt"
     output: "indel_calls/{indel_type}.tab"
     params: sge_opts=""
-    shell: "paste {input} > {output}"
+    shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
 
 # TODO: add rules to build known indels and then convert these Make rules into Snakemake rules.
 # insertion.isect_known.col: gaps.short.bed.insertion.2_plus.no_hp
