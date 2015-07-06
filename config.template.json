@@ -13,7 +13,8 @@
     },
     "alignment": {
         "size_per_batch": 214748364800,
-        "mapping_quality": 30
+        "mapping_quality": 30,
+        "alignment_parameters": "-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50"
     },
     "detection": {
         "min_length": 50,
