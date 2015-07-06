@@ -34,7 +34,8 @@
         "fastqToCA": "/path/to/celera/bin/fastqToCA",
         "mapping_quality": 30,
         "regions_to_assemble": "/path/to/working/directory/filtered_assembly_candidates_with_coverage.bed",
-        "log": "/path/to/working/directory/assembly.log"
+        "log": "/path/to/working/directory/assembly.log",
+        "alignment_parameters": "-affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -bestn 1 -maxMatch 50"
     },
     "mhap_celera": {
         "celera_dir": "/path/to/celera/bin",
