@@ -96,7 +96,11 @@ for samFileName in args.sam:
         aln = Tools.SAMEntry(line)
         if (aln.title is None):
             continue
-
+	#
+	# Use 0-based coordinate system
+	#
+        aln.tStart -=1
+        aln.tEnd -=1
         if (args.onTarget == True):
             coordReMatch = coordRe.match(aln.title)
             if (coordReMatch is not None):
@@ -104,8 +108,6 @@ for samFileName in args.sam:
                 srcChrom = coordMatchGroups[0]
                 srcStart = int(coordMatchGroups[1])
                 srcEnd   = int(coordMatchGroups[2])
-                aln.tStart -=1
-                aln.tEnd -=1
                 if (srcChrom != aln.tName):
                     print "off target chromosome: " + srcChrom + " " + aln.tName
                     continue
