@@ -17,6 +17,7 @@ The PacBio variant caller has the following dependencies:
   - bedtools (>= 2.23.0)
   - BioPython (>= 1.6.5)
   - freebayes (>= 0.9.14)
+  - intervaltree (>= 2.1.0)
   - perl (>= 5.14.2)
   - R (>= 3.1.0)
   - RepeatMasker (>= 3.3.0)
