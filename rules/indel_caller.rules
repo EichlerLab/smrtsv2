@@ -101,8 +101,8 @@ rule filter_indel_gaps_by_tiling_path:
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/tiling_contigs.tab"
-    params: sge_opts="", min_contig_length=str(MIN_CONTIG_LENGTH)
-    shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin --minContigLength {params.min_contig_length} > {output}"
+    params: sge_opts=""
+    shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin > {output}"
 
 rule find_indel_gaps_in_alignments:
     input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
