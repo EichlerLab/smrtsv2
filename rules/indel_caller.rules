@@ -7,13 +7,13 @@ rule combine_indel_tables:
     input: expand("indel_calls/{indel_type}.tab", indel_type=INDEL_TYPES)
     output: "indel_calls/indel_calls.tab"
     params: sge_opts=""
-    shell: "cat {input} > {output}"
+    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 rule combine_annotations_for_indel_type:
     input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt", "indel_calls/{indel_type}/exons.txt", "indel_calls/{indel_type}/strs.txt"
     output: "indel_calls/{indel_type}.tab"
     params: sge_opts=""
-    shell: "paste {input} > {output}"
+    shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
 
 # TODO: add rules to build known indels and then convert these Make rules into Snakemake rules.
 # insertion.isect_known.col: gaps.short.bed.insertion.2_plus.no_hp
@@ -24,7 +24,6 @@ rule combine_annotations_for_indel_type:
 # 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.deletions.bed -loj -sorted |\
 #   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type deletion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
 
-# TODO: make sure that the number of lines in this output file matches the other files being pasted
 rule annotate_coding_exons_in_indels:
     input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config["reference"]["gene_exons"]
     output: "indel_calls/{indel_type}/exons.txt"
@@ -78,7 +77,14 @@ rule remove_indel_events_in_homopolymers:
     input: "indel_calls/{indel_type}/gaps.bed"
     output: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
     params: sge_opts=""
-    shell: """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | scripts/PrintSNVSupport.py /dev/stdin /dev/stdout | scripts/BedMod.py /dev/stdin {output} --leftjustify 1"""
+    run:
+        command = """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | scripts/PrintSNVSupport.py /dev/stdin /dev/stdout"""
+        if wildcards.indel_type == "insertion":
+            command = "%s | scripts/BedMod.py /dev/stdin {output} --leftjustify 1" % command
+        else:
+            command = "%s > {output}" % command
+
+        shell(command)
 
 rule split_indels_by_type:
     input: "indel_calls/gaps.tiled.bed"
@@ -95,8 +101,8 @@ rule filter_indel_gaps_by_tiling_path:
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/tiling_contigs.tab"
-    params: sge_opts="", min_contig_length=str(MIN_CONTIG_LENGTH)
-    shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin --minContigLength {params.min_contig_length} > {output}"
+    params: sge_opts=""
+    shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin > {output}"
 
 rule find_indel_gaps_in_alignments:
     input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS

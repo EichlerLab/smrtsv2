@@ -38,8 +38,8 @@ REGION_SIZE = str(operator.sub(*map(int, reversed(REGION.split("-")[1:3]))))
 rule align_consensus_to_reference_region:
     input: "consensus.fasta", "reference_region.fasta"
     output: "consensus_reference_alignment.sam"
-    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"])
-    shell: """{BLASR_BIN} {input} -clipping subread -affineAlign -affineOpen 100 -affineExtend 0 -insertion 0 -deletion 0 -out /dev/stdout -bestn 1 -sam -maxMatch 50 | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' > {output}"""
+    params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), alignment_parameters=config["assembly"]["alignment_parameters"]
+    shell: """{BLASR_BIN} {input} -clipping subread -out /dev/stdout -sam {params.alignment_parameters} | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' > {output}"""
 
 rule extract_reference_sequence:
     input: config["reference"]["assembly"], "reference_region.slop.txt"

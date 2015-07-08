@@ -3,12 +3,6 @@
 Structural variant caller for PacBio reads based on methods from [Chaisson et
 al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.html).
 
-The pipeline currently assumes that the analysis will need to start with raw
-input reads prior to alignment against the reference. The complete pipeline can
-be visualized through Snakemake's DAG as follows.
-
-![alt text](https://raw.githubusercontent.com/EichlerLab/pacbio_variant_caller/master/pipeline.png?token=AAFNfPFB6lw3rKXVpwn9my7m5fNDJM-Mks5VNXa3wA%3D%3D "Snakemake DAG for the SV caller pipeline")
-
 ## Install dependencies
 
 The PacBio variant caller has the following dependencies:
@@ -17,6 +11,7 @@ The PacBio variant caller has the following dependencies:
   - bedtools (>= 2.23.0)
   - BioPython (>= 1.6.5)
   - freebayes (>= 0.9.14)
+  - intervaltree (>= 2.1.0)
   - perl (>= 5.14.2)
   - R (>= 3.1.0)
   - RepeatMasker (>= 3.3.0)
