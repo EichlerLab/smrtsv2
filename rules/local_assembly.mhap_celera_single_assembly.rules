@@ -61,7 +61,7 @@ rule create_reference_region:
 rule quiver_assembly:
     input: assembly="assembly.fasta", alignments="alignment.cmp.h5", assembly_index="assembly.fasta.fai"
     output: "consensus.fasta"
-    params: sge_opts="", threads="4"
+    params: sge_opts="", threads="2"
     shell:
         "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
         "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}"
@@ -79,7 +79,7 @@ rule convert_assembly_alignments_to_hdf5:
 rule map_reads_to_assembly:
     input: "reads.bas.h5", "assembly.fasta"
     output: "alignment.sam"
-    params: sge_opts="", threads="4"
+    params: sge_opts="", threads="2"
     shell: "{BLASR_BIN} {input} -sam -bestn 1 -out {output} -nproc {params.threads}"
 
 rule index_assembly:
@@ -91,7 +91,7 @@ rule index_assembly:
 rule assemble_reads:
     input: "reads.fastq"
     output: "assembly.fasta"
-    params: sge_opts="-l mfree=2G -pe serial 4 -l disk_free=10G", threads="4", read_length="1000", partitions="50", max_runtime="45m"
+    params: sge_opts="-l mfree=4G -pe serial 2 -l disk_free=10G", threads="2", read_length="1000", partitions="50", max_runtime="45m"
     run:
         assembly_output = "local/9-terminator/asm.ctg.fasta"
         assembly_exists = False

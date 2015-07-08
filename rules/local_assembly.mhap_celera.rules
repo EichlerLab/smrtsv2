@@ -222,7 +222,7 @@ rule collect_assembly_alignments:
 rule assemble_region:
     input: "alignments.fofn"
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
-    params: sge_opts="-l mfree=3G -pe serial 4 -l disk_free=10G"
+    params: sge_opts="-l mfree=6G -pe serial 2 -l disk_free=10G"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
