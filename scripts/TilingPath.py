@@ -67,9 +67,3 @@ for chrom in chroms:
                 optDist = dist
                 opt = intv[2]
         print chrom + "\t" + str(chromPos[i]) + "\t" + str(chromPos[i+1]) + "\t" + opt + "\t" + str(optDist)
-    
-    
-
-
-
-
