@@ -58,7 +58,7 @@ rule annotate_coverage_of_assembled_contigs_for_indels:
 rule calculate_coverage_from_assembled_contigs:
     input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "assembled_contigs.depth.bed"
-    params: sge_opts=""
+    params: sge_opts="-l mfree=12G"
     shell: "bedtools bamtobed -i {input.alignments} | scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | bedtools sort > {output}"
 
 rule cut_indel_events_by_columns:
@@ -94,9 +94,9 @@ rule split_indels_by_type:
 
 rule filter_indel_gaps_by_tiling_path:
     input: "indel_calls/gaps.bed", "indel_calls/tiling_contigs.tab"
-    output: "indel_calls/gaps.tiled.bed"
-    params: sge_opts=""
-    shell: "scripts/FilterGapsByTilingPath.py {input} > {output}"
+    output: "indel_calls/gaps.tiled.bed", "indel_calls/gaps.tiled.log"
+    params: sge_opts="-l mfree=4G"
+    shell: "scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
 
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
