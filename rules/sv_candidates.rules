@@ -229,7 +229,7 @@ rule merge_coverage_per_batch:
 rule calculate_coverage_per_batch:
     input: _get_bam_path_for_batch
     output: "coverage/{alignment_name}.bed"
-    params: sge_opts="-l mfree=2G", bwlimit="20000"
+    params: sge_opts="-l mfree=4G", bwlimit="20000"
     shell:
         "mkdir -p {TMP_DIR}; "
         "mkdir -p `dirname {output}`; "
