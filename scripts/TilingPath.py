@@ -46,11 +46,14 @@ for chrom in chroms:
     j = i
     nCondense = 0
 
+    # Ignore chromosomes with no intervals (i.e., no contigs mapped to this
+    # chromosome).
     if (len(chromPos) == 2):
         continue
 
     for i in range(0,len(chromPos)-1):
         midPoint = (chromPos[i] + chromPos[i+1])/2
+        # Ignore intervals that are too small.
         if (chromPos[i+1] - chromPos[i] < 2):
             continue
         ovpMidPoint = intvs.search(midPoint)
@@ -64,9 +67,3 @@ for chrom in chroms:
                 optDist = dist
                 opt = intv[2]
         print chrom + "\t" + str(chromPos[i]) + "\t" + str(chromPos[i+1]) + "\t" + opt + "\t" + str(optDist)
-    
-    
-
-
-
-

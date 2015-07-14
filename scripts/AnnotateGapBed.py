@@ -41,12 +41,12 @@ for line in dotoutFile:
     post = vals[13]
     pre = int(pre.replace("(","").replace(")",""))
     post = int(post.replace("(","").replace(")",""))
-    
+
     if (pre+post < 30):
         rep = rep + ":FULL"
     else:
         rep = rep + ":INC"
-    
+
     if (name not in annotations):
         annotations[name] = []
     annotations[name].append(rep)
@@ -62,14 +62,14 @@ for line in bedFileIn:
 
     repeatContent = ""
     if (name in maskedDict):
-        vals[5] =  maskedDict[name].seq.tostring()
+        vals[5] =  str(maskedDict[name].seq)
         repeatContent = "\t{:2.2f}".format(float(vals[5].count("a") + vals[5].count("c") + vals[5].count("g") + vals[5].count("t"))/len(vals[5]))
-        
+
     line = '\t'.join(vals[0:args.seqidx]) + '\t' + annotation + '\t' + '\t'.join(vals[args.seqidx:]) + repeatContent + '\n'
-    
+
     bedFileOut.write(line)
 
-        
-bedFileOut.close()    
-        
-        
+
+bedFileOut.close()
+
+
