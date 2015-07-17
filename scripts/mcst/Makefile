@@ -1,5 +1,10 @@
-SAMTOOLS=/net/eichler/vol5/home/mchaisso/software/samtools/samtools-0.1.18/
-all: maxq bedq bamacc hardstop splitread coverage
+SAMTOOLS=/net/eichler/vol5/home/mchaisso/software/samtools-1.2
+BLASR=/net/eichler/vol5/home/mchaisso/software/blasr_2/cpp/common
+
+all: screenInversions maxq bedq bamacc hardstop splitread coverage
+
+screenInversions: ScreenInversions.cpp InversionAlign.h
+	g++ -O3 $< -o $@ -I $(BLASR) -lpthread
 
 coverage: PrintGenomeCoverage.cpp
 	g++ -g  $^ -I $(SAMTOOLS)  -L $(SAMTOOLS)  -lbam -lm -lz -o $@
