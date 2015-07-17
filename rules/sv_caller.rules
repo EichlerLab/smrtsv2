@@ -41,7 +41,7 @@ rule identify_calls_by_type:
     input: "sv_calls/gaps.bed"
     output: "sv_calls/calls.{sv_type}.bed"
     params: sge_opts="", window_for_duplicates="100"
-    shell: "grep {wildcards.sv_type} {input} | sort -k 1,1 -k 2,2n | scripts/rmdup.py /dev/stdin /dev/stdout --leftjustify --window {params.window_for_duplicates} | scripts/FilterEventListByAssembledTarget.py /dev/stdin {output}"
+    shell: "grep {wildcards.sv_type} {input} | sort -k 1,1 -k 2,2n | scripts/rmdup.py /dev/stdin /dev/stdout --leftjustify --window {params.window_for_duplicates} > {output}"
 
 rule find_calls_by_gaps_in_alignments:
     input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
