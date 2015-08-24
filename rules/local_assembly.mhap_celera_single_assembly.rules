@@ -137,7 +137,7 @@ rule convert_reads_to_bam:
     input: "reads.sam"
     output: "reads.bam"
     params: sge_opts=""
-    shell: "samtools view -bS {input} > {output}"
+    shell: "samtools view -buS {input} > {output}"
 
 rule get_reads:
     input: ALIGNMENTS
