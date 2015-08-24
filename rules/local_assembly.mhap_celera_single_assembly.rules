@@ -15,7 +15,7 @@ BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 
 # By default delay jobs for a random amount of time up to this value to prevent
 # too much I/O from simultaneous assemblies.
-DEFAULT_MAX_DELAY = 5
+DEFAULT_MAX_DELAY = 1
 
 # User-defined file of alignments with one absolute path to a BAM per line.
 ALIGNMENTS = config["alignments"]
