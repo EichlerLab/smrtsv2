@@ -1,3 +1,5 @@
+export SMRT_ROOT=/net/eichler/vol24/projects/sequencing/pacbio/software/smrtanalysis
+
 module load anaconda/2.1.0
 module load bedtools/2.23.0
 module load blasr/dev

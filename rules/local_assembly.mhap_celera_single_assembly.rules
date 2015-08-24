@@ -65,8 +65,11 @@ rule quiver_assembly:
     output: "consensus.fasta"
     params: sge_opts="", threads="2"
     shell:
-        "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
-        "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}"
+        "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
+        "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}; "
+        "head -n 1 {output} > consensus.tmp.fasta; "
+        "sed 1d {output} | tr -d '\\n' | sed 's/^[actgn]\+//;s/[actgn]\+$//' | fold -w 80 >> consensus.tmp.fasta; "
+        "mv -f consensus.tmp.fasta {output}"
 
 rule convert_assembly_alignments_to_hdf5:
     input: alignments="alignment.sam", assembly="assembly.fasta", reads="reads.bas.h5"
@@ -74,9 +77,9 @@ rule convert_assembly_alignments_to_hdf5:
     params: sge_opts=""
     shell:
         "{BLASR_DIR}/samtoh5 {input.alignments} {input.assembly} {output} -useShortRefName; "
-        "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && cmph5tools.py sort --deep {output}; "
+        "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && cmph5tools.py sort --deep {output}; "
         "{BLASR_DIR}/loadPulses {input.reads} {output} -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
-        "unset QRSH_COMMAND && source /net/eichler/vol5/home/mchaisso/scripts/setup_pacbio.sh && {BIN_DIR}/local_assembly/LoadGenericChemistry.py {BAS_TEMPLATE} {output}"
+        "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && {BIN_DIR}/local_assembly/LoadGenericChemistry.py {BAS_TEMPLATE} {output}"
 
 rule map_reads_to_assembly:
     input: "reads.bas.h5", "assembly.fasta"
