@@ -3,6 +3,8 @@ import os
 
 configfile: "config.json"
 
+SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
+
 REFERENCE = config["reference"]["assembly"]
 CADIR = config["mhap_celera"]["celera_dir"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
@@ -120,13 +122,13 @@ rule convert_reads_to_fastq:
     input: "reads.fasta"
     output: "reads.fastq"
     params: sge_opts=""
-    shell: "{BIN_DIR}/FastaToFakeFastq.py {input} {output}"
+    shell: "{SNAKEMAKE_DIR}/../scripts/FastaToFakeFastq.py {input} {output}"
 
 rule convert_reads_to_fasta:
     input: "reads.bam"
     output: "reads.fasta"
     params: sge_opts=""
-    shell: """samtools view {input} | awk '{{ print ">"$1; print $10 }}' | /net/eichler/vol5/home/mchaisso/projects/PacBioSequencing/scripts/falcon/FormatFasta.py --fakename > {output}"""
+    shell: """samtools view {input} | awk '{{ print ">"$1; print $10 }}' | {SNAKEMAKE_DIR}/../scripts/FormatFasta.py --fakename > {output}"""
 
 rule convert_reads_to_bam:
     input: "reads.sam"
