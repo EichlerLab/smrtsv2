@@ -41,7 +41,7 @@ REFERENCE_SLOP = config["assembly"].get("reference_slop", 0)
 #
 
 rule align_consensus_to_reference_region:
-    input: "consensus.fasta", "reference_region.fasta"
+    input: "consensus.trimmed.fasta", "reference_region.fasta"
     output: "consensus_reference_alignment.sam"
     params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), alignment_parameters=config["assembly"]["alignment_parameters"]
     shell: """{BLASR_BIN} {input} -clipping subread -out /dev/stdout -sam {params.alignment_parameters} | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' > {output}"""
@@ -63,6 +63,12 @@ rule create_reference_region:
     params: sge_opts=""
     shell: "echo {REGION} | sed 's/-/\t/g' > {output}"
 
+rule trim_consensus:
+    input: "consensus.fasta"
+    output: "consensus.trimmed.fasta"
+    params: sge_opts=""
+    shell: "{SNAKEMAKE_DIR}/../scripts/trim_lowercase.py {input} {output}"
+
 rule quiver_assembly:
     input: assembly="assembly.fasta", alignments="alignment.cmp.h5", assembly_index="assembly.fasta.fai"
     output: "consensus.fasta"
@@ -70,9 +76,6 @@ rule quiver_assembly:
     shell:
         "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
         "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}; "
-        "head -n 1 {output} > consensus.tmp.fasta; "
-        "sed 1d {output} | tr -d '\\n' | sed 's/^[actgn]\+//;s/[actgn]\+$//' | fold -w 80 >> consensus.tmp.fasta; "
-        "mv -f consensus.tmp.fasta {output}"
 
 rule convert_assembly_alignments_to_hdf5:
     input: alignments="alignment.sam", assembly="assembly.fasta", reads="reads.bas.h5"
