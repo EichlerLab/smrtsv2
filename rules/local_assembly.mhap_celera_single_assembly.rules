@@ -33,6 +33,9 @@ STANDARD_REGION = REGION.replace("-", ":", 1)
 # the subtraction operator.
 REGION_SIZE = str(operator.sub(*map(int, reversed(REGION.split("-")[1:3]))))
 
+# Get reference slop to add prior to alignment of local assembly.
+REFERENCE_SLOP = config["assembly"].get("reference_slop", 0)
+
 #
 # Define rules.
 #
@@ -52,7 +55,7 @@ rule extract_reference_sequence:
 rule extend_reference_region:
     input: bed="reference_region.bed", chromosomes=config["reference"]["chromosome_lengths"]
     output: "reference_region.slop.txt"
-    params: sge_opts="", slop="50000"
+    params: sge_opts="", slop=str(REFERENCE_SLOP)
     shell: """bedtools slop -i {input.bed} -g {input.chromosomes} -b {params.slop} | awk '{{ print $1":"$2"-"$3 }}' > {output}"""
 
 rule create_reference_region:
