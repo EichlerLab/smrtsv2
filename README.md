@@ -65,40 +65,50 @@ include per alignment batch. The default is 30GB.
 
 ## Align reads
 
-Align PacBio reads to the prepared reference.
+Align PacBio reads to the prepared reference. You must specify a file with paths
+to PacBio reads and a reference to align the reads to. By default, the reference
+is assumed to have a suffix array and ctab file withe same name as the reference
+FASTA plus the corresponding extension (e.g., "reference.fasta" has a suffix
+array of "reference.fasta.sa" and ctab of "reference.fasta.ctab").
 
 ```bash
-snakemake align_reads
+snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_alts.fasta
 ```
 
-## Identify SV candidate regions
-
-Parse alignments to identify SV candidates and produce a list of candidate
-regions for local assembly.
+By default, all alignments are stored in a single BAM. Alignments can be divided
+into any number of batches with the `batches` configuration parameter. The file
+containing the final alignment paths can be specified with the `alignments`
+parameter. The following example shows the use of both parameters.
 
 ```bash
-snakemake detect_svs
+snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_alts.fasta \
+    batches=4 alignments=custom_alignments.fofn alignments_dir=custom_alignments
 ```
 
-## Assemble SV candidate regions
+### Parameters
 
-Assemble SV candidate regions with MHAP/Celera. Local assemblies that map to
-overlapping regions of the reference will be reassembled together to create a
-single representative contig for the region. The final assemblies are in
-`merged_assemblies.fasta` and their alignments against the reference are in
-`merged_assemblies.bam`.
+| Parameter | Definition |
+| --------- | ---------- |
+| reads | a text file of absolute paths to PacBio reads in HDF5 format (i.e., .bax.h5 files) with one path per line |
+| reference | a FASTA sequence to align reads to with a .sa and .ctab file in the same directory |
+| batches (default: 1) | number of batches to split input reads into such that there will be one BAM output file per batch |
+| alignments (default: "alignments.fofn") | name of output file with list of absolute paths to BAM output files |
+| alignments_dir (default: "alignments") | name of directory where BAM output files will be written |
+
+## Identify and assembly SV candidate regions
+
+Parse alignments to identify SV candidates, produce a list of candidate regions
+for local assembly, and assemble SV candidate regions with MHAP/Celera. Local
+assemblies that map to overlapping regions of the reference will be reassembled
+together to create a single representative contig for the region. The final
+assemblies and their alignments against the reference are in
+`local_assembly_alignments.bam`.
+
+After producing local assemblies, call SVs from assemblies based on gaps in
+their alignments back to the reference. The final output is in `sv_calls.bed`.
 
 ```bash
-snakemake assemble_with_mhap
-```
-
-## Call SVs from local assemblies
-
-Call SVs from local assemblies based on gaps in their alignments back to the
-reference. The final output is in `sv_calls.bed`.
-
-```bash
-snakemake call_svs
+snakemake call_svs --config alignments=alignments.fofn
 ```
 
 ## Distributing analyses on a cluster
