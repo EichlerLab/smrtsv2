@@ -26,7 +26,7 @@ rule combine_annotations_for_indel_type:
 
 # TODO: don't annotate exons in calling step. This should happen outside of the caller.
 rule annotate_coding_exons_in_indels:
-    input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config["reference"].get("gene_exons", "")
+    input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config.get("gene_exons", "")
     output: "indel_calls/{indel_type}/exons.txt"
     params: sge_opts=""
     shell: """bedtools intersect -a {input.indels} -b {input.genes} -loj | bedtools groupby -c 7 -o first -full | awk '$8 != "."' | cut -f 9 > {output}"""
@@ -57,7 +57,7 @@ rule annotate_coverage_of_assembled_contigs_for_indels:
     shell: "cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o max -full | cut -f 8 > {output}"
 
 rule calculate_coverage_from_assembled_contigs:
-    input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
+    input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "assembled_contigs.depth.bed"
     params: sge_opts="-l mfree=12G"
     shell: "bedtools bamtobed -i {input.alignments} | scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | bedtools sort > {output}"
@@ -106,7 +106,7 @@ rule tile_contigs_from_alignments:
     shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin > {output}"
 
 rule find_indel_gaps_in_alignments:
-    input: reference=config["reference"]["assembly"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
+    input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/gaps.bed"
     params: sge_opts="", indel_pack_distance="0", min_contig_length=str(MIN_CONTIG_LENGTH)
     shell: "samtools view {input.alignments} | scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 50 --context 6 --removeAdjacentIndels --onTarget --minContigLength {params.min_contig_length} --condense {params.indel_pack_distance} --outFile {output}"
