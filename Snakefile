@@ -19,6 +19,8 @@ configfile: "config.json"
 TMP_DIR = config["tmp_dir"]
 EVENT_TYPES = ("insertion", "deletion")
 
+CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
+
 #
 # Include rules.
 #
