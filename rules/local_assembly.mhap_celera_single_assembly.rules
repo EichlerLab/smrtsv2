@@ -61,7 +61,7 @@ rule extend_reference_region:
 rule create_reference_region:
     output: "reference_region.bed"
     params: sge_opts=""
-    shell: "echo {REGION} | sed 's/-/\t/g' > {output}"
+    shell: "echo {REGION} | sed 's/-/\\t/g' > {output}"
 
 rule trim_consensus:
     input: "consensus.fasta"
