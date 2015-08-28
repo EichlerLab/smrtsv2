@@ -215,7 +215,7 @@ rule collect_assembly_alignments:
             for i in input.alignments:
                 oh.write("%s\n" % i)
 
-        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | awk 'OFS="\\t" {{ $4 = $4 + 1; print }}' | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
+        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
