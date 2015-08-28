@@ -9,7 +9,7 @@ REFERENCE = config["reference"]["assembly"]
 CADIR = config["mhap_celera"]["celera_dir"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
 BLASR_DIR = config["mhap_celera"]["blasr_dir"]
-BLASR_BIN = "%s/blasr" % BLASR_DIR
+BLASR_BIN = config["blasr_bin"]
 CELERA_SPEC = config["mhap_celera"]["celera_spec"]
 BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 
