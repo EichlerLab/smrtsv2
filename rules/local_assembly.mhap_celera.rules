@@ -32,6 +32,9 @@ BLASR_BIN = config["blasr_bin"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
 CADIR = config["mhap_celera"]["celera_dir"]
 
+# User-defined file of alignments with one absolute path to a BAM per line.
+ALIGNMENTS = config["alignments"]
+
 #
 # Define helper functions.
 #
@@ -220,7 +223,7 @@ rule collect_assembly_alignments:
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
 rule assemble_region:
-    input: "alignments.fofn"
+    input: ALIGNMENTS
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
     params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -soft -l L3cache=30M"
     shell:
