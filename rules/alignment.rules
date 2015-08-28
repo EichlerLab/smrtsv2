@@ -4,7 +4,7 @@ alignments.
 """
 import math
 
-localrules: assign_batches align_reads
+localrules: assign_batches, align_reads
 
 # Make a list of batches to split reads into.
 BATCHES = list(range(int(config.get("batches", "1"))))
