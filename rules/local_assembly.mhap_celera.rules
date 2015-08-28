@@ -32,6 +32,9 @@ BLASR_BIN = config["blasr_bin"]
 BIN_DIR = config["mhap_celera"]["bin_dir"]
 CADIR = config["mhap_celera"]["celera_dir"]
 
+# User-defined file of alignments with one absolute path to a BAM per line.
+ALIGNMENTS = config["alignments"]
+
 #
 # Define helper functions.
 #
@@ -215,20 +218,20 @@ rule collect_assembly_alignments:
             for i in input.alignments:
                 oh.write("%s\n" % i)
 
-        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | awk 'OFS="\\t" {{ $4 = $4 + 1; print }}' | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
+        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
 rule assemble_region:
-    input: "alignments.fofn"
+    input: ALIGNMENTS
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
-    params: sge_opts="-l mfree=6G -pe serial 2 -l disk_free=10G"
+    params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -soft -l L3cache=30M"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ANALYSIS_DIR/{input} region={wildcards.region}; "
+        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments={input} region={wildcards.region}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
