@@ -24,8 +24,9 @@ rule combine_annotations_for_indel_type:
 # 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.deletions.bed -loj -sorted |\
 #   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type deletion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
 
+# TODO: don't annotate exons in calling step. This should happen outside of the caller.
 rule annotate_coding_exons_in_indels:
-    input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config["reference"]["gene_exons"]
+    input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config["reference"].get("gene_exons", "")
     output: "indel_calls/{indel_type}/exons.txt"
     params: sge_opts=""
     shell: """bedtools intersect -a {input.indels} -b {input.genes} -loj | bedtools groupby -c 7 -o first -full | awk '$8 != "."' | cut -f 9 > {output}"""
