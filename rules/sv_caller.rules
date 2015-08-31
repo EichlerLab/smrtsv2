@@ -1,7 +1,135 @@
 configfile: "config.json"
 
+localrules: call_variants
+
 SV_TYPES = ("insertion", "deletion")
+INDEL_TYPES = ("insertion", "deletion")
 LOCAL_ASSEMBLY_ALIGNMENTS = config.get("local_assembly_alignments", "merged_assemblies.bam")
+MIN_CONTIG_LENGTH = 40000
+
+#
+# All variant calls
+#
+
+rule call_variants:
+    input: "sv_calls.bed", "indel_calls.bed"
+
+#
+# Small insertion/deletion (indel) calls
+#
+
+rule call_indels:
+    input: expand("indel_calls/{indel_type}.tab", indel_type=INDEL_TYPES)
+    output: "indel_calls.bed"
+    params: sge_opts=""
+    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
+
+rule combine_annotations_for_indel_type:
+    input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt", "indel_calls/{indel_type}/exons.txt", "indel_calls/{indel_type}/strs.txt"
+    output: "indel_calls/{indel_type}.tab"
+    params: sge_opts=""
+    shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
+
+# TODO: add rules to build known indels and then convert these Make rules into Snakemake rules.
+# insertion.isect_known.col: gaps.short.bed.insertion.2_plus.no_hp
+# 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.insertions.left_justify.bed -loj -sorted |\
+#   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type insertion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
+
+# deletion.isect_known.col: gaps.short.bed.deletion.2_plus.no_hp
+# 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.deletions.bed -loj -sorted |\
+#   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type deletion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
+
+# TODO: don't annotate exons in calling step. This should happen outside of the caller.
+rule annotate_coding_exons_in_indels:
+    input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config.get("gene_exons", "")
+    output: "indel_calls/{indel_type}/exons.txt"
+    params: sge_opts=""
+    shell: """bedtools intersect -a {input.indels} -b {input.genes} -loj | bedtools groupby -c 7 -o first -full | awk '$8 != "."' | cut -f 9 > {output}"""
+
+rule annotate_support_from_assembled_contigs_for_indels:
+    input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
+    output: "indel_calls/{indel_type}/support_by_assembled_contigs.txt"
+    params: sge_opts=""
+    shell: "cut -f 6 {input} > {output}"
+
+rule annotate_strs_in_indels:
+    input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed", "strs_in_reference.bed"
+    output: "indel_calls/{indel_type}/strs.txt"
+    params: sge_opts=""
+    shell: "cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o first -full | cut -f 7 > {output}"
+
+# TODO: confirm that this coverage.bed works like the original hg19 bed from Mark
+rule annotate_coverage_of_pacbio_reads_for_indels:
+    input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed", "coverage.bed"
+    output: "indel_calls/{indel_type}/read_coverage.txt"
+    params: sge_opts=""
+    shell: """cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o mean -full | cut -f 8 | awk '{{ printf("%2.2f\\n", $1) }}' > {output}"""
+
+rule annotate_coverage_of_assembled_contigs_for_indels:
+    input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed", "assembled_contigs.depth.bed"
+    output: "indel_calls/{indel_type}/assembled_contigs_coverage.txt"
+    params: sge_opts=""
+    shell: "cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o max -full | cut -f 8 > {output}"
+
+rule calculate_coverage_from_assembled_contigs:
+    input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
+    output: "assembled_contigs.depth.bed"
+    params: sge_opts="-l mfree=12G"
+    shell: "bedtools bamtobed -i {input.alignments} | scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | bedtools sort > {output}"
+
+rule cut_indel_events_by_columns:
+    input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
+    output: "indel_calls/{indel_type}/filtered_gaps.bed"
+    params: sge_opts=""
+    shell: "cut -f 1-5 {input} > {output}"
+
+rule filter_indel_events_by_size:
+    input: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
+    output: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
+    params: sge_opts=""
+    shell: "awk '$4 >= 2' {input} | bedtools groupby -c 6 -o max -full > {output}"
+
+rule remove_indel_events_in_homopolymers:
+    input: "indel_calls/{indel_type}/gaps.bed"
+    output: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
+    params: sge_opts=""
+    run:
+        command = """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | scripts/PrintSNVSupport.py /dev/stdin /dev/stdout"""
+        if wildcards.indel_type == "insertion":
+            command = "%s | scripts/BedMod.py /dev/stdin {output} --leftjustify 1" % command
+        else:
+            command = "%s > {output}" % command
+
+        shell(command)
+
+rule split_indels_by_type:
+    input: "indel_calls/gaps.tiled.bed"
+    output: "indel_calls/{indel_type}/gaps.bed"
+    params: sge_opts=""
+    shell: "grep {wildcards.indel_type} {input} | bedtools sort -i stdin > {output}"
+
+rule filter_indel_gaps_by_tiling_path:
+    input: "indel_calls/gaps.bed", "indel_calls/tiling_contigs.tab"
+    output: "indel_calls/gaps.tiled.bed", "indel_calls/gaps.tiled.log"
+    params: sge_opts="-l mfree=4G"
+    shell: "scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
+
+rule tile_contigs_from_alignments:
+    input: LOCAL_ASSEMBLY_ALIGNMENTS
+    output: "indel_calls/tiling_contigs.tab"
+    params: sge_opts=""
+    shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin > {output}"
+
+rule find_indel_gaps_in_alignments:
+    input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
+    output: "indel_calls/gaps.bed"
+    params: sge_opts="", indel_pack_distance="0", min_contig_length=str(MIN_CONTIG_LENGTH)
+    shell: "samtools view {input.alignments} | scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 50 --context 6 --removeAdjacentIndels --onTarget --minContigLength {params.min_contig_length} --condense {params.indel_pack_distance} --outFile {output}"
+
+
+#
+# Structural variation (SV) calls
+#
 
 rule call_svs:
     input: "sv_calls.bed"
