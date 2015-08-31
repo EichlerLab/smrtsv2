@@ -5,18 +5,23 @@ al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.ht
 
 ## Install dependencies
 
-The PacBio variant caller has the following dependencies:
+The PacBio variant caller has the following Python dependencies:
 
   - anaconda (>= 2.1.0)
-  - bedtools (>= 2.23.0)
   - BioPython (>= 1.6.5)
-  - freebayes (>= 0.9.14)
   - intervaltree (>= 2.1.0)
+  - snakemake (>= 3.2.1)
+
+Additionally, SMRT SV relies on these external tools:
+
+  - [PacBio SMRT analysis](http://www.pacb.com/devnet/)
+  - [BLASR](https://github.com/EichlerLab/blasr) (>= 1.MC.rc42)
+  - bedtools (>= 2.23.0)
+  - freebayes (>= 0.9.14)
   - perl (>= 5.14.2)
   - R (>= 3.1.0)
   - RepeatMasker (>= 3.3.0)
   - samtools (>= 1.1)
-  - snakemake (>= 3.2.1)
 
 If modules are already installed for these tools, source the configuration file.
 
