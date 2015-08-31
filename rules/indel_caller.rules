@@ -3,9 +3,9 @@ LOCAL_ASSEMBLY_ALIGNMENTS = config.get("local_assembly_alignments", "merged_asse
 INDEL_TYPES = ("insertion", "deletion")
 MIN_CONTIG_LENGTH = 40000
 
-rule combine_indel_tables:
+rule call_indels:
     input: expand("indel_calls/{indel_type}.tab", indel_type=INDEL_TYPES)
-    output: "indel_calls/indel_calls.tab"
+    output: "indel_calls.bed"
     params: sge_opts=""
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
