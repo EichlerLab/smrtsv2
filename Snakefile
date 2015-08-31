@@ -37,8 +37,7 @@ elif config["assembly"]["assembler"] == "mhap_celera":
 else:
     include: "rules/local_assembly.rules"
 
-include: "rules/sv_caller.rules"
-include: "rules/indel_caller.rules"
+include: "rules/variant_caller.rules"
 
 #
 # Determine which outputs to create.
