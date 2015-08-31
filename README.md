@@ -16,6 +16,7 @@ Additionally, SMRT SV relies on these external tools:
 
   - [PacBio SMRT analysis](http://www.pacb.com/devnet/)
   - [BLASR](https://github.com/EichlerLab/blasr) (>= 1.MC.rc42)
+  - [PBcR](http://wgs-assembler.sourceforge.net/wiki/index.php/PBcR) (Celera Assembler with MHAP overlapper)
   - bedtools (>= 2.23.0)
   - freebayes (>= 0.9.14)
   - perl (>= 5.14.2)
