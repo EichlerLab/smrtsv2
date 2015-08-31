@@ -109,9 +109,31 @@ make
 sudo make install PREFIX=/usr/local
 ```
 
+## Install PBcR
+
+Download the [latest release of PBcR](http://wgs-assembler.sourceforge.net/wiki/index.php/PBcR).
+
+```bash
+wget http://sourceforge.net/projects/wgs-assembler/files/wgs-assembler/wgs-8.3/wgs-8.3rc2-Linux_amd64.tar.bz2/download -O wgs-8.3rc2-Linux_amd64.tar.bz2
+```
+
+Unpack binaries, create a central directory for Celera, and copy binaries
+(except BLASR) into that directory.
+
+```bash
+tar jxvf wgs-8.3rc2-Linux_amd64.tar.bz2
+cd wgs-8.3rc2/Linux-amd64/bin
+rm -f blasr
+sudo mkdir -p /usr/local/celera
+rsync -arv * /usr/local/celera/
+```
+
+Update the `celera_dir` parameter in the `config.json` for your analysis to
+point to the above directory.
+
 ## Install bedtools
 
-Download [latest release of bedtools](https://github.com/arq5x/bedtools2/releases/latest).
+Download the [latest release of bedtools](https://github.com/arq5x/bedtools2/releases/latest).
 
 ```bash
 wget https://github.com/arq5x/bedtools2/releases/download/v2.24.0/bedtools-2.24.0.tar.gz
