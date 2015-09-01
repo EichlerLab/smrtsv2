@@ -162,7 +162,9 @@ Unpack and build samtools.
 tar jxvf samtools-1.2.tar.bz2
 cd samtools-1.2
 make
-sudo make install
+sudo make install install-htslib
+
+sudo rsync -arv *.h /usr/local/include/
 ```
 
 ## Install freebayes
