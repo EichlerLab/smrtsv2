@@ -4,8 +4,6 @@ Rules for local assembly of genomic regions.
 import csv
 import os
 
-print("Local assembly with MHAP/Celera")
-
 #
 # Inputs:
 #  1. Text file with a list of absolute paths for BAMs with reads for assembly
