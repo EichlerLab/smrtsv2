@@ -115,7 +115,7 @@ After producing local assemblies, call SVs from assemblies based on gaps in
 their alignments back to the reference. The final output is in `sv_calls.bed`.
 
 ```bash
-snakemake call_svs --config alignments=alignments.fofn
+snakemake call_variants --config alignments=alignments.fofn
 ```
 
 ## Distributing analyses on a cluster
