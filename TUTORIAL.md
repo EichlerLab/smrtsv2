@@ -58,3 +58,12 @@ Align reads to the reference with BLASR.
 ```bash
 snakemake align_reads --config reads=input.fofn reference=reference/chr20.fa alignments=alignments.fofn
 ```
+
+## Call variants
+
+Call variants by creating tiles of local assemblies across the reference and
+aligning assemblies back to the reference.
+
+```bash
+snakemake call_variants --config alignments=alignments.fofn
+```
