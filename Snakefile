@@ -27,6 +27,7 @@ CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"
 
 # TODO: fix bug caused by Snakemake not understanding more than one dynamic
 # output type per file.
+include: "rules/prepare_reference.rules"
 include: "rules/alignment.rules"
 include: "rules/sv_candidates.rules"
 
