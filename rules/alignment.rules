@@ -53,11 +53,14 @@ rule align_batch:
     output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
     params: sge_opts="-l disk_free=200G -l mfree=3.25G -pe serial 12 -N align_batch_{batch_id}", threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment"]["alignment_parameters"]
     shell:
+        "export REFERENCE_PATH=`readlink -f {input.reference}`; "
+        "export REFERENCE_SUFFIX_PATH=`readlink -f {input.suffix}`; "
+        "export REFERENCE_CTAB_PATH=`readlink -f {input.ctab}`; "
         "mkdir -p {TMP_DIR}/{wildcards.batch_id}; "
         "cd {TMP_DIR}/{wildcards.batch_id}; "
         "set -o pipefail; "
         "set -e; "
-        "{BLASR_BIN} {CWD}/{input.reads} {input.reference} -unaligned /dev/null -out /dev/stdout -sam -sa {input.suffix} -ctab {input.ctab} -nproc {params.threads} -clipping subread {params.alignment_parameters} | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -; "
+        "blasr {CWD}/{input.reads} $REFERENCE_PATH -unaligned /dev/null -out /dev/stdout -sam -sa $REFERENCE_SUFFIX_PATH -ctab $REFERENCE_CTAB_PATH -nproc {params.threads} -clipping subread {params.alignment_parameters} | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -; "
         "samtools index {wildcards.batch_id}.bam; "
         "rsync --bwlimit={params.bwlimit} --remove-source-files -W {wildcards.batch_id}.bam* {CWD}/`dirname {output}`/; "
         "rm -rf {TMP_DIR}/{wildcards.batch_id}"
