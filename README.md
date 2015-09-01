@@ -67,7 +67,7 @@ with the following lines.
 
 Modify `config.json` to include the correct paths to the reference assembly's
 files and input reads manifest. Also indicated how many bytes of input reads to
-include per alignment batch. The default is 30GB.
+include per alignment batch. The default is ~200GB.
 
 ## Align reads
 
