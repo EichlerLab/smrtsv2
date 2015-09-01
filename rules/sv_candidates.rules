@@ -4,9 +4,8 @@ assembly.
 """
 import os
 
+SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
-GAPS = config.get("gaps", "")
-CENTROMERES = config.get("centromeres", "")
 
 # Load alignments if they already exist.
 if config.get("alignments") and os.path.exists(config.get("alignments")):
@@ -80,7 +79,7 @@ rule identify_inaccessible_regions:
             "bedtools intersect -a stdin -b {input.excluded_regions} -v > {output}"
 
 rule collect_regions_to_exclude_as_inaccessible_regions:
-    input: "merged_hardstops_per_bin.bed", GAPS, "filtered_candidates.tab", CENTROMERES
+    input: "merged_hardstops_per_bin.bed", "gaps_in_reference_assembly.bed", "filtered_candidates.tab"
     output: "regions_to_exclude_as_inaccessible.bed"
     params: sge_opts=""
     shell: "cut -f 1-3 {input} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 1 > {output}"
@@ -92,7 +91,7 @@ rule collect_regions_to_exclude_as_inaccessible_regions:
 # Filter hardstops to exclude reference gaps and small SV candidates. Then merge
 # adjacent bins that pass filters.
 rule filter_and_merge_adjacent_hardstop_bins:
-    input: hardstops="hardstops_per_bin.bed", gaps=GAPS, small_svs="filtered_candidates.tab"
+    input: hardstops="hardstops_per_bin.bed", gaps="gaps_in_reference_assembly.bed", small_svs="filtered_candidates.tab"
     output: "merged_hardstops_per_bin.bed"
     params: sge_opts="-l mfree=1G", min_support=str(config["detection"]["min_hardstop_support"])
     shell:
@@ -100,6 +99,13 @@ rule filter_and_merge_adjacent_hardstop_bins:
             "bedtools window -w 1000 -a stdin -b {input.gaps} -v | "
             "bedtools window -w 1000 -a stdin -b {input.small_svs} -v | "
             "bedtools merge -i stdin -d 1 > {output}"
+
+# Find gap bases in the reference assembly to exclude from hardstop collection.
+rule identify_gaps_in_reference_assembly:
+    input: config["reference"]
+    output: "gaps_in_reference_assembly.bed"
+    params: sge_opts=""
+    shell: "python {SNAKEMAKE_DIR}/scripts/find_fasta_gaps.py {input} | bedtools merge -i stdin -d 0 > {output}"
 
 # Count hardstops per genomic bin.
 rule count_hardstops_per_genomic_bin:
