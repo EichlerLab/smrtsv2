@@ -56,5 +56,5 @@ find data/ -name "*.bax.h5" -exec readlink -f {} \; > input.fofn
 Align reads to the reference with BLASR.
 
 ```bash
-snakemake align_reads --config reads=input.fofn reference=reference/chr20.fa
+snakemake align_reads --config reads=input.fofn reference=reference/chr20.fa alignments=alignments.fofn
 ```
