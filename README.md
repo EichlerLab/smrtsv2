@@ -91,7 +91,7 @@ snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_
     batches=4 alignments=custom_alignments.fofn alignments_dir=custom_alignments
 ```
 
-### Parameters
+### Alignment parameters
 
 | Parameter | Definition |
 | --------- | ---------- |
