@@ -21,7 +21,7 @@ Prepare the reference sequence for alignment with PacBio reads. This step
 produces suffix array and ctab files used by BLASR to speed up alignments.
 
 ```bash
-snakemake prepare_reference --config reference_fasta=reference/chr20.fa
+snakemake prepare_reference --config reference=reference/chr20.fa
 ```
 
 ## Download PacBio reads for CHM1 (P5/C3 chemistry)
