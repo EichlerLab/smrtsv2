@@ -14,11 +14,7 @@ import os
 # the entire genome.
 
 # Load regions to assemble.
-if config.get("assembly") and config["assembly"].get("regions_to_assemble") and os.path.exists(config["assembly"].get("regions_to_assemble")) and not os.path.exists("local_assembly_alignments.bam"):
-    with open(config["assembly"]["regions_to_assemble"], "r") as fh:
-        REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh if line.rstrip()]
-else:
-    REGIONS_TO_ASSEMBLE = []
+REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candidates_with_coverage.bed")
 
 #
 # Define internal constants.
@@ -45,7 +41,13 @@ def _get_overlapping_assembly_outputs(wildcards):
         return []
 
 def _get_assembly_alignments(wildcards):
-    return ["mhap_assembly/{chromosome}/{region}/consensus_reference_alignment.sam".format(chromosome=region.split("-")[0], region=region) for region in REGIONS_TO_ASSEMBLE]
+    if os.path.exists(REGIONS_TO_ASSEMBLE):
+        with open(REGIONS_TO_ASSEMBLE, "r") as fh:
+            LIST_OF_REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh if line.rstrip()]
+
+        return ["mhap_assembly/{chromosome}/{region}/consensus_reference_alignment.sam".format(chromosome=region.split("-")[0], region=region) for region in LIST_OF_REGIONS_TO_ASSEMBLE]
+    else:
+        return []
 
 #
 # Settings for rules
@@ -221,7 +223,7 @@ rule collect_assembly_alignments:
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
 rule assemble_region:
-    input: ALIGNMENTS
+    input: alignments=ALIGNMENTS, regions=REGIONS_TO_ASSEMBLE
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
     params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -soft -l L3cache=30M"
     shell:
@@ -229,7 +231,7 @@ rule assemble_region:
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments={input} region={wildcards.region}; "
+        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments={input.alignments} region={wildcards.region}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
