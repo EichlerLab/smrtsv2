@@ -228,10 +228,11 @@ rule assemble_region:
     params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -soft -l L3cache=30M"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
+        "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments={input.alignments} region={wildcards.region}; "
+        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH region={wildcards.region}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
