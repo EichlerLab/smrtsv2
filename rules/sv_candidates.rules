@@ -5,7 +5,6 @@ assembly.
 import os
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
-CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
 REGIONS_TO_EXCLUDE = config.get("regions_to_exclude")
 
 # Load alignments if they already exist.
