@@ -60,7 +60,7 @@ rule align_batch:
         "cd {TMP_DIR}/{wildcards.batch_id}; "
         "set -o pipefail; "
         "set -e; "
-        "blasr {CWD}/{input.reads} $REFERENCE_PATH -unaligned /dev/null -out /dev/stdout -sam -sa $REFERENCE_SUFFIX_PATH -ctab $REFERENCE_CTAB_PATH -nproc {params.threads} -clipping subread {params.alignment_parameters} | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -; "
+        "blasr {CWD}/{input.reads} $REFERENCE_PATH -unaligned /dev/null -out /dev/stdout -sam -sa $REFERENCE_SUFFIX_PATH -ctab $REFERENCE_CTAB_PATH -nproc {params.threads} -clipping subread {params.alignment_parameters} | samtools view -F 0x4 -hS - | samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -; "
         "samtools index {wildcards.batch_id}.bam; "
         "rsync --bwlimit={params.bwlimit} --remove-source-files -W {wildcards.batch_id}.bam* {CWD}/`dirname {output}`/; "
         "rm -rf {TMP_DIR}/{wildcards.batch_id}"
