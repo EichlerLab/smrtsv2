@@ -22,9 +22,8 @@ REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candi
 ASSEMBLY_DIR = "mhap_assembly"
 OVERLAPPING_ASSEMBLY_DIR = "mhap_overlapping_assembly"
 
-BLASR_BIN = config["blasr_bin"]
-BIN_DIR = config["mhap_celera"]["bin_dir"]
-CADIR = config["mhap_celera"]["celera_dir"]
+REFERENCE = config["reference"]
+CADIR = config["celera_dir"]
 
 # User-defined file of alignments with one absolute path to a BAM per line.
 ALIGNMENTS = config.get("alignments", "")
@@ -229,10 +228,11 @@ rule assemble_region:
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
+        "export REFERENCE_PATH=`readlink -f {REFERENCE}`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH region={wildcards.region}; "
+        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH region={wildcards.region}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
