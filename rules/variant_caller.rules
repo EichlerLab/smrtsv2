@@ -4,7 +4,7 @@ localrules: call_variants
 
 SV_TYPES = ("insertion", "deletion")
 INDEL_TYPES = ("insertion", "deletion")
-LOCAL_ASSEMBLY_ALIGNMENTS = config.get("local_assembly_alignments", "merged_assemblies.bam")
+LOCAL_ASSEMBLY_ALIGNMENTS = config.get("local_assembly_alignments", "local_assembly_alignments.bam")
 MIN_CONTIG_LENGTH = 40000
 
 #
