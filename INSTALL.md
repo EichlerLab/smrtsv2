@@ -156,14 +156,14 @@ Download the [latest release of samtools](https://github.com/samtools/samtools/r
 wget https://github.com/samtools/samtools/releases/download/1.2/samtools-1.2.tar.bz2
 ```
 
-Unpack and build samtools.
+Unpack, build samtools, and install binaries, libraries, and headers into
+central directories.
 
 ```bash
 tar jxvf samtools-1.2.tar.bz2
 cd samtools-1.2
 make
 sudo make install install-htslib
-
 sudo rsync -arv *.h /usr/local/include/
 ```
 
