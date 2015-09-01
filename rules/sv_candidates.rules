@@ -6,6 +6,7 @@ import os
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
+REGIONS_TO_EXCLUDE = config.get("regions_to_exclude")
 
 # Load alignments if they already exist.
 if config.get("alignments") and os.path.exists(config.get("alignments")):
@@ -26,8 +27,8 @@ rule get_regions:
     output: "filtered_assembly_candidates_with_coverage.bed"
     params: sge_opts="", min_coverage=str(config["detection"]["min_coverage"]), max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
     run:
-        if config["detection"].get("regions_to_exclude"):
-            shell("bedtools intersect -a {input} -b %s -wa -v | awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' > {output}" % config["detection"].get("regions_to_exclude"))
+        if REGIONS_TO_EXCLUDE is not None:
+            shell("set -o pipefail; bedtools intersect -a {input} -b %s -wa -v | awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' > {output}" % REGIONS_TO_EXCLUDE)
         else:
             shell("awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' {input} > {output}")
 
