@@ -30,14 +30,7 @@ CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"
 include: "rules/prepare_reference.rules"
 include: "rules/alignment.rules"
 include: "rules/sv_candidates.rules"
-
-if config["assembly"]["assembler"] == "celera":
-    include: "rules/local_assembly.celera.rules"
-elif config["assembly"]["assembler"] == "mhap_celera":
-    include: "rules/local_assembly.mhap_celera.rules"
-else:
-    include: "rules/local_assembly.rules"
-
+include: "rules/local_assembly.mhap_celera.rules"
 include: "rules/variant_caller.rules"
 
 #
