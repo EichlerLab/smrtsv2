@@ -118,6 +118,14 @@ their alignments back to the reference. The final output is in `sv_calls.bed`.
 snakemake call_variants --config alignments=alignments.fofn
 ```
 
+### Assembly parameters
+
+| Parameter | Definition |
+| --------- | ---------- |
+| alignments | a text file of absolute paths to PacBio reads alignments in BAM format |
+| reference | a FASTA sequence to align local assemblies to with a .sa and .ctab file in the same directory |
+| regions_to_assemble | a BED file of regions to assemble for variant detection |
+
 ## Distributing analyses on a cluster
 
 SMRT SV is designed to run on a grid engine-style cluster like UGE with 1 or
