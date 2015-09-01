@@ -21,7 +21,7 @@ def _get_bam_path_for_batch(wildcards):
     return PATHS_BY_ALIGNMENT_NAME.get(wildcards.alignment_name)
 
 # Annotate assembly candidates with coverage.
-rule detect_svs:
+rule get_regions:
     input: "assembly_candidates_with_coverage.bed"
     output: "filtered_assembly_candidates_with_coverage.bed"
     params: sge_opts="", min_coverage=str(config["detection"]["min_coverage"]), max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
