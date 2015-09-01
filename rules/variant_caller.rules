@@ -25,7 +25,7 @@ rule call_indels:
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 rule combine_annotations_for_indel_type:
-    input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt", "indel_calls/{indel_type}/exons.txt", "indel_calls/{indel_type}/strs.txt"
+    input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt", "indel_calls/{indel_type}/strs.txt"
     output: "indel_calls/{indel_type}.tab"
     params: sge_opts=""
     shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
@@ -39,12 +39,12 @@ rule combine_annotations_for_indel_type:
 # 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.deletions.bed -loj -sorted |\
 #   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type deletion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
 
-# TODO: don't annotate exons in calling step. This should happen outside of the caller.
-rule annotate_coding_exons_in_indels:
-    input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config.get("gene_exons", "")
-    output: "indel_calls/{indel_type}/exons.txt"
-    params: sge_opts=""
-    shell: """bedtools intersect -a {input.indels} -b {input.genes} -loj | bedtools groupby -c 7 -o first -full | awk '$8 != "."' | cut -f 9 > {output}"""
+# # TODO: don't annotate exons in calling step. This should happen outside of the caller.
+# rule annotate_coding_exons_in_indels:
+#     input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config.get("gene_exons", "")
+#     output: "indel_calls/{indel_type}/exons.txt"
+#     params: sge_opts=""
+#     shell: """bedtools intersect -a {input.indels} -b {input.genes} -loj | bedtools groupby -c 7 -o first -full | awk '$8 != "."' | cut -f 9 > {output}"""
 
 rule annotate_support_from_assembled_contigs_for_indels:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
