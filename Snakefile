@@ -27,6 +27,7 @@ CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"
 
 # TODO: fix bug caused by Snakemake not understanding more than one dynamic
 # output type per file.
+include: "rules/prepare_reference.rules"
 include: "rules/alignment.rules"
 include: "rules/sv_candidates.rules"
 
@@ -37,8 +38,7 @@ elif config["assembly"]["assembler"] == "mhap_celera":
 else:
     include: "rules/local_assembly.rules"
 
-include: "rules/sv_caller.rules"
-include: "rules/indel_caller.rules"
+include: "rules/variant_caller.rules"
 
 #
 # Determine which outputs to create.

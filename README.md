@@ -5,18 +5,24 @@ al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.ht
 
 ## Install dependencies
 
-The PacBio variant caller has the following dependencies:
+The PacBio variant caller has the following Python dependencies:
 
   - anaconda (>= 2.1.0)
-  - bedtools (>= 2.23.0)
   - BioPython (>= 1.6.5)
-  - freebayes (>= 0.9.14)
   - intervaltree (>= 2.1.0)
+  - snakemake (>= 3.2.1)
+
+Additionally, SMRT SV relies on these external tools:
+
+  - [PacBio SMRT analysis](http://www.pacb.com/devnet/)
+  - [BLASR](https://github.com/EichlerLab/blasr) (>= 1.MC.rc42)
+  - [PBcR](http://wgs-assembler.sourceforge.net/wiki/index.php/PBcR) (Celera Assembler with MHAP overlapper)
+  - bedtools (>= 2.23.0)
+  - freebayes (>= 0.9.14)
   - perl (>= 5.14.2)
   - R (>= 3.1.0)
   - RepeatMasker (>= 3.3.0)
   - samtools (>= 1.1)
-  - snakemake (>= 3.2.1)
 
 If modules are already installed for these tools, source the configuration file.
 
@@ -61,7 +67,7 @@ with the following lines.
 
 Modify `config.json` to include the correct paths to the reference assembly's
 files and input reads manifest. Also indicated how many bytes of input reads to
-include per alignment batch. The default is 30GB.
+include per alignment batch. The default is ~200GB.
 
 ## Align reads
 
@@ -94,6 +100,7 @@ snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_
 | batches (default: 1) | number of batches to split input reads into such that there will be one BAM output file per batch |
 | alignments (default: "alignments.fofn") | name of output file with list of absolute paths to BAM output files |
 | alignments_dir (default: "alignments") | name of directory where BAM output files will be written |
+| threads (default: 1) | number of threads to use for each BLASR alignment job |
 
 ## Identify and assembly SV candidate regions
 
