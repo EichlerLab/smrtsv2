@@ -189,7 +189,7 @@ rule find_overlapping_assemblies:
     input: "local_assembly_overlaps.bed"
     output: "overlapping_assemblies.bed"
     params: sge_opts=""
-    shell: "awk '$4 > 1' {input} | sed '/random/d;/chrUn/d;/chrM/d;/chrY/d' > {output}"
+    shell: "awk '$4 > 1' {input} > {output}"
 
 # Identify overlapping assemblies.
 rule find_assembly_overlaps:

@@ -74,7 +74,6 @@ rule identify_inaccessible_regions:
     params: sge_opts="", max_support=str(config["detection"]["max_inaccessible_support"])
     shell:
         "awk '$4 <= {params.max_support}' {input.coverage} | "
-            "sed '/chrY/d;/chrEBV/d' | "
             "bedtools merge -i stdin -d 1000 | "
             "bedtools intersect -a stdin -b {input.excluded_regions} -v > {output}"
 
@@ -127,7 +126,7 @@ rule create_hardstop_breakpoints:
                   if ($6 == "left") {{ print $1,$2,$2 + 1,$4,$7,"left" }}
                   else if ($6 == "right") {{ print $1,$3 - 1,$3,$4,$8,"right" }}
                   else if ($6 == "both") {{ print $1,$2,$2 + 1,$4,$7,"left"; print $1,$3 - 1,$3,$4,$8,"right" }}
-              }}' {input} | sort -k 1,1 -k 2,2n | awk '$1 != "chrY"' > {output}"""
+              }}' {input} | sort -k 1,1 -k 2,2n > {output}"""
 
 # Collect gaps in one command
 rule collect_hardstops:
@@ -219,12 +218,11 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000", patterns_to_exclude="random|chrUn|chrY|chrM"
+    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
-            """| grep -v -P "({params.patterns_to_exclude})" """
             "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed; "
         "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed {output}"
 
