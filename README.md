@@ -100,6 +100,7 @@ snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_
 | batches (default: 1) | number of batches to split input reads into such that there will be one BAM output file per batch |
 | alignments (default: "alignments.fofn") | name of output file with list of absolute paths to BAM output files |
 | alignments_dir (default: "alignments") | name of directory where BAM output files will be written |
+| threads (default: 1) | number of threads to use for each BLASR alignment job |
 
 ## Identify and assembly SV candidate regions
 
