@@ -1,16 +1,8 @@
 {
     "reads": "/path/to/input.bax.fofn",
     "alignments": "/path/to/alignments.fofn",
-    "blasr_bin": "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/blasr_jlhudd/alignment/bin/blasr",
+    "celera_dir": "/path/to/celera/bin",
     "tmp_dir": "/var/tmp",
-    "reference": {
-        "assembly": "/path/to/assemblies/hg38/ucsc.hg38.no_alts.fasta",
-        "suffix_array": "/path/to/assemblies/hg38/ucsc.hg38.no_alts.fasta.sa",
-        "ctab": "/path/to/assemblies/hg38/ucsc.hg38.no_alts.fasta.ctab",
-        "chromosome_lengths": "/path/to/assemblies/hg38/chromInfo.no_alts.txt",
-        "gaps": "/path/to/assemblies/hg38/gaps.bed",
-        "centromeres": "/path/to/assemblies/hg38/centromeres.bed"
-    },
     "alignment": {
         "size_per_batch": 214748364800,
         "mapping_quality": 30,
@@ -39,19 +31,8 @@
         "alignment_parameters": "-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13"
     },
     "mhap_celera": {
-        "celera_dir": "/path/to/celera/bin",
         "bin_dir": "/path/to/mhap/celera/scripts",
-        "celera_spec": "/path/to/celera/specifications/pacbio.local_human.spec",
         "bas_template": "/path/to/representative/hdf5/file/for/chemistry/m130928_232712_42213_c100518541910000001823079209281310_s1_p0.1.bax.h5",
         "blasr_dir": "/path/to/blasr/bin"
-    },
-    "gap_extension": {
-        "min_coverage": 5,
-        "max_coverage": 100,
-        "regions_to_assemble": "/path/to/working/directory/gaps_to_assemble.bed",
-        "assembler": "mhap_celera",
-        "runCA": "/path/to/celera/bin/runCA",
-        "fastqToCA": "/path/to/celera/bin/fastqToCA",
-        "mapping_quality": 30
     }
 }
