@@ -102,17 +102,29 @@ snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_
 | alignments_dir (default: "alignments") | name of directory where BAM output files will be written |
 | threads (default: 1) | number of threads to use for each BLASR alignment job |
 
-## Identify and assembly SV candidate regions
+## Identify SV candidate regions
 
-Parse alignments to identify SV candidates, produce a list of candidate regions
-for local assembly, and assemble SV candidate regions with MHAP/Celera. Local
-assemblies that map to overlapping regions of the reference will be reassembled
-together to create a single representative contig for the region. The final
-assemblies and their alignments against the reference are in
-`local_assembly_alignments.bam`.
+Parse alignments to identify SV candidates and produce a list of candidate
+regions for local assembly.
 
-After producing local assemblies, call SVs from assemblies based on gaps in
-their alignments back to the reference. The final output is in `sv_calls.bed`.
+```bash
+snakemake get_regions --config alignments=alignments.fofn reference=reference.fasta
+```
+
+### Candidate region parameters
+
+| Parameter | Definition |
+| --------- | ---------- |
+| alignments | a text file of absolute paths to PacBio reads alignments in BAM format |
+| reference | a FASTA sequence to align local assemblies to with a .sa and .ctab file in the same directory |
+| regions_to_exclude *(optional)* | a BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, gaps, etc.) |
+
+## Assemble candidate regions
+
+Assemble SV candidate regions with MHAP/Celera. The final assemblies and their
+alignments against the reference are in `local_assembly_alignments.bam`. After
+producing local assemblies, call SVs from assemblies based on gaps in their
+alignments back to the reference. The final output is in `sv_calls.bed`.
 
 ```bash
 snakemake call_variants --config alignments=alignments.fofn
