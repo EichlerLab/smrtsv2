@@ -52,7 +52,7 @@ rule merge_filtered_candidates:
     output: "assembly_candidates.bed"
     # TODO: consider moving these parameters into config file
     params: sge_opts="", merge_distance="500", slop="10000"
-    shell: "cut -f 1-3 {input} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d {params.merge_distance} | bedtools slop -i stdin -g {input.chromosome_lengths} -b {params.slop} > {output}"
+    shell: "set -o pipefail; cut -f 1-3 {input[0]} {input[1]} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d {params.merge_distance} | bedtools slop -i stdin -g {input.chromosome_lengths} -b {params.slop} > {output}"
 
 #
 # Windows for tiled assemblies.
