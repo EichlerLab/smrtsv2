@@ -144,7 +144,7 @@ rule find_hardstops_in_aligned_reads:
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
-        "scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
+        ". config.sh && scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
         "sort -k 1,1 -k 2,2n -o {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
         "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {output}"
 
@@ -242,5 +242,5 @@ rule calculate_coverage_per_batch:
     shell:
         "mkdir -p {TMP_DIR}; "
         "mkdir -p `dirname {output}`; "
-        "scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
+        ". config.sh && scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
         "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}"
