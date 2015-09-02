@@ -22,7 +22,7 @@ REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candi
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 ASSEMBLY_DIR = "mhap_assembly"
 OVERLAPPING_ASSEMBLY_DIR = "mhap_overlapping_assembly"
-
+LOG_FILE = config.get("log", "{SNAKEMAKE_DIR}/assembly.log")
 REFERENCE = config["reference"]
 CADIR = config["celera_dir"]
 
@@ -233,7 +233,7 @@ rule assemble_region:
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH region={wildcards.region} log={SNAKEMAKE_DIR}/assembly.log; "
+        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH region={wildcards.region} log={LOG_FILE}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
