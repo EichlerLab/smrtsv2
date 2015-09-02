@@ -67,7 +67,7 @@ rule align_batch:
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
-    input: config["reads"]
+    input: config.get("reads", "")
     output: "%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR
     params: sge_opts=""
     run:
