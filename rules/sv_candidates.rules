@@ -6,6 +6,7 @@ import os
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 REGIONS_TO_EXCLUDE = config.get("regions_to_exclude")
+BANDWIDTH_LIMIT = 50000
 
 # Load alignments if they already exist.
 if config.get("alignments") and os.path.exists(config.get("alignments")):
@@ -139,7 +140,7 @@ rule collect_hardstops:
 rule find_hardstops_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch
     output: "hardstops_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), min_clipping="500", bwlimit="20000"
+    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), min_clipping="500", bwlimit=str(BANDWIDTH_LIMIT)
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
@@ -218,7 +219,7 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit="20000"
+    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit=str(BANDWIDTH_LIMIT)
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
@@ -230,14 +231,14 @@ rule find_gaps_in_aligned_reads:
 rule merge_coverage_per_batch:
     input: expand("coverage/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
     output: "coverage.bed"
-    params: sge_opts="-l mfree=2G", bwlimit="20000"
+    params: sge_opts="-l mfree=2G", bwlimit=str(BANDWIDTH_LIMIT)
     shell: """paste {input} | awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' > {output}"""
 
 # Calculate coverage from each batch.
 rule calculate_coverage_per_batch:
     input: _get_bam_path_for_batch
     output: "coverage/{alignment_name}.bed"
-    params: sge_opts="-l mfree=4G", bwlimit="20000"
+    params: sge_opts="-l mfree=4G", bwlimit=str(BANDWIDTH_LIMIT)
     shell:
         "mkdir -p {TMP_DIR}; "
         "mkdir -p `dirname {output}`; "
