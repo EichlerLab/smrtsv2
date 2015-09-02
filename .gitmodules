@@ -1,0 +1,6 @@
+[submodule "samtools"]
+	path = samtools
+	url = https://github.com/samtools/samtools.git
+[submodule "dist/samtools"]
+	path = dist/samtools
+	url = https://github.com/samtools/samtools.git
