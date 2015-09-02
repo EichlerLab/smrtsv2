@@ -48,7 +48,7 @@ creates the appropriate configuration file entries for the reference in the file
 the template in this repository.
 
 ```bash
-snakemake prepare_reference --config reference_fasta=/path/to/reference.fasta
+snakemake prepare_reference --config reference=/path/to/reference.fasta
 ```
 
 ## Create a manifest of input reads
