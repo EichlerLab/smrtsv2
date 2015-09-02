@@ -6,10 +6,11 @@ module list &> /dev/null
 
 if [[ "$?" -eq "0" ]]
 then
+    module load anaconda/2.3.0
     module load bedtools/2.23.0
     module load blasr/dev
     module load freebayes/0.9.14
-    module load samtools/1.1
+    module load samtools/1.2-complete
 
     module load hdf5/1.8.13
     module load netcdf/4.3.2
