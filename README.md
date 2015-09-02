@@ -91,6 +91,12 @@ snakemake align_reads --config reads=input.fofn reference=/path/to/ucsc.hg38.no_
     batches=4 alignments=custom_alignments.fofn alignments_dir=custom_alignments
 ```
 
+Note that if you already have alignments of PacBio reads to your reference in BAM format, you can skip this step and create an `alignments.fofn` file for the subsequent steps.
+
+```bash
+find /path/to/your/alignments -name "*.bam" > alignments.fofn
+```
+
 ### Alignment parameters
 
 | Parameter | Definition |
