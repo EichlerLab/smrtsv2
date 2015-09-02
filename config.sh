@@ -1,4 +1,5 @@
 export SMRT_ROOT=/net/eichler/vol24/projects/sequencing/pacbio/software/smrtanalysis
+export PATH=`pwd`/bin:$PATH
 
 # Use modules to load dependencies if that environment is available.
 module list &> /dev/null
