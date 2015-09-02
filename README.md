@@ -137,6 +137,7 @@ snakemake call_variants --config alignments=alignments.fofn
 | alignments | a text file of absolute paths to PacBio reads alignments in BAM format |
 | reference | a FASTA sequence to align local assemblies to with a .sa and .ctab file in the same directory |
 | regions_to_assemble | a BED file of regions to assemble for variant detection |
+| log (default: assembly.log) | file to log assembly results to |
 
 ## Distributing analyses on a cluster
 
