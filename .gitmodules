@@ -7,3 +7,6 @@
 [submodule "dist/htslib"]
 	path = dist/htslib
 	url = https://github.com/samtools/htslib.git
+[submodule "dist/blasr"]
+	path = dist/blasr
+	url = https://github.com/EichlerLab/blasr.git
