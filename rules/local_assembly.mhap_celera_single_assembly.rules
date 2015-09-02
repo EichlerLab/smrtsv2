@@ -107,12 +107,12 @@ rule assemble_reads:
             shell("timeout {params.max_runtime} {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
             if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
                 shell("cat {assembly_output} > {output}")
-                shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["assembly"]["log"])
+                shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["log"])
                 assembly_exists = True
             else:
-                shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["assembly"]["log"])
+                shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["log"])
         except:
-            shell("""echo -e "{REGION}\tassembly_crashed" >> %s""" % config["assembly"]["log"])
+            shell("""echo -e "{REGION}\tassembly_crashed" >> %s""" % config["log"])
 
         # Create an empty assembly for failed regions.
         if not assembly_exists:
