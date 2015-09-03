@@ -36,7 +36,7 @@ rule get_regions:
 rule annotate_coverage_for_candidates:
     input: candidates="assembly_candidates_and_windows.bed", coverage="coverage.bed"
     output: "assembly_candidates_with_coverage.bed"
-    params: sge_opts=""
+    params: sge_opts="-l mfree=4G"
     shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
 
 # Merge filtered candidates with tiled windows.
@@ -198,7 +198,7 @@ rule filter_candidates:
 rule annotate_coverage_of_merged_gap_support:
     input: support="merged_support_for_{event_type}.bed", coverage="coverage.bed"
     output: "coverage_and_merged_support_for_{event_type}.bed"
-    params: sge_opts=""
+    params: sge_opts="-l mfree=4G"
     shell: """bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($13 == ".") {{ $13 = 0 }} print }}' | groupBy -i stdin -g 1,2,3,4,5,6,7,8,9 -c 13 -o mean > {output}"""
 
 # Merge gap support for each type of event.
