@@ -17,6 +17,7 @@ bedtools2:
 freebayes:
 	git submodule update --init  dist/freebayes
 	cd dist/freebayes && git submodule update --init
+	cd dist/freebayes/vcflib && git submodule update --init
 	cd $(PWD)/dist/freebayes && make
 	sleep 1
 	-ln -s dist/freebayes/bin/freebayes bin/freebayes
