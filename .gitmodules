@@ -10,3 +10,9 @@
 [submodule "dist/blasr"]
 	path = dist/blasr
 	url = https://github.com/EichlerLab/blasr.git
+[submodule "dist/bedtools"]
+	path = dist/bedtools
+	url = https://github.com/arq5x/bedtools2.git
+[submodule "dist/freebayes"]
+	path = dist/freebayes
+	url = https://github.com/ekg/freebayes.git
