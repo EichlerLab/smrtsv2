@@ -10,17 +10,17 @@ PWD  = $(shell pwd)
 all: checkBedtools checkSamtools checkFreebayes
 
 bedtools2:
-	git submodule update --init --recursive
+	cd dist/bedtools && git submodule update --init --recursive
 	cd $(PWD)/dist/bedtools && make
 	sleep 1
 	-ln -s dist/bedtools/bin/bedtools bin/bedtools
 freebayes:
-	git submodule update --init --recursive
+	cd dist/freebayes && git submodule update --init --recursive
 	cd $(PWD)/dist/freebayes && make
 	sleep 1
 	-ln -s dist/freebayes/bin/freebayes bin/freebayes
 samtools:
-	git submodule update --init --recursive
+	cd dist/samtools && git submodule update --init --recursive
 	cd $(PWD)/dist/samtools && make	
 	sleep 1
 	-ln -s dist/samtools/samtools bin/samtools
