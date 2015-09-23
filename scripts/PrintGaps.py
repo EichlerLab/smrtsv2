@@ -212,7 +212,6 @@ for samFileName in args.sam:
 
             if (op == N or op == S):
                 # Inside match block (if op == M)
-                tPos += l
                 qPos += l
             if (op == M):
                 # Inside match block (if op == M)
