@@ -135,6 +135,36 @@ rule call_svs:
     input: "sv_calls.bed"
     params: sge_opts=""
 
+rule summarize_sv_calls:
+    input: expand("sv_calls/summarized_{sv_type}", sv_type=SV_TYPES)
+
+rule summarize_calls_by_repeat_type:
+    input: "sv_calls/all_annotated.{sv_type}.bed"
+    output: "sv_calls/summarized_{sv_type}"
+    params: sge_opts=""
+    shell:
+        "mkdir -p {output}; "
+        "scripts/PrintUniqueEvents.py {input} --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
+        "scripts/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; "
+        "scripts/PrintUniqueEvents.py {output}/2.bed --prefix NONE --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --remainder {output}/3.bed > {output}/NONE.bed; "
+        "scripts/PrintUniqueEvents.py {output}/3.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
+        "scripts/PrintUniqueEvents.py {output}/4.bed --prefix L1HS  --maxNotPrefix 0 --remainder {output}/5.bed > {output}/L1HS.simple.bed; "
+        "scripts/PrintUniqueEvents.py {output}/5.bed --prefix Alu  --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/6.bed > {output}/Alu.Mosaic.bed; "
+        "scripts/PrintUniqueEvents.py {output}/6.bed --prefix Alu  --minSTR 1 --minPrefix 1 --maxNotPrefix 0 --remainder {output}/7.bed > {output}/Alu.STR.bed; "
+        "scripts/PrintUniqueEvents.py {output}/7.bed --prefix ALR   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/8.bed > {output}/ALR.bed; "
+        "scripts/PrintUniqueEvents.py {output}/8.bed --prefix SVA   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/9.bed > {output}/SVA.simple.bed; "
+        "scripts/PrintUniqueEvents.py {output}/9.bed --prefix HERV   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/10.bed > {output}/HERV.simple.bed; "
+        "scripts/PrintUniqueEvents.py {output}/10.bed --prefix L1P   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/11.bed > {output}/L1P.bed; "
+        "scripts/PrintUniqueEvents.py {output}/11.bed --prefix BSR/Beta   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/12.bed > {output}/Beta.bed; "
+        "scripts/PrintUniqueEvents.py {output}/12.bed --prefix HSAT   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/13.bed > {output}/HSAT.bed; "
+        "scripts/PrintUniqueEvents.py {output}/13.bed --prefix MER   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/14.bed > {output}/MER.bed; "
+        "scripts/PrintUniqueEvents.py {output}/14.bed --prefix L1   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/15.bed > {output}/L1.bed; "
+        "scripts/PrintUniqueEvents.py {output}/14.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
+
+        "scripts/PrintUniqueEvents.py {output}/16.bed --max 1 --remainder {output}/17.bed > {output}/Singletons.bed; "
+        "mv -f {output}/17.bed {output}/Complex.bed; "
+        "rm -f {output}/[0-9]*.bed"
+
 rule merge_sv_calls:
     input: expand("sv_calls/all_annotated.{sv_type}.bed", sv_type=SV_TYPES)
     output: "sv_calls.bed"
