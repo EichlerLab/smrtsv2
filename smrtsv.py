@@ -2,11 +2,22 @@ import argparse
 import subprocess
 import sys
 
+CLUSTER_SETTINGS = '" -q all.q -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash"'
+CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "30")
+
+def _build_prefix(args):
+    prefix = ["snakemake", "-pq"]
+    if args.distribute:
+        prefix.extend(CLUSTER_FLAG)
+
+    return tuple(prefix)
 
 def index(args):
-    args = ("snakemake", "-q", "prepare_reference", "--config", "reference=%s" % args.reference)
-    print(args)
-    return subprocess.call(args)
+    prefix = _build_prefix(args)
+    args = prefix + ("prepare_reference", "--config", "reference=%s" % args.reference)
+    args = " ".join(args)
+    print args
+    return subprocess.call(args, shell=True)
 
 def align(args):
     print "Align reads"
