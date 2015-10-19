@@ -13,17 +13,20 @@ bedtools2:
 	git submodule update --init  dist/bedtools
 	-cd dist/bedtools && make
 	-@ln -s ../dist/bedtools/bin/bedtools bin/bedtools
+
 freebayes:
 	git submodule update --init  dist/freebayes
 	cd dist/freebayes && git submodule update --init
 	cd dist/freebayes/vcflib && git submodule update --init
 	-cd dist/freebayes && make
 	-@ln -s ../dist/freebayes/bin/freebayes bin/freebayes
+
 samtools:
 	git submodule update --init dist/samtools
 	git submodule update --init dist/htslib
 	-cd dist/samtools && make
 	-@ln -s ../dist/samtools/samtools bin/samtools
+
 checkSamtools:
 ifdef SAMTOOLS
 	@echo "Found samtools version: $(SAMTOOLS)"
