@@ -20,6 +20,7 @@ def genotype(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--distribute", action="store_true", help="Distribute analysis to Grid Engine-style cluster")
     subparsers = parser.add_subparsers()
 
     # Index a reference for use by BLASR.
