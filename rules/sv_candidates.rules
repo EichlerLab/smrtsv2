@@ -244,3 +244,30 @@ rule calculate_coverage_per_batch:
         "mkdir -p `dirname {output}`; "
         ". config.sh && scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
         "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}"
+
+# Collect coverages from all alignments.
+rule merge_coverage_per_batch_bedops:
+    input: expand("bedops_coverage/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
+    output: "bedops_coverage.bed"
+    params: sge_opts="-l mfree=2G"
+    shell: """paste {input} | awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' > {output}"""
+
+# Calculate coverage from each batch.
+rule calculate_coverage_per_batch_bedops:
+    input: bam=_get_bam_path_for_batch, windows="coverage_windows.bed"
+    output: "bedops_coverage/{alignment_name}.bed"
+    params: sge_opts="-l mfree=4G -l disk_free=3G -pe serial 1", bwlimit=str(BANDWIDTH_LIMIT)
+    shell:
+        "mkdir -p {TMP_DIR}; "
+        "mkdir -p `dirname {output}`; "
+        ". config.sh; "
+        "bedtools bamtobed -i {input.bam} | awk '$5 >= 30' | cut -f 1-3 > {TMP_DIR}/{wildcards.alignment_name}.bam.bed; "
+        """bedmap --delim "\\t" --faster --echo --count {input.windows} {TMP_DIR}/{wildcards.alignment_name}.bam.bed > {TMP_DIR}/{wildcards.alignment_name}.bed; """
+        "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}; "
+        "rm -f {TMP_DIR}/{wildcards.alignment_name}.bam.bed"
+
+rule make_coverage_windows:
+    input: config["reference"]
+    output: "coverage_windows.bed"
+    params: sge_opts="-l mfree=2G"
+    shell: "sort -k 1,1 {input}.fai | bedtools makewindows -g /dev/stdin -w 50 > {output}"
