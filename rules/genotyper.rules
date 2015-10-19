@@ -1,0 +1,224 @@
+import pandas as pd
+
+configfile: "config.json"
+
+SAMPLES = sorted(config["samples"].keys())
+
+def _get_bam_for_sample(wildcards):
+    return config["samples"][wildcards.sample]
+
+def _get_1000_genomes_sample_name(wildcards):
+    return wildcards["sample"].split("_")[2]
+
+
+rule annotate_mei_genotypes_with_PacBio_genotypes:
+    input: mei_genotypes="samples/{sample}/1000_genomes_{mei}_genotypes_for_PacBio_calls.bed", pacbio_genotypes="samples/{sample}/concordant_support.tab"
+    output: "samples/{sample}/concordant_support_for_{mei}_with_1000_genomes.tab"
+    params: sge_opts=""
+    run:
+        mei_genotypes = pd.read_table(input["mei_genotypes"])
+        pacbio_genotypes = pd.read_table(input["pacbio_genotypes"])
+        mei_genotypes = mei_genotypes.merge(pacbio_genotypes, how="inner", on=("chr", "start", "end"))
+        mei_genotypes["genotype_from_1KG"] = mei_genotypes["genotype_from_1KG"].apply(lambda x: "/".join(sorted(re.split(r'[/|]', str(x)), reverse=True)))
+        mei_genotypes["concordant_genotype"] = mei_genotypes["genotype_from_1KG"] == mei_genotypes["genotype"]
+        mei_genotypes.to_csv(output[0], sep="\t", index=False)
+
+rule intersect_MEI_genotypes_with_PacBio_calls:
+    input: sv_calls="sv_calls_for_intersection.bed", mei_calls="samples/{sample}/1000_genomes_{mei}_genotypes.bed"
+    output: "samples/{sample}/1000_genomes_{mei}_genotypes_for_PacBio_calls.bed"
+    params: sge_opts="", sample_name=_get_1000_genomes_sample_name
+    shell: """bedtools intersect -a {input.sv_calls} -b {input.mei_calls} -f 0.5 -r -wo | awk '$4 == "insertion"' | cut -f 6-8,14 | sort -k 1,1 -k 2,2n | awk 'OFS="\\t" {{ if (NR == 1) {{ print "chr","start","end","genotype_from_1KG" }} print }}' > {output}"""
+
+rule get_specific_MEI_genotypes_for_sample:
+    input: config["1000_genomes_sv_calls"]
+    output: "samples/{sample}/1000_genomes_{mei}_genotypes.bed"
+    params: sge_opts="", sample_name=_get_1000_genomes_sample_name
+    shell: """set -o pipefail; zcat {input} | vcffilter -f "SVTYPE = {wildcards.mei}" | vcfkeepinfo - SVTYPE END SVLEN | vcfkeepsamples - {params.sample_name} | vcf2tsv -g -n . | sed 1d | awk 'OFS="\\t" {{ print "chr"$1,$2-1,$2-1+$9,$3,$9,$12 }}' | sort -k 1,1 -k 2,2n > {output}"""
+
+rule genotype_PacBio_SVs:
+    input: sv_calls="sv_calls.bed", control_locations="control_locations.hg38.bed", alignments="samples/{sample}/single_end_alignments.bam"
+    output: "samples/{sample}/concordant_support.tab"
+    params: sge_opts=""
+    shell: "python genotype_with_reference.py {input.sv_calls} {input.control_locations} {input.alignments} {output}"
+
+rule plot_genotypes_heatmap:
+    input: "sv_genotypes.tab"
+    output: "sv_genotypes.pdf"
+    params: sge_opts=""
+    shell: "python heatmap.py {input} {output}"
+
+rule combine_genotypes_across_samples:
+    input: expand("samples/{sample}/sv_genotypes.txt", sample=SAMPLES)
+    output: "sv_genotypes.tab"
+    params: sge_opts=""
+    shell: "paste {input} > {output}"
+
+rule summarize_breakpoint_genotypes:
+    input: "samples/{sample}/sv_breakpoint_support.tab"
+    output: "samples/{sample}/sv_genotypes.txt"
+    params: sge_opts=""
+    priority: 15
+    shell: """awk '{{ if (NR == 1) {{ print "{wildcards.sample}" }} if ($2 == 2) {{ print 1 }} else {{ print 0 }} }}' {input} > {output}"""
+
+rule genotype_breakpoints:
+    input: sv_coordinates="sv_coordinates_in_assemblies.bed", local_assembly_index="local_assemblies.fasta.fai", alignments="samples/{sample}/alignments_for_local_assemblies.bam"
+    output: "samples/{sample}/sv_breakpoint_support.tab"
+    params: sge_opts="", flank="5", min_support="1"
+    priority: 10
+    shell: """bedtools flank -i {input.sv_coordinates} -g {input.local_assembly_index} -b {params.flank} | samtools bedcov /dev/stdin {input.alignments} | cut -f 4-5 | sort -k 1,1 | awk 'OFS="\\t" {{ if ($2 >= {params.min_support}) {{ $2=1 }} else {{ $2=0 }} print }}' | groupBy -i stdin -g 1 -c 2 -o sum > {output}"""
+
+rule extract_alignments_for_control_regions:
+    input: control_regions="control_locations.copy2.hg38.txt", alignments="samples/{sample}/single_end_alignments.bam", assembly_index="reference.fasta.fai"
+    output: "samples/{sample}/control_locations.copy2.bam"
+    params: sge_opts=""
+    priority: 5
+    shell: """while read region; do samtools view -f 0x2 {input.alignments} "$region"; done < {input.control_regions} | awk '$5 > 0 || ($12 == "NM:i:0" && $6 == length($10)"M")' | samtools view -Sb -t {input.assembly_index} - > {output}; samtools index {output}"""
+
+rule extract_alignments_for_local_assemblies:
+    input: contigs="local_assemblies.txt", alignments="samples/{sample}/single_end_alignments.bam", local_assembly_index="local_assemblies.fasta.fai"
+    output: "samples/{sample}/alignments_for_local_assemblies.bam"
+    params: sge_opts=""
+    priority: 5
+    #|| ($12 == "NM:i:0" && $6 == length($10)"M")
+    shell: """while read contig; do samtools view -f 0x2 {input.alignments} "$contig"; done < {input.contigs} | awk '$5 > 0 || ($12 == "NM:i:0" && $6 == length($10)"M")' | samtools view -Sb -t {input.local_assembly_index} - > {output}; samtools index {output}"""
+
+# Map paired-end reads from entire BAM with bamshuf
+rule map_sample_reads:
+    input: reads=_get_bam_for_sample, reference="reference.fasta", index="reference.fasta.bwt", regions_to_keep="regions_to_keep.bed"
+    output: alignments="samples/{sample}/single_end_alignments.bam"
+    params: sge_opts="-l mfree=4G -pe serial 12 -l disk_free=300G", threads="11", samtools_memory="8G"
+    shell: "samtools view -h {input.reads} | cut -f 1-11 | samtools view -Sub - | samtools bamshuf -O /dev/stdin $TMPDIR/shuffled.{wildcards.sample} | samtools bam2fq - | seqtk dropse | bwa mem -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}' -k 30 -L 8,8 -j -p -t {params.threads} {input.reference} - | samblaster --removeDups | samtools view -h -L {input.regions_to_keep} - | samtools sort -m {params.samtools_memory} -T $TMPDIR/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"
+
+# # Map paired-end reads from extracted reads.
+# rule map_sample_reads:
+#     input: reads="samples/{sample}/all_reads.fastq.gz", reference="reference.fasta", index="reference.fasta.bwt", regions_to_keep="regions_to_keep.bed"
+#     output: alignments="samples/{sample}/single_end_alignments.bam", discordant="samples/{sample}/discordant_reads.sam"
+#     params: sge_opts="-l mfree=4G -pe serial 12 -l disk_free=200G", threads="11", samtools_memory="8G"
+#     shell: "bwa mem -R '@RG\tID:{wildcards.sample}\tSM:{wildcards.sample}' -k 30 -L 8,8 -j -p -t {params.threads} {input.reference} - | samblaster --removeDups | samtools view -h -L {input.regions_to_keep} - | samtools sort -m {params.samtools_memory} -T /var/tmp/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"
+
+# # Map paired-end reads with mrsfast from entire BAM with bamshuf
+# rule map_sample_reads_with_mrsfast:
+#     input: reads=_get_bam_for_sample, reference="reference.fasta", index="reference.fasta.bwt", regions_to_keep="regions_to_keep.bed"
+#     output: alignments="samples/{sample}/single_end_alignments.bam", discordant="samples/{sample}/discordant_reads.sam"
+#     params: sge_opts="-l mfree=3.25G -pe serial 12 -l disk_free=200G", threads="11", samtools_memory="2G"
+#     shell: "samtools bamshuf -O -u {input.reads} /var/tmp/shuffled.{wildcards.sample} | samtools bam2fq - | seqtk dropse | bwa mem -k 30 -L 8,8 -j -p -t {params.threads} {input.reference} - | samblaster --removeDups --excludeDups --discordantFile {output.discordant} | samtools view -h -L {input.regions_to_keep} - | samtools sort -m {params.samtools_memory} -T /var/tmp/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"
+
+# rule merge_reads_for_sample:
+#     input: "samples/{sample}/mapped_reads.fastq.gz", "samples/{sample}/unmapped_reads.fastq.gz"
+#     output: "samples/{sample}/all_reads.fastq.gz"
+#     params: sge_opts=""
+#     shell: "zcat {input} | gzip -1 -c > {output}"
+
+# rule get_paired_reads_for_local_assembly_regions:
+#     input: regions="regions_to_keep.hg19.bed", bam=_get_bam_for_sample
+#     output: "samples/{sample}/all_reads.fastq.gz"
+#     params: sge_opts="-l mfree=8G -pe serial 2 -l disk_free=50G"
+#     shell:
+#         "samtools view -h -L {input.regions} {input.bam} | cut -f 1-11 | samtools sort -@ 2 -m 7G -n -T /var/tmp/mapped_reads.{wildcards.sample} -O sam | samtools bam2fq - > $TMPDIR/reads.fastq; "
+#         "samtools view -f 0x4 {input.bam} '*' | samtools bam2fq - >> $TMPDIR/reads.fastq; "
+#         "gzip $TMPDIR/reads.fastq; "
+#         "rsync --remove-source-files $TMPDIR/reads.fastq.gz {output}"
+
+# rule get_unmapped_reads:
+#     input: _get_bam_for_sample
+#     output: temp("samples/{sample}/unmapped_reads.fastq.gz")
+#     params: sge_opts="-l mfree=3G"
+#     shell: "samtools view -f 0x4 {input} '*' | samtools bam2fq - | gzip -1 -c > {output}"
+
+# Prepare reference FASTAs
+
+rule samtools_index_combined_reference:
+    input: "reference.fasta"
+    output: "reference.fasta.fai"
+    params: sge_opts=""
+    shell: "samtools faidx {input}"
+
+rule mrsfast_index_combined_reference:
+    input: "reference.fasta"
+    output: "reference.fasta.index"
+    params: sge_opts="-l mfree=10G"
+    shell: "mrsfast --index {input}"
+
+rule bwa_index_combined_reference:
+    input: "reference.fasta"
+    output: "reference.fasta.bwt"
+    params: sge_opts="-l mfree=10G"
+    shell: "bwa index {input}"
+
+rule build_combined_reference:
+    input: config["reference"], "local_assemblies.fasta"
+    output: "reference.fasta"
+    params: sge_opts=""
+    shell: "cat {input} > {output}"
+
+rule get_copy_2_control_regions:
+    input: "control_locations.hg38.bed"
+    output: "control_locations.copy2.hg38.txt"
+    params: sge_opts=""
+    shell: """awk '$4 == 2' {input} | awk '{{ print $1":"$2"-"$3 }}' > {output}"""
+
+rule get_bed_for_regions_to_keep:
+    input: "local_assemblies.bed", "local_assembly_regions.hg38.bed", "control_locations.hg38.bed"
+    output: "regions_to_keep.bed"
+    params: sge_opts=""
+    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
+
+rule get_bed_for_regions_to_keep_in_mapped_bams:
+    input: "local_assembly_regions.hg19.bed", "control_locations.hg19.bed"
+    output: "regions_to_keep.hg19.bed"
+    params: sge_opts=""
+    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
+
+rule liftover_set_to_hg19:
+    input: "{liftover_set}.hg38.bed", "/net/eichler/vol2/eee_shared/assemblies/hg38/liftOver/hg38ToHg19.over.chain"
+    output: "{liftover_set}.hg19.bed", "{liftover_set}.unmapped.txt"
+    params: sge_opts=""
+    shell: "liftOver {input} {output}"
+
+rule get_bed_for_local_assemblies:
+    input: "local_assemblies.fasta.fai"
+    output: "local_assemblies.bed"
+    params: sge_opts=""
+    shell: """awk 'OFS="\\t" {{ print $1,0,$2 }}' {input} > {output}"""
+
+rule get_bed_for_local_assembly_regions:
+    input: index="local_assemblies.fasta.fai", chromosome_lengths=config["chromosome_lengths"]
+    output: "local_assembly_regions.hg38.bed"
+    params: sge_opts="", slop="5000"
+    shell: "cut -f 1 {input.index} | sed 's/|.\+//' | sed 's/-/\\t/g' | cut -f 1-3 | sort -k 1,1 -k 2,2n | bedtools slop -i stdin -g {input.chromosome_lengths} -b {params.slop} | bedtools merge -i stdin -d 1 > {output}"
+
+rule get_local_assembly_names:
+    input: "local_assemblies.fasta.fai"
+    output: "local_assemblies.txt"
+    params: sge_opts=""
+    shell: "cut -f 1 {input} > {output}"
+
+rule create_windows_across_reference:
+    input: "local_assemblies.fasta.fai"
+    output: "windows.bed"
+    params: sge_opts="-l mfree=3G", window_size="20"
+    shell: "bedtools makewindows -g {input} -w {params.window_size} | sort -k 1,1 -k 2,2n --buffer-size=2G > {output}"
+
+rule index_local_assemblies:
+    input: "local_assemblies.fasta"
+    output: "local_assemblies.fasta.fai"
+    params: sge_opts=""
+    shell: "samtools faidx {input}"
+
+rule get_local_assemblies:
+    input: config["local_assemblies"]
+    output: "local_assemblies.fasta"
+    params: sge_opts=""
+    shell: "cat {input} > {output}"
+
+rule get_sv_calls:
+    input: config["sv_calls"]
+    output: "sv_calls.bed"
+    params: sge_opts=""
+    shell: """awk 'OFS="\\t" {{ if ($4 == "insertion") {{ $3=$2+1 }} else if ($4 == "deletion") {{ $11 = $10 + 1 }} print $1,$2,$3,$4,$5,$9,$10,$11 }}' {input} | sort -k 1,1 -k 2,2n > {output}"""
+
+rule get_sv_coordinates_in_assemblies:
+    input: config["sv_calls"]
+    output: "sv_coordinates_in_assemblies.bed"
+    params: sge_opts=""
+    shell: """awk 'OFS="\\t" {{ if ($4 == "deletion") {{ end=$10 + 1 }} else {{ end=$11 }} print $9,$10,end,$9"_"$10"_"end"_"$4 }}' {input} | sed 's/\/[0-9]\+_[0-9]\+//' | sort -k 1,1 -k 2,2n > {output}"""
