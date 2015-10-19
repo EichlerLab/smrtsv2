@@ -8,6 +8,7 @@ if [[ "$?" -eq "0" ]]
 then
     module load anaconda/2.3.0
     module load samtools/1.2-complete
+    module load bedops/2.4.0
 
     module load hdf5/1.8.13
     module load netcdf/4.3.2
