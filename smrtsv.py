@@ -14,6 +14,9 @@ def align(args):
 def call(args):
     print "Call variants"
 
+def genotype(args):
+    print "Genotype"
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -38,6 +41,13 @@ if __name__ == "__main__":
     parser_caller.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
     parser_caller.set_defaults(func=call)
+
+    # Genotype SVs with Illumina reads.
+    parser_genotyper = subparsers.add_parser("genotype", help="Genotype SVs with Illumina reads")
+    parser_genotyper.add_argument("variants", help="VCF of SMRT SV variants to genotype")
+    parser_genotyper.add_argument("genotyped_variants", help="VCF of SMRT SV variant genotypes for the given sample-level BAMs")
+    parser_genotyper.add_argument("samples", nargs="+", help="one or more sample-level BAMs to genotype for the given variants")
+    parser_genotyper.set_defaults(func=genotype)
 
     args = parser.parse_args()
     return_code = args.func(args)
