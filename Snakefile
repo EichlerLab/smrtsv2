@@ -6,6 +6,10 @@ See also: https://github.com/EichlerLab/pacbio_variant_caller
 import math
 import os
 
+# Always source config file.
+SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
+shell.prefix(". {SNAKEMAKE_DIR}/config.sh; ")
+
 #
 # Define internal constants.
 #
