@@ -219,7 +219,7 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit=str(BANDWIDTH_LIMIT)
+    params: sge_opts="-l mfree=6G -l disk_free=1G -pe serial 1", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit=str(BANDWIDTH_LIMIT)
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
