@@ -16,11 +16,21 @@ def index(args):
     prefix = _build_prefix(args)
     args = prefix + ("prepare_reference", "--config", "reference=%s" % args.reference)
     args = " ".join(args)
-    print args
     return subprocess.call(args, shell=True)
 
 def align(args):
     print "Align reads"
+    prefix = _build_prefix(args)
+    args = prefix + (
+        "align_reads",
+        "--config",
+        "reference=%s" % args.reference,
+        "reads=%s" % args.reads,
+        "alignments=%s" % args.alignments,
+        "alignments_dir=%s" % args.alignments_dir
+    )
+    args = " ".join(args)
+    return subprocess.call(args, shell=True)
 
 def call(args):
     print "Call variants"
