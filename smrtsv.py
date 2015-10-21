@@ -32,7 +32,48 @@ def align(args):
     return subprocess.call(" ".join(command), shell=True)
 
 def call(args):
-    print "Call variants"
+    # Find candidate regions in alignments.
+    sys.stdout.write("Searching for candidate regions\n")
+    prefix = _build_prefix(args)
+    command = prefix + (
+        "get_regions",
+        "--config",
+        "reference=%s" % args.reference,
+        "alignments=%s" % args.alignments,
+        "regions_to_exclude=%s" % args.exclude
+    )
+    return_code = subprocess.call(" ".join(command), shell=True)
+
+    if return_code != 0:
+        sys.stderr.write("Failed to identify candidate regions\n")
+        return return_code
+
+    # Generate local assemblies across the genome.
+    sys.stdout.write("Starting local assemblies\n")
+    command = prefix + (
+        "collect_assembly_alignments",
+        "--config",
+        "reference=%s" % args.reference,
+        "alignments=%s" % args.alignments
+    )
+    return_code = subprocess.call(" ".join(command), shell=True)
+
+    if return_code != 0:
+        sys.stderr.write("Failed to generate local assemblies\n")
+        return return_code
+
+    # Call SVs, indels, and inversions.
+    sys.stdout.write("Calling variants\n")
+    command = prefix + (
+        "call_variants",
+        "--config",
+        "reference=%s" % args.reference
+    )
+    return_code = subprocess.call(" ".join(command), shell=True)
+
+    if return_code != 0:
+        sys.stderr.write("Failed to call variants\n")
+        return return_code
 
 def genotype(args):
     print "Genotype"
@@ -63,6 +104,7 @@ if __name__ == "__main__":
     parser_caller.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
     parser_caller.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
+    parser_caller.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
     parser_caller.set_defaults(func=call)
 
     # Genotype SVs with Illumina reads.
