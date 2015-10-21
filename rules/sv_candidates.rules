@@ -6,6 +6,8 @@ import os
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 REGIONS_TO_EXCLUDE = config.get("regions_to_exclude")
+if REGIONS_TO_EXCLUDE == "None":
+    REGIONS_TO_EXCLUDE = None
 BANDWIDTH_LIMIT = 50000
 
 # Load alignments if they already exist.
