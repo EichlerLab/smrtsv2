@@ -18,7 +18,6 @@ def index(args):
     return subprocess.call(" ".join(args), shell=True)
 
 def align(args):
-    print "Align reads"
     prefix = _build_prefix(args)
     args = prefix + (
         "align_reads",
