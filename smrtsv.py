@@ -26,7 +26,8 @@ def align(args):
         "reference=%s" % args.reference,
         "reads=%s" % args.reads,
         "alignments=%s" % args.alignments,
-        "alignments_dir=%s" % args.alignments_dir
+        "alignments_dir=%s" % args.alignments_dir,
+        "batches=%s" % args.batches
     )
     return subprocess.call(" ".join(args), shell=True)
 
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     parser_align.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
     parser_align.add_argument("--alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line", default="alignments.fofn")
     parser_align.add_argument("--alignments_dir", help="absolute path of directory for BLASR alignment files", default="alignments")
+    parser_align.add_argument("--batches", help="number of batches to split input reads into such that there will be one BAM output file per batch", type=int, default=1)
     parser_align.set_defaults(func=align)
 
     # Call SVs and indels from BLASR alignments.
