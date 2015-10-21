@@ -5,9 +5,10 @@
 SAMTOOLS  := $(shell samtools --version 2>/dev/null)
 BEDTOOLS  := $(shell bedtools --version 2>/dev/null)
 FREEBAYES := $(shell freebayes --version 2>/dev/null)
+BLASR     := $(shell bin/blasr 2> /dev/null)
 PWD  = $(shell pwd)
 
-all: checkBedtools checkSamtools checkFreebayes
+all: checkBedtools checkSamtools checkFreebayes checkBlasr
 
 bedtools2:
 	git submodule update --init  dist/bedtools
@@ -26,6 +27,16 @@ samtools:
 	git submodule update --init dist/htslib
 	-cd dist/samtools && make
 	-@ln -s ../dist/samtools/samtools bin/samtools
+
+dist/blasr: dist/hdf5 dist/zlib
+	git submodule update --init $@
+	-cd $@ && make HDF5INCLUDEDIR=$(PWD)/$</include HDF5LIBDIR=$(PWD)/$</lib LIBRARY_PATH=$(PWD)/$(word 2,$^)/lib:$LIBRARY_PATH && make install PREFIX=$(PWD) && make clean
+
+dist/hdf5:
+	cd $@ && $(MAKE)
+
+dist/zlib:
+	cd $@ && $(MAKE)
 
 checkSamtools:
 ifdef SAMTOOLS
@@ -52,4 +63,12 @@ ifdef FREEBAYES
 else
 	@echo "Trying to install freebayes"
 	$(MAKE) freebayes
+endif
+
+checkBlasr:
+ifdef BLASR
+	@echo "Found BLASR"
+else
+	@echo "Trying to install BLASR"
+	$(MAKE) dist/blasr
 endif
