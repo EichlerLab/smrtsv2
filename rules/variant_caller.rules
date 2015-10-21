@@ -12,7 +12,7 @@ MIN_CONTIG_LENGTH = 40000
 #
 
 rule call_variants:
-    input: "sv_calls.bed", "indel_calls.bed"
+    input: "sv_calls.bed", "indel_calls.bed", "sv_calls/merged_inversions.bed"
 
 #
 # Small insertion/deletion (indel) calls
