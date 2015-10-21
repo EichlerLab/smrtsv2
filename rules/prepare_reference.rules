@@ -4,16 +4,6 @@ REFERENCE = config.get("reference", "")
 
 rule prepare_reference:
     input: [REFERENCE + extension for extension in (".fai", ".sa", ".ctab")]
-    output: "reference_config.json"
-    params: sge_opts=""
-    run:
-        files = tuple([REFERENCE] + list(input))
-        shell("""echo '"reference": {{
-    "assembly": "%s",
-    "assembly_index": "%s",
-    "suffix_array": "%s",
-    "ctab": "%s"
-}}' > {output}""" % files)
 
 rule combine_low_complexity_and_simple_repeats:
     input: "low_complexity_repeats.bed", "simple_repeats.bed"
