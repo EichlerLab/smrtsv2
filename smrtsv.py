@@ -14,12 +14,12 @@ def _build_prefix(args):
 
 def index(args):
     prefix = _build_prefix(args)
-    args = prefix + ("prepare_reference", "--config", "reference=%s" % args.reference)
-    return subprocess.call(" ".join(args), shell=True)
+    command = prefix + ("prepare_reference", "--config", "reference=%s" % args.reference)
+    return subprocess.call(" ".join(command), shell=True)
 
 def align(args):
     prefix = _build_prefix(args)
-    args = prefix + (
+    command = prefix + (
         "align_reads",
         "--config",
         "reference=%s" % args.reference,
@@ -29,7 +29,7 @@ def align(args):
         "batches=%s" % args.batches,
         "threads=%s" % args.threads
     )
-    return subprocess.call(" ".join(args), shell=True)
+    return subprocess.call(" ".join(command), shell=True)
 
 def call(args):
     print "Call variants"
