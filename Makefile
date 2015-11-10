@@ -53,7 +53,7 @@ ifdef BEDTOOLS
 	-@ln -s $(shell which bedtools) bin/bedtools
 else
 	@echo "Trying to install bedtools"
-	$(MAKE) bedtools
+	$(MAKE) bedtools2
 endif
 
 checkFreebayes:
