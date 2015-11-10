@@ -76,7 +76,7 @@ def call(args):
         return return_code
 
 def genotype(args):
-    print "Genotype"
+    print("Genotype")
 
 
 if __name__ == "__main__":
