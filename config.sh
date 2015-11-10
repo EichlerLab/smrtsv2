@@ -1,8 +1,3 @@
-export INSTALL_DIR=`pwd`
-export SMRT_ROOT=/net/eichler/vol24/projects/sequencing/pacbio/software/smrtanalysis
-export PATH=`pwd`/bin:$PATH
-export PATH=${INSTALL_DIR}/dist/miniconda/envs/python2/bin:${INSTALL_DIR}/dist/miniconda/envs/python3/bin:${INSTALL_DIR}/dist/miniconda/bin:$PATH
-
 # Use modules to load dependencies if that environment is available.
 module list &> /dev/null
 
@@ -22,3 +17,8 @@ then
 
     #module load mpfr/3.1.0 mpc/0.8.2 gmp/5.0.2 gcc/4.9.1
 fi
+
+export INSTALL_DIR=`pwd`
+export SMRT_ROOT=/net/eichler/vol24/projects/sequencing/pacbio/software/smrtanalysis
+export PATH=`pwd`/bin:$PATH
+export PATH=${INSTALL_DIR}/dist/miniconda/envs/python2/bin:${INSTALL_DIR}/dist/miniconda/envs/python3/bin:${INSTALL_DIR}/dist/miniconda/bin:$PATH
