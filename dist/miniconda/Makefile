@@ -7,7 +7,7 @@ install: Miniconda3-latest-Linux-x86_64.sh
 	source ./bin/activate python3
 	pip install snakemake
 	rm -f ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
-	ln -s $(shell pwd)/../UGE/snakemake/jobscript.sh ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
+	ln -s $(shell pwd)/../snakemake/cluster/UGE/jobscript.sh ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
 
 Miniconda3-latest-Linux-x86_64.sh:
 	wget https://repo.continuum.io/miniconda/$@
