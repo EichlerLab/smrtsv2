@@ -7,9 +7,10 @@ BEDTOOLS  := $(shell bedtools --version 2>/dev/null)
 FREEBAYES := $(shell freebayes --version 2>/dev/null)
 BLASR     := $(shell bin/blasr 2> /dev/null)
 CELERA    := $(shell bin/PBcR 2> /dev/null)
+JAVA      := $(shell bin/java 2> /dev/null)
 PWD  = $(shell pwd)
 
-all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera
+all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava
 
 bedtools2:
 	git submodule update --init  dist/bedtools
@@ -27,6 +28,10 @@ samtools:
 	git submodule update --init dist/htslib
 	-cd dist/samtools && make
 	-@ln -s ../dist/samtools/samtools bin/samtools
+
+dist/java:
+	-cd $@ && make
+	-@ln -s ../$@/jre1.8.0_65/bin/java bin/java
 
 dist/celera:
 	-cd $@ && make
@@ -83,4 +88,12 @@ ifdef CELERA
 else
 	@echo "Trying to install Celera"
 	$(MAKE) dist/celera
+endif
+
+checkJava:
+ifdef JAVA
+	@echo "Found Java"
+else
+	@echo "Trying to install Java"
+	$(MAKE) dist/java
 endif
