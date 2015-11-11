@@ -1,4 +1,5 @@
 export PATH=/usr/local/bin:/usr/bin:/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/dist/hdf5/lib
 
 # Use modules to load dependencies if that environment is available.
 module list &> /dev/null
