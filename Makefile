@@ -6,9 +6,10 @@ SAMTOOLS  := $(shell samtools --version 2>/dev/null)
 BEDTOOLS  := $(shell bedtools --version 2>/dev/null)
 FREEBAYES := $(shell freebayes --version 2>/dev/null)
 BLASR     := $(shell bin/blasr 2> /dev/null)
+CELERA    := $(shell bin/PBcR 2> /dev/null)
 PWD  = $(shell pwd)
 
-all: checkBedtools checkSamtools checkFreebayes checkBlasr
+all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera
 
 bedtools2:
 	git submodule update --init  dist/bedtools
@@ -26,6 +27,10 @@ samtools:
 	git submodule update --init dist/htslib
 	-cd dist/samtools && make
 	-@ln -s ../dist/samtools/samtools bin/samtools
+
+dist/celera:
+	-cd $@ && make
+	-@ln -s ../$@/wgs-8.3rc2/Linux-amd64/bin/PBcR bin/PBcR
 
 dist/blasr: dist/hdf5 dist/zlib
 	git submodule update --init $@
@@ -70,4 +75,12 @@ ifdef BLASR
 else
 	@echo "Trying to install BLASR"
 	$(MAKE) dist/blasr
+endif
+
+checkCelera:
+ifdef CELERA
+	@echo "Found Celera"
+else
+	@echo "Trying to install Celera"
+	$(MAKE) dist/celera
 endif
