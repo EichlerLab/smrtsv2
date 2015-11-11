@@ -5,6 +5,7 @@ assembly.
 import os
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
+CANDIDATES = config.get("candidates", "filtered_assembly_candidates_with_coverage.bed")
 REGIONS_TO_EXCLUDE = config.get("regions_to_exclude")
 if REGIONS_TO_EXCLUDE == "None":
     REGIONS_TO_EXCLUDE = None
@@ -26,7 +27,7 @@ def _get_bam_path_for_batch(wildcards):
 # Annotate assembly candidates with coverage.
 rule get_regions:
     input: "assembly_candidates_with_coverage.bed"
-    output: "filtered_assembly_candidates_with_coverage.bed"
+    output: CANDIDATES
     params: sge_opts="", min_coverage=str(config["detection"]["min_coverage"]), max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
     run:
         if REGIONS_TO_EXCLUDE is not None:
