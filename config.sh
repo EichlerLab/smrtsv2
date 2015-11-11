@@ -8,7 +8,6 @@ if [[ "$?" -eq "0" ]]
 then
     module purge
     module load modules modules-init modules-gs/prod modules-eichler/prod
-    module load java/8u25
     #module load anaconda/2.3.0
     #module load samtools/1.2-complete
     module load bedops/2.4.0
