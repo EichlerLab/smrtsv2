@@ -34,19 +34,31 @@ def align(args):
     )
     return subprocess.call(" ".join(command), shell=True)
 
-def call(args):
+def detect(args):
+    """
+    Detect SVs from signatures in read alignments.
+    """
     # Find candidate regions in alignments.
     sys.stdout.write("Searching for candidate regions\n")
     prefix = _build_prefix(args)
+
     command = prefix + (
         "get_regions",
         "--config",
         "reference=%s" % args.reference,
-        "alignments=%s" % args.alignments,
-        "regions_to_exclude=%s" % args.exclude
+        "alignments=%s" % args.alignments
     )
-    return_code = subprocess.call(" ".join(command), shell=True)
 
+    if args.exclude:
+        command = command + ("regions_to_exclude=%s" % args.exclude,)
+
+    if args.candidates:
+        command = command + ("candidates=%s" % args.candidates,)
+
+    return subprocess.call(" ".join(command), shell=True)
+
+def call(args):
+    return_code = detect(args)
     if return_code != 0:
         sys.stderr.write("Failed to identify candidate regions\n")
         return return_code
@@ -103,6 +115,14 @@ if __name__ == "__main__":
     parser_align.add_argument("--batches", help="number of batches to split input reads into such that there will be one BAM output file per batch", type=int, default=1)
     parser_align.add_argument("--threads", help="number of threads to use for each BLASR alignment job", type=int, default=1)
     parser_align.set_defaults(func=align)
+
+    # Detect SV signatures in BLASR alignments and build sliding windows to assemble.
+    parser_detector = subparsers.add_parser("detect", help="detect SV signatures in BLASR-aligned reads")
+    parser_detector.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
+    parser_detector.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
+    parser_detector.add_argument("candidates", help="BED file of candidates detected in read alignments")
+    parser_detector.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
+    parser_detector.set_defaults(func=detect)
 
     # Call SVs and indels from BLASR alignments.
     parser_caller = subparsers.add_parser("call", help="call SVs and indels by local assembly of BLASR-aligned reads")
