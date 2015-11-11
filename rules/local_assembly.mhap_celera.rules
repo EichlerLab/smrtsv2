@@ -227,7 +227,7 @@ rule collect_assembly_alignments:
 rule assemble_region:
     input: alignments=ALIGNMENTS, regions=REGIONS_TO_ASSEMBLE
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
-    params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -soft -l L3cache=30M"
+    params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -soft -l L3cache=30M", threads="4"
     shell:
         "export ANALYSIS_DIR=`pwd`; "
         "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
@@ -236,7 +236,7 @@ rule assemble_region:
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log={LOG_FILE}; "
+        "snakemake -j {params.threads} -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log={LOG_FILE}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
