@@ -146,8 +146,8 @@ if __name__ == "__main__":
     parser_assembler.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
     parser_assembler.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
     parser_assembler.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
-    parser_assembler.add_argument("--regions", help="BED file of regions to assemble from raw read alignments")
-    parser_assembler.add_argument("--assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
+    parser_assembler.add_argument("regions", help="BED file of regions to assemble from raw read alignments")
+    parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_assembler.set_defaults(func=assemble)
 
     # Call SVs and indels from BLASR alignments.
