@@ -12,8 +12,7 @@ all: checkBedtools checkSamtools checkFreebayes checkBlasr
 
 bedtools2:
 	git submodule update --init  dist/bedtools
-	-cd dist/bedtools && make
-	-@ln -s ../dist/bedtools/bin/bedtools bin/bedtools
+	-cd dist/bedtools && make && make install prefix=$(PWD)
 
 freebayes:
 	git submodule update --init  dist/freebayes
