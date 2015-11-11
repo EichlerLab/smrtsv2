@@ -22,6 +22,7 @@ freebayes:
 	cd dist/freebayes/vcflib && git submodule update --init
 	-cd dist/freebayes && make
 	-@ln -s ../dist/freebayes/bin/freebayes bin/freebayes
+	-@ln -s ../dist/freebayes/bin/bamleftalign bin/bamleftalign
 
 samtools:
 	git submodule update --init dist/samtools
