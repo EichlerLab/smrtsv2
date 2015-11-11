@@ -63,6 +63,8 @@ def assemble(args):
     """
     # Generate local assemblies across the genome.
     sys.stdout.write("Starting local assemblies\n")
+    prefix = _build_prefix(args)
+
     command = prefix + (
         "collect_assembly_alignments",
         "--config",
