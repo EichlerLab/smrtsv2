@@ -14,6 +14,7 @@ import os
 # the entire genome.
 
 # Load regions to assemble.
+INPUT_READS = config.get("reads", "input.fofn")
 REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candidates_with_coverage.bed")
 LOCAL_ASSEMBLY_ALIGNMENTS = config.get("assembly_alignments", "local_assembly_alignments.bam")
 
@@ -231,10 +232,11 @@ rule assemble_region:
         "export ANALYSIS_DIR=`pwd`; "
         "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
         "export REFERENCE_PATH=`readlink -f {REFERENCE}`; "
+        "export INPUT_READS_PATH=`readlink -f {INPUT_READS}`; "
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         "rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; "
-        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH region={wildcards.region} log={LOG_FILE}; "
+        "snakemake -s $ANALYSIS_DIR/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log={LOG_FILE}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "

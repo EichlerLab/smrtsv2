@@ -5,9 +5,13 @@ configfile: "config.json"
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 
+INPUT_READS = config.get("reads", "input.fofn")
 CELERA_SPEC = config.get("celera_spec", "%s/../celera/pacbio.local_human.spec" % SNAKEMAKE_DIR)
-BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
+
+# Get a sample .bax.h5 file from the given list of input reads.
+with open(INPUT_READS, "r") as fh:
+    BAS_TEMPLATE = next(fh).strip()
 
 # By default delay jobs for a random amount of time up to this value to prevent
 # too much I/O from simultaneous assemblies.

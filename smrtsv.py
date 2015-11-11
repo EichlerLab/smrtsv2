@@ -69,7 +69,8 @@ def assemble(args):
         "collect_assembly_alignments",
         "--config",
         "reference=%s" % args.reference,
-        "alignments=%s" % args.alignments
+        "alignments=%s" % args.alignments,
+        "reads=%s" % args.reads
     )
 
     if args.regions:
@@ -143,6 +144,7 @@ if __name__ == "__main__":
     # Assemble candidate regions and align assemblies back to the reference.
     parser_assembler = subparsers.add_parser("assemble", help="assemble candidate regions and align assemblies back to the reference")
     parser_assembler.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
+    parser_assembler.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
     parser_assembler.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
     parser_assembler.add_argument("--regions", help="BED file of regions to assemble from raw read alignments")
     parser_assembler.add_argument("--assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
@@ -151,6 +153,7 @@ if __name__ == "__main__":
     # Call SVs and indels from BLASR alignments.
     parser_caller = subparsers.add_parser("call", help="call SVs and indels by local assembly of BLASR-aligned reads")
     parser_caller.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
+    parser_caller.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
     parser_caller.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
     parser_caller.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
