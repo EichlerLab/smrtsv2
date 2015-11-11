@@ -1,3 +1,5 @@
+export PATH=/usr/local/bin:/usr/bin:/bin
+
 # Use modules to load dependencies if that environment is available.
 module list &> /dev/null
 
