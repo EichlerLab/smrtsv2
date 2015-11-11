@@ -57,12 +57,10 @@ def detect(args):
 
     return subprocess.call(" ".join(command), shell=True)
 
-def call(args):
-    return_code = detect(args)
-    if return_code != 0:
-        sys.stderr.write("Failed to identify candidate regions\n")
-        return return_code
-
+def assemble(args):
+    """
+    Assemble candidate regions from raw reads aligned to regions.
+    """
     # Generate local assemblies across the genome.
     sys.stdout.write("Starting local assemblies\n")
     command = prefix + (
@@ -71,8 +69,24 @@ def call(args):
         "reference=%s" % args.reference,
         "alignments=%s" % args.alignments
     )
-    return_code = subprocess.call(" ".join(command), shell=True)
 
+    if args.regions:
+        command = command + ("regions_to_assemble=%s" % args.regions,)
+
+    if args.assembly_alignments:
+        command = command + ("assembly_alignments=%s" % args.assembly_alignments,)
+
+    return subprocess.call(" ".join(command), shell=True)
+
+def call(args):
+    # Detect SVs.
+    return_code = detect(args)
+    if return_code != 0:
+        sys.stderr.write("Failed to identify candidate regions\n")
+        return return_code
+
+    # Run local assemblies.
+    return_code = assemble(args)
     if return_code != 0:
         sys.stderr.write("Failed to generate local assemblies\n")
         return return_code
@@ -123,6 +137,14 @@ if __name__ == "__main__":
     parser_detector.add_argument("candidates", help="BED file of candidates detected in read alignments")
     parser_detector.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
     parser_detector.set_defaults(func=detect)
+
+    # Assemble candidate regions and align assemblies back to the reference.
+    parser_assembler = subparsers.add_parser("assemble", help="assemble candidate regions and align assemblies back to the reference")
+    parser_assembler.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
+    parser_assembler.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
+    parser_assembler.add_argument("--regions", help="BED file of regions to assemble from raw read alignments")
+    parser_assembler.add_argument("--assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
+    parser_assembler.set_defaults(func=assemble)
 
     # Call SVs and indels from BLASR alignments.
     parser_caller = subparsers.add_parser("call", help="call SVs and indels by local assembly of BLASR-aligned reads")
