@@ -133,7 +133,7 @@ if __name__ == "__main__":
     # Detect SV signatures in BLASR alignments and build sliding windows to assemble.
     parser_detector = subparsers.add_parser("detect", help="detect SV signatures in BLASR-aligned reads")
     parser_detector.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
-    parser_detector.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
+    parser_detector.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
     parser_detector.add_argument("candidates", help="BED file of candidates detected in read alignments")
     parser_detector.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
     parser_detector.set_defaults(func=detect)
