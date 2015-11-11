@@ -29,7 +29,7 @@ samtools:
 
 dist/blasr: dist/hdf5 dist/zlib
 	git submodule update --init $@
-	-cd $@ && make HDF5INCLUDEDIR=$(PWD)/$</include HDF5LIBDIR=$(PWD)/$</lib LIBRARY_PATH=$(PWD)/$(word 2,$^)/lib:$LIBRARY_PATH && make install PREFIX=$(PWD) && make clean
+	-cd $@ && make HDF5INCLUDEDIR=$(PWD)/$</include HDF5LIBDIR=$(PWD)/$</lib LIBRARY_PATH=$(PWD)/$(word 2,$^)/lib:$(LIBRARY_PATH) && make install PREFIX=$(PWD) && make clean
 
 dist/hdf5:
 	cd $@ && $(MAKE)
