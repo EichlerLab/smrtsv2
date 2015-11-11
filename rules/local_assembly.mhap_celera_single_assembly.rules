@@ -74,7 +74,7 @@ rule quiver_assembly:
     output: "consensus.fasta"
     params: sge_opts="", threads="2"
     shell:
-        "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
+        "(unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}); "
         "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}; "
 
 rule convert_assembly_alignments_to_hdf5:
@@ -83,9 +83,9 @@ rule convert_assembly_alignments_to_hdf5:
     params: sge_opts=""
     shell:
         "samtoh5 {input.alignments} {input.assembly} {output} -useShortRefName; "
-        "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && cmph5tools.py sort --deep {output}; "
+        "(unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && cmph5tools.py sort --deep {output}); "
         "loadPulses {input.reads} {output} -metrics InsertionQV,DeletionQV,SubstitutionQV,MergeQV,SubstitutionTag,DeletionTag; "
-        "unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && {SNAKEMAKE_DIR}/../scripts/LoadGenericChemistry.py {BAS_TEMPLATE} {output}"
+        "(unset QRSH_COMMAND && source $SMRT_ROOT/current/etc/setup.sh && {SNAKEMAKE_DIR}/../scripts/LoadGenericChemistry.py {BAS_TEMPLATE} {output})"
 
 rule map_reads_to_assembly:
     input: "reads.bas.h5", "assembly.fasta"
