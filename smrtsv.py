@@ -7,6 +7,9 @@ CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "30")
 
 def _build_prefix(args):
     prefix = ["snakemake", "-pq", "-j", str(args.jobs)]
+    if args.dryrun:
+        prefix.append("-n")
+
     if args.distribute:
         prefix.extend(CLUSTER_FLAG)
 
@@ -81,6 +84,7 @@ def genotype(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dryrun", "-n", action="store_true", help="Print commands that will run without running them")
     parser.add_argument("--distribute", action="store_true", help="Distribute analysis to Grid Engine-style cluster")
     parser.add_argument("--jobs", help="number of jobs to run simultaneously", type=int, default=1)
     subparsers = parser.add_subparsers()
