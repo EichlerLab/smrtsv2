@@ -5,7 +5,6 @@ configfile: "config.json"
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 
-CADIR = config["celera_dir"]
 CELERA_SPEC = config.get("celera_spec", "%s/../celera/pacbio.local_human.spec" % SNAKEMAKE_DIR)
 BAS_TEMPLATE = config["mhap_celera"]["bas_template"]
 CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
@@ -103,8 +102,9 @@ rule assemble_reads:
     run:
         assembly_output = "local/9-terminator/asm.ctg.fasta"
         assembly_exists = False
+
+        shell("timeout {params.max_runtime} PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
         try:
-            shell("timeout {params.max_runtime} {CADIR}/PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
             if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
                 shell("cat {assembly_output} > {output}")
                 shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["log"])
