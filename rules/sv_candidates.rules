@@ -193,9 +193,14 @@ rule filter_candidates:
         min_length=str(config["detection"]["min_length"]),
         min_coverage=str(config["detection"]["min_coverage"]),
         max_coverage=str(config["detection"]["max_coverage"])
-    shell:
-        "awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} | "
-            "bedtools merge -i stdin -d 1 -c 6,4,5 -o distinct,mean,mean > {output}"
+    run:
+        shell("awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}.tmp")
+        if os.stat("%s.tmp" % output[0]).st_size > 0:
+            shell("bedtools merge -i {output}.tmp -d 1 -c 6,4,5 -o distinct,mean,mean > {output}")
+        else:
+            shell("touch {output}")
+
+        shell("rm -f {output}.tmp")
 
 # Annotate merged gap support with alignment coverage.
 rule annotate_coverage_of_merged_gap_support:
