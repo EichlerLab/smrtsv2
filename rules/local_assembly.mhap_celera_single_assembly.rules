@@ -108,7 +108,7 @@ rule assemble_reads:
         unitig_output = "local/9-terminator/asm.utg.fasta"
         assembly_exists = False
 
-        shell("timeout {params.max_runtime} PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
+        shell("timeout {params.max_runtime} PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} assembleMinCoverage=5 &> assembly.log")
         try:
             if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
                 shell("cat {assembly_output} > {output}")
