@@ -105,6 +105,7 @@ rule assemble_reads:
     params: sge_opts="-l mfree=4G -pe serial 2 -l disk_free=10G", threads="2", read_length="1000", partitions="50", max_runtime="45m"
     run:
         assembly_output = "local/9-terminator/asm.ctg.fasta"
+        unitig_output = "local/9-terminator/asm.utg.fasta"
         assembly_exists = False
 
         shell("timeout {params.max_runtime} PBcR -threads {params.threads} -length {params.read_length} -partitions {params.partitions} -l local -s {CELERA_SPEC} -fastq {input} genomeSize={REGION_SIZE} &> assembly.log")
@@ -112,6 +113,10 @@ rule assemble_reads:
             if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
                 shell("cat {assembly_output} > {output}")
                 shell("""echo -e "{REGION}\tassembly_exists" >> %s""" % config["log"])
+                assembly_exists = True
+            elif os.path.exists(unitig_output) and os.stat(unitig_output).st_size > 0:
+                shell("cat {unitig_output} > {output}")
+                shell("""echo -e "{REGION}\tunitig_assembly_exists" >> %s""" % config["log"])
                 assembly_exists = True
             else:
                 shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config["log"])
