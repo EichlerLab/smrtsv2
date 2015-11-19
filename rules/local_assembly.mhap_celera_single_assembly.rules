@@ -91,7 +91,7 @@ rule map_reads_to_assembly:
     input: "reads.bas.h5", "assembly.fasta"
     output: "alignment.sam"
     params: sge_opts="", threads="2"
-    shell: "blasr {input} -sam -bestn 1 -out {output} -nproc {params.threads}"
+    shell: "blasr {input} -sam -bestn 1 -out /dev/stdout -nproc {params.threads} | samtools view -F 0x4 -S - > {output}"
 
 rule index_assembly:
     input: "assembly.fasta"
