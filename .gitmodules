@@ -25,3 +25,6 @@
 [submodule "dist/GenomicConsensus"]
 	path = dist/GenomicConsensus
 	url = https://github.com/PacificBiosciences/GenomicConsensus.git
+[submodule "dist/pbh5tools"]
+	path = dist/pbh5tools
+	url = https://github.com/PacificBiosciences/pbh5tools.git
