@@ -13,7 +13,7 @@ PWD  = $(shell pwd)
 all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava
 
 bedtools2:
-	git submodule update --init  dist/bedtools
+	git submodule update --init dist/bedtools
 	-cd dist/bedtools && make && make install prefix=$(PWD)
 
 freebayes:
