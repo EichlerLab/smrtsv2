@@ -48,6 +48,9 @@ dist/hdf5:
 dist/zlib:
 	cd $@ && $(MAKE)
 
+dist/swig:
+	cd $@ && $(MAKE)
+
 checkSamtools:
 ifdef SAMTOOLS
 	@echo "Found samtools version: $(SAMTOOLS)"
