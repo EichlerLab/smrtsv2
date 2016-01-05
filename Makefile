@@ -69,7 +69,7 @@ dist/swig:
 
 pbcore:
 	git submodule update --init dist/$@
-	-cd dist/$@ && pip install --no-deps file:$(PWD)/dist/$@/$@
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
 
 #
 # Check for existing system-wide installations before building locally.
