@@ -9,9 +9,10 @@ BLASR     := $(shell bin/blasr 2> /dev/null)
 CELERA    := $(shell bin/PBcR 2> /dev/null)
 JAVA      := $(shell bin/java 2> /dev/null)
 QUIVER    := $(shell quiver --version 2> /dev/null)
+PBH5TOOLS := $(shell cmph5tools.py --help 2> /dev/null)
 PWD  = $(shell pwd)
 
-all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava checkQuiver
+all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava checkQuiver checkPbH5Tools
 
 #
 # Install core genomics tools.
@@ -81,8 +82,24 @@ GenomicConsensus:
 	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
 
 #
+# pbh5tools
+#
+
+pbh5tools:
+	git submodule update --init dist/$@
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
+
+#
 # Check for existing system-wide installations before building locally.
 #
+
+checkPbH5Tools:
+ifdef PBH5TOOLS
+	@echo "Found pbh5tools"
+else
+	@echo "Trying to install pbh5tools"
+	$(MAKE) pbh5tools
+endif
 
 checkQuiver:
 ifdef QUIVER
