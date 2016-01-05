@@ -22,3 +22,6 @@
 [submodule "dist/ConsensusCore"]
 	path = dist/ConsensusCore
 	url = https://github.com/PacificBiosciences/ConsensusCore.git
+[submodule "dist/GenomicConsensus"]
+	path = dist/GenomicConsensus
+	url = https://github.com/PacificBiosciences/GenomicConsensus.git
