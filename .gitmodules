@@ -19,3 +19,6 @@
 [submodule "dist/pbcore"]
 	path = dist/pbcore
 	url = https://github.com/PacificBiosciences/pbcore.git
+[submodule "dist/ConsensusCore"]
+	path = dist/ConsensusCore
+	url = https://github.com/PacificBiosciences/ConsensusCore.git
