@@ -8,9 +8,10 @@ FREEBAYES := $(shell freebayes --version 2>/dev/null)
 BLASR     := $(shell bin/blasr 2> /dev/null)
 CELERA    := $(shell bin/PBcR 2> /dev/null)
 JAVA      := $(shell bin/java 2> /dev/null)
+QUIVER    := $(shell quiver --version 2> /dev/null)
 PWD  = $(shell pwd)
 
-all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava
+all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava checkQuiver
 
 #
 # Install core genomics tools.
@@ -82,6 +83,14 @@ GenomicConsensus:
 #
 # Check for existing system-wide installations before building locally.
 #
+
+checkQuiver:
+ifdef QUIVER
+	@echo "Found Quiver version: $(QUIVER)"
+else
+	@echo "Trying to install Quiver"
+	$(MAKE) pbcore ConsensusCore GenomicConsensus
+endif
 
 checkSamtools:
 ifdef SAMTOOLS
