@@ -16,3 +16,6 @@
 [submodule "dist/freebayes"]
 	path = dist/freebayes
 	url = https://github.com/ekg/freebayes.git
+[submodule "dist/pbcore"]
+	path = dist/pbcore
+	url = https://github.com/PacificBiosciences/pbcore.git
