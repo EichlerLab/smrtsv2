@@ -12,6 +12,10 @@ PWD  = $(shell pwd)
 
 all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava
 
+#
+# Install core genomics tools.
+#
+
 bedtools2:
 	git submodule update --init dist/bedtools
 	-cd dist/bedtools && make && make install prefix=$(PWD)
@@ -30,6 +34,10 @@ samtools:
 	-cd dist/samtools && make
 	-@ln -s ../dist/samtools/samtools bin/samtools
 
+#
+# Install Celera/PBcR and its dependencies.
+#
+
 dist/java:
 	-cd $@ && make
 	-@ln -s ../$@/jre1.8.0_65/bin/java bin/java
@@ -37,6 +45,10 @@ dist/java:
 dist/celera:
 	-cd $@ && make
 	-@ln -s ../$@/wgs-8.3rc2/Linux-amd64/bin/PBcR bin/PBcR
+
+#
+# Install BLASR and its dependencies.
+#
 
 dist/blasr: dist/hdf5 dist/zlib
 	git submodule update --init $@
@@ -48,8 +60,20 @@ dist/hdf5:
 dist/zlib:
 	cd $@ && $(MAKE)
 
+#
+# Install Quiver and its dependencies.
+#
+
 dist/swig:
 	cd $@ && $(MAKE)
+
+pbcore:
+	git submodule update --init dist/$@
+	-cd dist/$@ && pip install --no-deps file:$(PWD)/dist/$@/$@
+
+#
+# Check for existing system-wide installations before building locally.
+#
 
 checkSamtools:
 ifdef SAMTOOLS
