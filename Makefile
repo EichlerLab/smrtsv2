@@ -71,6 +71,14 @@ pbcore:
 	git submodule update --init dist/$@
 	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
 
+ConsensusCore: dist/swig
+	git submodule update --init dist/$@
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8
+
+GenomicConsensus:
+	git submodule update --init dist/$@
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
+
 #
 # Check for existing system-wide installations before building locally.
 #
