@@ -35,22 +35,6 @@ rule combine_annotations_for_indel_type:
     params: sge_opts=""
     shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
 
-# TODO: add rules to build known indels and then convert these Make rules into Snakemake rules.
-# insertion.isect_known.col: gaps.short.bed.insertion.2_plus.no_hp
-# 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.insertions.left_justify.bed -loj -sorted |\
-#   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type insertion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
-
-# deletion.isect_known.col: gaps.short.bed.deletion.2_plus.no_hp
-# 	cut -f 1-4 $< | bedtools intersect -a stdin -b ~/projects/PacBioSequencing/SmallIndelAnalysis/all.deletions.bed -loj -sorted |\
-#   $(PBS)/SmallIndelAnalysis/AnnotateIntersection.py --type deletion --bLenCol 8 | bedtools groupby -c 9 -o first -full | cut -f 10-11 > $@
-
-# # TODO: don't annotate exons in calling step. This should happen outside of the caller.
-# rule annotate_coding_exons_in_indels:
-#     input: indels="indel_calls/{indel_type}/filtered_gaps.bed", genes=config.get("gene_exons", "")
-#     output: "indel_calls/{indel_type}/exons.txt"
-#     params: sge_opts=""
-#     shell: """bedtools intersect -a {input.indels} -b {input.genes} -loj | bedtools groupby -c 7 -o first -full | awk '$8 != "."' | cut -f 9 > {output}"""
-
 rule annotate_support_from_assembled_contigs_for_indels:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
     output: "indel_calls/{indel_type}/support_by_assembled_contigs.txt"
