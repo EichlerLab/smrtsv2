@@ -61,7 +61,7 @@ class SAMHeader:
         index = 0
         while (len(line)> 0 and line[0] == '@'):
             if (line[0:3] == "@SQ"):
-                vals = line.split()
+                vals = line.split("\t")
                 valkvs = [kv.split(":") for kv in vals[1:]]
                 self.references[valkvs[0][1]] = Reference(valkvs[0][1], valkvs[1][1], index)
                 index += 1
@@ -125,7 +125,7 @@ class SAMEntry:
         else:
             (self.title, self.flag, self.tName, self.tPos, self.mapqv, self.qStart, self.qEnd, self.readlen, self.seq, self.tlen)  = (v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9])
 
-        vals = line.split()
+        vals = line.split("\t")
         self.cigar = vals[5]
         self.ops, self.lengths = CIGARToArrays(self.cigar)
         self.strand = GetStrand(self.flag)
@@ -184,7 +184,9 @@ tleni = 9
 
 def ParseSamLine(line):
     try:
-        vals = line.split()
+        vals = line.split("\t")
+        if (vals[6] == "*" and vals[7] == "0" and vals[8] == "0"):
+            return None
         title = vals[0]
         flag = int(vals[1])
         tName = vals[2]
