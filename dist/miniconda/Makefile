@@ -11,6 +11,9 @@ install: Miniconda3-latest-Linux-x86_64.sh
 	ln -s $(shell pwd)/../snakemake/cluster/UGE/jobscript.sh ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
 	source bin/deactivate
 	./bin/conda create --yes --name python2 python=2 biopython h5py
+	source ./bin/activate python2
+	pip install intervaltree
+	source bin/deactivate
 
 Miniconda3-latest-Linux-x86_64.sh:
 	wget https://repo.continuum.io/miniconda/$@
