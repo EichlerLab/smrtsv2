@@ -31,7 +31,7 @@ for line in samFile:
         continue
 
     samEntry = Tools.SAMEntry(line)
-    if (samEntry.title is not None):
+    if (samEntry.title is not None and samEntry.tLen > 0):
         chromIntervals[samEntry.tName].addi(samEntry.tStart, samEntry.tEnd, samEntry.title)
 
 for chrom in chroms:
