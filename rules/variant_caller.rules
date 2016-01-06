@@ -12,6 +12,7 @@ MIN_CONTIG_LENGTH = 40000
 # All variant calls
 #
 
+# TODO: output VCF
 rule call_variants:
     input: "sv_calls.bed", "indel_calls.bed", "sv_calls/merged_inversions.bed"
     output: VARIANTS
