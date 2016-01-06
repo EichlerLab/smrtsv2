@@ -132,7 +132,7 @@ class SAMEntry:
         self.tLen = 0
 
         for i in range(len(self.ops)):
-            if (self.ops[i] == 'M' or self.ops[i] == 'D'):
+            if (self.ops[i] in ('M', 'D', '=', 'X')):
                 self.tLen += self.lengths[i]
         prefixSoftClip = 0
         suffixSoftClip = 0
