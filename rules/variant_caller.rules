@@ -30,7 +30,7 @@ rule call_indels:
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 rule combine_annotations_for_indel_type:
-    input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt", "indel_calls/{indel_type}/strs.txt"
+    input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt"
     output: "indel_calls/{indel_type}.tab"
     params: sge_opts=""
     shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
