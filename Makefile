@@ -71,15 +71,15 @@ dist/swig:
 
 pbcore:
 	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install && make clean
 
 ConsensusCore: dist/swig
 	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8 && make clean
 
 GenomicConsensus:
 	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
+	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install && make clean
 
 #
 # pbh5tools
