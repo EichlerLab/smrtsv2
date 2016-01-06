@@ -22,6 +22,5 @@ then
 fi
 
 export INSTALL_DIR=`pwd`
-export SMRT_ROOT=/net/eichler/vol24/projects/sequencing/pacbio/software/smrtanalysis
 export PATH=`pwd`/bin:$PATH
 export PATH=${INSTALL_DIR}/dist/miniconda/envs/python2/bin:${INSTALL_DIR}/dist/miniconda/envs/python3/bin:${INSTALL_DIR}/dist/miniconda/bin:$PATH
