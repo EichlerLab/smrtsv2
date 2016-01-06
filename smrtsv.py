@@ -82,6 +82,23 @@ def assemble(args):
     return subprocess.call(" ".join(command), shell=True)
 
 def call(args):
+    # Call SVs, indels, and inversions.
+    sys.stdout.write("Calling variants\n")
+    prefix = _build_prefix(args)
+    command = prefix + (
+        "call_variants",
+        "--config",
+        "reference=%s" % args.reference,
+        "local_assembly_alignments=%s" % args.assembly_alignments,
+        "variants=%s" % args.variants
+    )
+    return_code = subprocess.call(" ".join(command), shell=True)
+
+    if return_code != 0:
+        sys.stderr.write("Failed to call variants\n")
+        return return_code
+
+def run(args):
     # Detect SVs.
     return_code = detect(args)
     if return_code != 0:
@@ -95,14 +112,7 @@ def call(args):
         return return_code
 
     # Call SVs, indels, and inversions.
-    sys.stdout.write("Calling variants\n")
-    command = prefix + (
-        "call_variants",
-        "--config",
-        "reference=%s" % args.reference
-    )
-    return_code = subprocess.call(" ".join(command), shell=True)
-
+    return_code = call(args)
     if return_code != 0:
         sys.stderr.write("Failed to call variants\n")
         return return_code
@@ -150,14 +160,21 @@ if __name__ == "__main__":
     parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_assembler.set_defaults(func=assemble)
 
-    # Call SVs and indels from BLASR alignments.
-    parser_caller = subparsers.add_parser("call", help="call SVs and indels by local assembly of BLASR-aligned reads")
+    # Call SVs and indels from BLASR alignments of local assemblies.
+    parser_caller = subparsers.add_parser("call", help="call SVs and indels by BLASR alignments of local or whole genome assemblies")
     parser_caller.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
-    parser_caller.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
-    parser_caller.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
+    parser_caller.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
-    parser_caller.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
     parser_caller.set_defaults(func=call)
+
+    # Call SVs and indels from BLASR alignments of raw reads.
+    parser_runner = subparsers.add_parser("run", help="call SVs and indels by local assembly of BLASR-aligned reads")
+    parser_runner.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
+    parser_runner.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
+    parser_runner.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
+    parser_runner.add_argument("variants", help="VCF of variants called by local assembly alignments")
+    parser_runner.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
+    parser_runner.set_defaults(func=call)
 
     # Genotype SVs with Illumina reads.
     parser_genotyper = subparsers.add_parser("genotype", help="Genotype SVs with Illumina reads")
