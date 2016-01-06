@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import sys
 import os
+import re
+import sys
 
 
 def GetKV(key, vals):
@@ -29,14 +30,9 @@ def CIGARToArrays(cigar):
     lengths = []
     i1,i2 = 0,0
     end = len(cigar)
-    while (i1 < end):
-        i2=i1
-        while (i2 < end and cigar[i2:i2+1].isdigit()):
-            i2 += 1
-
-        lengths.append(int(cigar[i1:i2]))
-        ops.append(cigar[i2])
-        i1 = i2 + 1
+    opVals = re.findall(r'(\d+)([\w=])', cigar)
+    lengths = [int(opVals[i][0]) for i in range(0,len(opVals))]
+    ops = [opVals[i][1] for i in range(0,len(opVals))]
     return ops, lengths
 
 def ParseReadTitle(title):
