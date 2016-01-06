@@ -27,7 +27,7 @@ int GetTLen(const bam1_t *b) {
 	for (i = 0; i < len; i++) {
 		int op = cigar[i] & 0xf;
 		int oplen = cigar[i] >> 4;
-		if (op == BAM_CMATCH or op == BAM_CDEL) {
+		if (op == BAM_CMATCH or op == BAM_CDEL or op == BAM_CEQUAL or op == BAM_CDIFF) {
 			tlen += oplen;
 		}
 	}
