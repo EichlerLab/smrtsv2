@@ -5,6 +5,7 @@ localrules: call_variants
 SV_TYPES = ("insertion", "deletion")
 INDEL_TYPES = ("insertion", "deletion")
 LOCAL_ASSEMBLY_ALIGNMENTS = config.get("local_assembly_alignments", "local_assembly_alignments.bam")
+VARIANTS = config.get("variants", "variants.bed")
 MIN_CONTIG_LENGTH = 40000
 
 #
@@ -13,6 +14,9 @@ MIN_CONTIG_LENGTH = 40000
 
 rule call_variants:
     input: "sv_calls.bed", "indel_calls.bed", "sv_calls/merged_inversions.bed"
+    output: VARIANTS
+    params: sge_opts=""
+    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 #
 # Small insertion/deletion (indel) calls
