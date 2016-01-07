@@ -315,7 +315,7 @@ for samFileName in args.sam:
                             doPrint = False
                     if (doPrint):
                         if (tsd == ""):
-                            print line
+                            sys.stderr.write(line + "\n")
                         outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "insertion", oplen, gapSeq, tsd, aln.title, qPos, qPos + oplen))
                         if (args.context > 0):
                             outFile.write("\t{}".format(homopolymer))
