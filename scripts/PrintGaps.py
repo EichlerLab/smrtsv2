@@ -304,6 +304,8 @@ for samFileName in args.sam:
                             tsd = ss
                         elif (pScore > sScore ):
                             tsd = ps
+                        if (tsd == ""):
+                            tsd = "notsd"
 
                     nucs = ['A', 'C', 'G', 'T']
                     fracs = [float(gapSeq.count(n))/(len(gapSeq)+1) for n in nucs]
