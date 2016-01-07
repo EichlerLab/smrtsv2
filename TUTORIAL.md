@@ -21,7 +21,7 @@ Prepare the reference sequence for alignment with PacBio reads. This step
 produces suffix array and ctab files used by BLASR to speed up alignments.
 
 ```bash
-snakemake prepare_reference --config reference=reference/chr20.fa
+python smrtsv.py index reference/chr20.fa
 ```
 
 ## Download PacBio reads for CHM1 (P5/C3 chemistry)
@@ -56,7 +56,24 @@ find data/ -name "*.bax.h5" -exec readlink -f {} \; > input.fofn
 Align reads to the reference with BLASR.
 
 ```bash
-snakemake align_reads --config reads=input.fofn reference=reference/chr20.fa alignments=alignments.fofn
+python smrtsv.py align reference/chr20.fa input.fofn
+```
+
+## Find signatures of variants in raw reads
+
+Find candidate regions to search for SVs based on SV signatures.
+
+```bash
+python smrtsv.py detect reference/chr20.fa alignments.fofn candidates.bed
+```
+
+## Assemble regions
+
+Assemble local regions of the genome that have SV signatures or tile across the
+genome.
+
+```bash
+python smrtsv.py assemble reference/chr20.fa input.fofn alignments.fofn candidates.bed local_assembly_alignments.bam
 ```
 
 ## Call variants
@@ -65,5 +82,5 @@ Call variants by creating tiles of local assemblies across the reference and
 aligning assemblies back to the reference.
 
 ```bash
-snakemake call_variants --config alignments=alignments.fofn
+python smrtsv.py call reference/chr20.fa alignments.fofn local_assembly_alignments.bam variants.vcf
 ```
