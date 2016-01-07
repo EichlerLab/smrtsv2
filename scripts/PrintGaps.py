@@ -125,21 +125,21 @@ for samFileName in args.sam:
                 srcStart = int(coordMatchGroups[1])
                 srcEnd   = int(coordMatchGroups[2])
                 if (srcChrom != aln.tName):
-                    print "off target chromosome: " + srcChrom + " " + aln.tName
+                    sys.stderr.write("off target chromosome: " + srcChrom + " " + aln.tName + "\n")
                     continue
                 if (((srcStart >= aln.tStart and srcStart < aln.tEnd) or (srcEnd >= aln.tStart and srcEnd < aln.tEnd) or (srcStart < aln.tStart and srcEnd > aln.tEnd )) == False):
-                    print "no overlap " + srcChrom + " " + str(srcStart) + " " + str(srcEnd) + " alignment: " + str(aln.tStart) + " "+ str(aln.tEnd)
+                    sys.stderr.write("no overlap " + srcChrom + " " + str(srcStart) + " " + str(srcEnd) + " alignment: " + str(aln.tStart) + " "+ str(aln.tEnd) + "\n")
                     continue
 
-        if (aln.flag & 256 != 0):
-            continue
         if (aln.mapqv < args.minq):
+            sys.stderr.write("low mapqv " + str(aln.mapqv) + " , skipping " + aln.title + "\n")
             continue
 
         if (args.contigBed is not None):
             contigBed.write("{}\t{}\t{}\t{}\n".format(aln.tName, aln.tStart, aln.tStart + aln.tlen, aln.title))
 
         if (args.minContigLength > len(aln.seq)):
+            sys.stderr.write("too short, skipping " + aln.title + "\n")
             continue
 
 
@@ -236,7 +236,7 @@ for samFileName in args.sam:
                 i = j + 1
                 niter +=1
                 if (niter > len(aln.ops)):
-                    print "ERROR! too many interations."
+                    sys.stderr.write("ERROR! too many interations.\n")
         else:
             packedOps = aln.ops
             packedLengths = aln.lengths
@@ -256,6 +256,10 @@ for samFileName in args.sam:
                     nMis = 0
 
                     for mp in range(0,len(targetSeq)):
+                        if (mp >= len(querySeq) or mp >= len(targetSeq)):
+                            sys.stderr.write("ERROR with seq " + aln.title + "\n")
+                            continue
+
                         if (querySeq[mp].upper() != targetSeq[mp].upper() and targetSeq[mp].upper() != 'N' and querySeq[mp].upper() != 'N'):
                             nMis +=1
                             snvOut.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(aln.tName, tPos+mp, tPos+mp+1, targetSeq[mp], querySeq[mp], aln.title, mp+qPos ))
