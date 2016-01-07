@@ -1,3 +1,5 @@
+import os
+
 configfile: "config.json"
 
 localrules: call_variants
@@ -194,7 +196,12 @@ rule merge_inversions:
     input: "sv_calls/inversions.bed"
     output: "sv_calls/merged_inversions.bed"
     params: sge_opts=""
-    shell: "sort -k 1,1 -k 2,2n {input} | bedtools merge -i stdin -d 0 -c 4 -o count > {output}"
+    run:
+        # Only try to sort and merge inversions if any exist.
+        if os.stat(input[0]).st_size > 0:
+            shell("sort -k 1,1 -k 2,2n {input} | bedtools merge -i stdin -d 0 -c 4 -o count > {output}")
+        else:
+            shell("touch {output}")
 
 rule find_inversions:
     input: alignments=LOCAL_ASSEMBLY_ALIGNMENTS, reference=config["reference"]
