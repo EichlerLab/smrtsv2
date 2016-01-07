@@ -23,6 +23,7 @@ ap.add_argument("--outsam", help="Write the modified condensed sam to a file.", 
 ap.add_argument("--minq", help="Minimal mapping quality to consider (10)",default=10,type=int)
 ap.add_argument("--qpos", help="Write query position of gaps", default=False,action='store_true')
 ap.add_argument("--snv", help="Print SNVs to this file.", default=None)
+ap.add_argument("--nloc", help="Print locations of aligned N's here.", default=None)
 ap.add_argument("--contigBed", help="Print where contigs map.", default=None)
 ap.add_argument("--status", help="Print how far along the alignments are.", default=False, action='store_true')
 ap.add_argument("--blacklist", help="Exclude contigs on this list from callsets.", default=None)
@@ -66,16 +67,25 @@ snvOut = None
 if (args.snv is not None):
     snvOut = open(args.snv, 'w')
 
+nLocOut = None
+if (args.nloc is not None):
+    nLocOut = open(args.nloc, 'w')
+
 fai = Tools.ReadFAIFile(args.genome + ".fai")
 genomeFile = open(args.genome, 'r')
 
 M = 'M'
+X = 'X'
+E = '='
 I = 'I'
 D = 'D'
 N = 'N'
 S = 'S'
 H = 'H'
 P = 'P'
+def IsMatch(c):
+    return (c == M or c == X or c == E)
+
 if (args.sam[0].find(".fofn") >= 0):
     fofnFile = open(args.sam[0])
     samFiles = [line.strip() for line in fofnFile.readlines()]
@@ -200,7 +210,7 @@ for samFileName in args.sam:
                 if (op == I or op == D and i < len(aln.ops) - 2 and aln.ops[i+2][0] == op):
                     matchLen = 0
                     gapLen   = 0
-                    while (j+2 < len(aln.ops) and aln.ops[j+2][0] == op and aln.ops[j+1][0] == M and aln.lengths[j+1] < args.condense):
+                    while (j+2 < len(aln.ops) and aln.ops[j+2][0] == op and IsMatch(aln.ops[j+1][0])  and aln.lengths[j+1] < args.condense):
 
                         matchLen += aln.lengths[j+1]
                         gapLen   += aln.lengths[j+2]
@@ -232,34 +242,37 @@ for samFileName in args.sam:
 
         for i in range(len(packedOps)):
             op = packedOps[i]
-            l  = packedLengths[i]
+            oplen  = packedLengths[i]
 
             if (op == N or op == S):
                 # Inside match block (if op == M)
-                qPos += l
-            if (op == M):
+                qPos += oplen
+            if (IsMatch(op)):
                 # Inside match block (if op == M)
                 if (args.snv is not None):
-                    targetSeq = Tools.ExtractSeq((aln.tName, tPos-1,tPos+l-1), genomeFile, fai)
-                    querySeq  = aln.seq[qPos:qPos+l]
+                    targetSeq = Tools.ExtractSeq((aln.tName, tPos,tPos+oplen), genomeFile, fai)
+                    querySeq  = aln.seq[qPos:qPos+oplen]
                     nMis = 0
 
                     for mp in range(0,len(targetSeq)):
                         if (querySeq[mp].upper() != targetSeq[mp].upper() and targetSeq[mp].upper() != 'N' and querySeq[mp].upper() != 'N'):
                             nMis +=1
-                            snvOut.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(aln.tName, tPos+mp, tPos+mp+1, targetSeq[mp], querySeq[mp], aln.title ))
-                tPos += l
-                qPos += l
+                            snvOut.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(aln.tName, tPos+mp, tPos+mp+1, targetSeq[mp], querySeq[mp], aln.title, mp+qPos ))
+                        if (args.nloc is not None and (targetSeq[mp].upper() == 'N' or querySeq[mp].upper() == 'N')):
+                            nLocOut.write("{}\t{}\t{}\n".format(aln.tName, tPos+mp,tPos+mp+1));
+
+                tPos += oplen
+                qPos += oplen
 
             if (op == I):
-                if (l >= args.minLength and (args.maxLength is None or l < args.maxLength)):
-                    #                    print "gap at " + str(i) + " " + str(op) + " " + str(l) + " " + str(qPos) + " qlen: " + str(len(aln.seq))
+                if (oplen >= args.minLength and (args.maxLength is None or oplen < args.maxLength)):
+
                     foundGap = True
                     chrName = aln.tName
-                    #gapSeq = aln.seq[max(0,qPos-args.context):min(qPos+l+args.context, len(aln.seq))]
-                    gapSeq = aln.seq[qPos:qPos+l]
+                    #gapSeq = aln.seq[max(0,qPos-args.context):min(qPos+oplen+args.context, len(aln.seq))]
+                    gapSeq = aln.seq[qPos:qPos+oplen]
 
-                    context= aln.seq[qPos+l:min(qPos+l+args.context, len(aln.seq))]
+                    context= aln.seq[qPos+oplen:min(qPos+oplen+args.context, len(aln.seq))]
                     if (context == "A"*len(context) or context == "T"*len(context)):
                         homopolymer="T"
                     else:
@@ -294,7 +307,9 @@ for samFileName in args.sam:
                         if (frac > 0.85):
                             doPrint = False
                     if (doPrint):
-                        outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + l, "insertion", l, gapSeq, tsd, aln.title, qPos, qPos + l))
+                        if (tsd == ""):
+                            print line
+                        outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "insertion", oplen, gapSeq, tsd, aln.title, qPos, qPos + oplen))
                         if (args.context > 0):
                             outFile.write("\t{}".format(homopolymer))
                         if (args.qpos):
@@ -302,9 +317,9 @@ for samFileName in args.sam:
                         outFile.write("\n")
 
 
-                qPos += l
+                qPos += oplen
             if (op == D):
-                if (l >= args.minLength and (args.maxLength is None or l < args.maxLength)):
+                if (oplen >= args.minLength and (args.maxLength is None or oplen < args.maxLength)):
                     foundGap = True
                     chrName = aln.tName
                     if (tPos > fai[chrName][0]):
@@ -312,8 +327,10 @@ for samFileName in args.sam:
                     #delStart = max(tPos - args.context, 0)
                     #delEnd   = min(tPos + args.context + l, fai[chrName][0])
                     delStart = max(tPos - args.context, 0)
-                    delEnd   = min(tPos + args.context + l, fai[chrName][0])
-                    context= aln.seq[qPos+l:min(qPos+l+args.context, len(aln.seq))]
+                    delEnd   = min(tPos + args.context + oplen, fai[chrName][0])
+                    if (delEnd < delStart):
+                        continue
+                    context= aln.seq[qPos+oplen:min(qPos+oplen+args.context, len(aln.seq))]
                     if (context == "A"*len(context) or context == "T"*len(context)):
                         homopolymer="T"
                     else:
@@ -322,7 +339,7 @@ for samFileName in args.sam:
                     #delSeq = genomeDict[chrName].seq[delStart:delEnd].tostring()
                     delSeq = Tools.ExtractSeq([chrName, delStart, delEnd], genomeFile, fai)
 
-                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + l, "deletion", l, delSeq, aln.title, qPos, qPos + l))
+                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "deletion", oplen, delSeq, aln.title, qPos, qPos))
                     if (args.context > 0):
                         outFile.write("\t{}".format(homopolymer))
 
@@ -330,7 +347,7 @@ for samFileName in args.sam:
                         outFile.write("\t{}\t{}".format(qPos, qPos))
                     outFile.write("\n")
 
-                tPos += l
+                tPos += oplen
             if (op == H):
                 pass
 
