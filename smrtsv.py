@@ -89,6 +89,7 @@ def call(args):
         "call_variants",
         "--config",
         "reference=%s" % args.reference,
+        "alignments=%s" % args.alignments,
         "local_assembly_alignments=%s" % args.assembly_alignments,
         "variants=%s" % args.variants
     )
@@ -163,6 +164,7 @@ if __name__ == "__main__":
     # Call SVs and indels from BLASR alignments of local assemblies.
     parser_caller = subparsers.add_parser("call", help="call SVs and indels by BLASR alignments of local or whole genome assemblies")
     parser_caller.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
+    parser_caller.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
     parser_caller.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
     parser_caller.set_defaults(func=call)
