@@ -320,7 +320,7 @@ for samFileName in args.sam:
                         if (args.context > 0):
                             outFile.write("\t{}".format(homopolymer))
                         if (args.qpos):
-                            outFile.write("\t{}\t{}".format(qPos, qPos + len(gapSeq)))
+                            outFile.write("\t{}\t{}\t{}\t{}".format(qPos, qPos + len(gapSeq), aln.strand, len(aln.seq)))
                         outFile.write("\n")
 
 
@@ -351,7 +351,7 @@ for samFileName in args.sam:
                         outFile.write("\t{}".format(homopolymer))
 
                     if (args.qpos):
-                        outFile.write("\t{}\t{}".format(qPos, qPos))
+                        outFile.write("\t{}\t{}\t{}\t{}".format(qPos, qPos, aln.strand, len(aln.seq)))
                     outFile.write("\n")
 
                 tPos += oplen
