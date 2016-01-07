@@ -28,6 +28,7 @@ ap.add_argument("--contigBed", help="Print where contigs map.", default=None)
 ap.add_argument("--status", help="Print how far along the alignments are.", default=False, action='store_true')
 ap.add_argument("--blacklist", help="Exclude contigs on this list from callsets.", default=None)
 ap.add_argument("--removeAdjacentIndels", help="Find instances of SNVs pushed into indels, in the format: NIXMND., and remove these operations.", default=False, action='store_true')
+ap.add_argument("--printStrand", help="Print strand of aligned contig", default=False, action='store_true')
 args = ap.parse_args()
 
 genome = file(args.genome, 'r')
