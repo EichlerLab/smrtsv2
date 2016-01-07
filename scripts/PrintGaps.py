@@ -48,7 +48,12 @@ if (args.contigBed is not None):
 blacklist = {}
 if (args.blacklist is not None):
     bl = open(args.blacklist)
-    blacklist = { i.strip() : true for i in bl.readlines() }
+    for line in bl:
+        v = line.split()
+        if (v[0] not in blacklist):
+            blacklist[v[0]] = []
+        if (len(v) > 1):
+            blacklist[v[0]].append(int(v[1])+1)
 
 fai = Tools.ReadFAIFile(args.genome + ".fai")
 
@@ -125,6 +130,25 @@ for samFileName in args.sam:
 
         if (args.minContigLength > len(aln.seq)):
             continue
+
+
+        if (args.blacklist is not None):
+            if (aln.title in blacklist):
+                if (len(blacklist[aln.title]) == 0):
+                    sys.stderr.write("Skipping " + aln.title + " in blacklist.\n")
+                    continue
+                else:
+                    foundPos = False
+
+                    for p in blacklist[aln.title]:
+                        if int(aln.tPos) == p:
+                            foundPos = True
+                            break
+
+                    if foundPos:
+                        sys.stderr.write("Skipping " + aln.title + " in blacklist.\n")
+                        continue
+
         tPos = aln.tStart
         qPos = 0
         #
