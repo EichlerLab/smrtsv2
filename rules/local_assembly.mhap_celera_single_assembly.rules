@@ -44,7 +44,7 @@ rule align_consensus_to_reference_region:
     input: "consensus.trimmed.fasta", "reference_region.fasta"
     output: "consensus_reference_alignment.sam"
     params: sge_opts="", mapping_quality_threshold=str(config["assembly"]["mapping_quality"]), alignment_parameters=config["assembly"]["alignment_parameters"]
-    shell: """blasr {input} -clipping subread -out /dev/stdout -sam {params.alignment_parameters} | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' > {output}"""
+    shell: """blasr {input} -clipping subread -out /dev/stdout -sam {params.alignment_parameters} | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' | sed 's/RG:Z:\w\+\\t//' > {output}"""
 
 rule extract_reference_sequence:
     input: config["reference"], "reference_region.slop.txt"
