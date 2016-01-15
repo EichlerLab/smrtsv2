@@ -190,7 +190,10 @@ rule identify_calls_by_type:
     input: "sv_calls/gaps.bed"
     output: "sv_calls/calls.{sv_type}.bed"
     params: sge_opts=""
-    shell: """awk '$4 == "{wildcards.sv_type}"' {input} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python scripts/cluster_calls.py /dev/stdin | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n > {output}"""
+    # Filter input gaps by SV type and omit gaps containing N bases. Insertion
+    # coordinates are resized to their single-bp representation prior to
+    # clustering and returned to their original values after clustering.
+    shell: """awk '$4 == "{wildcards.sv_type}" && index($6, "N") == 0' {input} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python scripts/cluster_calls.py /dev/stdin | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n > {output}"""
 
 rule merge_inversions:
     input: "sv_calls/inversions.bed"
