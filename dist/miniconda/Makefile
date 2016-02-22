@@ -13,6 +13,7 @@ install: Miniconda3-latest-Linux-x86_64.sh
 	./bin/conda create --yes --name python2 python=2 biopython h5py networkx
 	. ./bin/activate python2
 	pip install intervaltree
+	pip install pysam
 	pip install pybedtools
 	. bin/deactivate
 

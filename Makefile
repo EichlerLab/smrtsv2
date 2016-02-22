@@ -66,14 +66,14 @@ dist/blasr: dist/hdf5 dist/zlib
 # Install Quiver and its dependencies.
 #
 
-dist/swig:
-	cd $@ && $(MAKE)
+dist/swig/bin/swig:
+	cd dist/swig && $(MAKE)
 
 pbcore:
 	git submodule update --init dist/$@
 	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install && make clean
 
-ConsensusCore: dist/swig
+ConsensusCore: dist/swig dist/swig/bin/swig
 	git submodule update --init dist/$@
 	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8 && make clean
 
