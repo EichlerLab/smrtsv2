@@ -346,12 +346,12 @@ for samFileName in args.sam:
                     #delSeq = genomeDict[chrName].seq[delStart:delEnd].tostring()
                     delSeq = Tools.ExtractSeq([chrName, delStart, delEnd], genomeFile, fai)
 
-                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "deletion", oplen, delSeq, aln.title, qPos, qPos))
+                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "deletion", oplen, delSeq, aln.title, qPos, qPos + 1))
                     if (args.context > 0):
                         outFile.write("\t{}".format(homopolymer))
 
                     if (args.qpos):
-                        outFile.write("\t{}\t{}\t{}\t{}".format(qPos, qPos, aln.strand, len(aln.seq)))
+                        outFile.write("\t{}\t{}\t{}\t{}".format(qPos, qPos + 1, aln.strand, len(aln.seq)))
                     outFile.write("\n")
 
                 tPos += oplen
