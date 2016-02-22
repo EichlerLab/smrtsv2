@@ -1,12 +1,17 @@
 import argparse
 import subprocess
 import sys
+import os
 
 CLUSTER_SETTINGS = '" -q all.q -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash"'
 CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "30")
 
+def _get_dist_dir():
+    dirname, filename = os.path.split(os.path.abspath(__file__))
+    return dirname
+
 def _build_prefix(args):
-    prefix = ["snakemake", "-pq", "-j", str(args.jobs)]
+    prefix = ["snakemake", "--snakefile", _get_dist_dir()+ "/Snakefile", "-pq", "-j", str(args.jobs)]
     if args.dryrun:
         prefix.append("-n")
 
