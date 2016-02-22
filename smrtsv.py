@@ -11,7 +11,7 @@ def _get_dist_dir():
     return dirname
 
 def _build_prefix(args):
-    prefix = ["snakemake", "--snakefile", _get_dist_dir()+ "/Snakefile", "-pq", "-j", str(args.jobs)]
+    prefix = ["snakemake", "--snakefile", os.path.join(_get_dist_dir(), "Snakefile"), "-pq", "-j", str(args.jobs)]
     if args.dryrun:
         prefix.append("-n")
 
