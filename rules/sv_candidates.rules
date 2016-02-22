@@ -143,13 +143,10 @@ rule collect_hardstops:
 rule find_hardstops_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch
     output: "hardstops_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), min_clipping="500", bwlimit=str(BANDWIDTH_LIMIT)
+    params: sge_opts="-l mfree=4G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), min_clipping="500"
     shell:
-        "mkdir -p `dirname {output}`; "
-        "mkdir -p {TMP_DIR}; "
-        ". config.sh && {SNAKEMAKE_DIR}/scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
-        "sort -k 1,1 -k 2,2n -o {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
-        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {output}"
+        "{SNAKEMAKE_DIR}/scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {output}; "
+        "sort -k 1,1 -k 2,2n -o {output} {output}"
 
 rule create_genomic_bins:
     input: CHROMOSOME_LENGTHS
@@ -227,31 +224,24 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=6G -l disk_free=1G -pe serial 1", mapping_quality_threshold=str(config["alignment"]["mapping_quality"]), bwlimit=str(BANDWIDTH_LIMIT)
+    params: sge_opts="-l mfree=6G -l disk_free=1G -pe serial 1", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
     shell:
-        "mkdir -p `dirname {output}`; "
-        "mkdir -p {TMP_DIR}; "
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
-            "| python {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed; "
-        "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed {output}"
+            "| python {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {output}"
 
 # Collect coverages from all alignments.
 rule merge_coverage_per_batch:
     input: expand("coverage/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
     output: "coverage.bed"
-    params: sge_opts="-l mfree=2G", bwlimit=str(BANDWIDTH_LIMIT)
+    params: sge_opts="-l mfree=2G"
     shell: """paste {input} | awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' > {output}"""
 
 # Calculate coverage from each batch.
 rule calculate_coverage_per_batch:
     input: _get_bam_path_for_batch
     output: "coverage/{alignment_name}.bed"
-    params: sge_opts="-l mfree=4G", bwlimit=str(BANDWIDTH_LIMIT)
-    shell:
-        "mkdir -p {TMP_DIR}; "
-        "mkdir -p `dirname {output}`; "
-        ". config.sh && {SNAKEMAKE_DIR}/scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
-        "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}"
+    params: sge_opts="-l mfree=4G"
+    shell: "{SNAKEMAKE_DIR}/scripts/mcst/coverage {output} -in {input}"
 
 # Collect coverages from all alignments.
 rule merge_coverage_per_batch_bedops:
@@ -268,7 +258,6 @@ rule calculate_coverage_per_batch_bedops:
     shell:
         "mkdir -p {TMP_DIR}; "
         "mkdir -p `dirname {output}`; "
-        ". config.sh; "
         "bedtools bamtobed -i {input.bam} | awk '$5 >= 30' | cut -f 1-3 > {TMP_DIR}/{wildcards.alignment_name}.bam.bed; "
         """bedmap --delim "\\t" --faster --echo --count {input.windows} {TMP_DIR}/{wildcards.alignment_name}.bam.bed > {TMP_DIR}/{wildcards.alignment_name}.bed; """
         "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}; "
