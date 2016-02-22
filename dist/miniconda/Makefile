@@ -2,7 +2,7 @@
 .PHONY: install
 
 install: Miniconda3-latest-Linux-x86_64.sh
-	bash Miniconda3-latest-Linux-x86_64.sh -b -p $(shell pwd)
+	bash Miniconda3-latest-Linux-x86_64.sh -f -b -p $(shell pwd)
 	./bin/conda create --yes --name python3 python=3
 	source ./bin/activate python3
 	pip install git+https://bitbucket.org/johanneskoester/snakemake.git
