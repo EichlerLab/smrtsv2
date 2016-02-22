@@ -157,7 +157,7 @@ rule get_fastq_for_overlapping_region:
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fastq"
     params: sge_opts=""
     priority: 10
-    shell: "scripts/FastaToFakeFastq.py {input} {output}"
+    shell: "{SNAKEMAKE_DIR}/scripts/FastaToFakeFastq.py {input} {output}"
 
 rule get_fasta_for_overlapping_region:
     input: regions="overlapping_assemblies.bed", assemblies="local_assemblies.fasta"

@@ -66,7 +66,7 @@ rule calculate_coverage_from_assembled_contigs:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "assembled_contigs.depth.bed"
     params: sge_opts="-l mfree=12G"
-    shell: "bedtools bamtobed -i {input.alignments} | scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | bedtools sort > {output}"
+    shell: "bedtools bamtobed -i {input.alignments} | {SNAKEMAKE_DIR}/scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | bedtools sort > {output}"
 
 rule cut_indel_events_by_columns:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
@@ -85,9 +85,9 @@ rule remove_indel_events_in_homopolymers:
     output: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
     params: sge_opts=""
     run:
-        command = """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | scripts/PrintSNVSupport.py /dev/stdin /dev/stdout"""
+        command = """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | {SNAKEMAKE_DIR}/scripts/PrintSNVSupport.py /dev/stdin /dev/stdout"""
         if wildcards.indel_type == "insertion":
-            command = "%s | scripts/BedMod.py /dev/stdin {output} --leftjustify 1" % command
+            command = "%s | {SNAKEMAKE_DIR}/scripts/BedMod.py /dev/stdin {output} --leftjustify 1" % command
         else:
             command = "%s > {output}" % command
 
@@ -103,19 +103,19 @@ rule filter_indel_gaps_by_tiling_path:
     input: "indel_calls/gaps.bed", "indel_calls/tiling_contigs.tab"
     output: "indel_calls/gaps.tiled.bed", "indel_calls/gaps.tiled.log"
     params: sge_opts="-l mfree=4G"
-    shell: "scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
+    shell: "{SNAKEMAKE_DIR}/scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
 
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/tiling_contigs.tab"
     params: sge_opts=""
-    shell: "samtools view -h {input} | scripts/TilingPath.py /dev/stdin > {output}"
+    shell: "samtools view -h {input} | {SNAKEMAKE_DIR}/scripts/TilingPath.py /dev/stdin > {output}"
 
 rule find_indel_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/gaps.bed"
     params: sge_opts="", indel_pack_distance="0", min_contig_length=str(MIN_CONTIG_LENGTH)
-    shell: "samtools view {input.alignments} | scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 50 --context 6 --removeAdjacentIndels --onTarget --minContigLength {params.min_contig_length} --condense {params.indel_pack_distance} --outFile {output}"
+    shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 50 --context 6 --removeAdjacentIndels --onTarget --minContigLength {params.min_contig_length} --condense {params.indel_pack_distance} --outFile {output}"
 
 
 #
@@ -135,24 +135,24 @@ rule summarize_calls_by_repeat_type:
     params: sge_opts=""
     shell:
         "mkdir -p {output}; "
-        "scripts/PrintUniqueEvents.py {input} --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
-        "scripts/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; "
-        "scripts/PrintUniqueEvents.py {output}/2.bed --prefix NONE --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --remainder {output}/3.bed > {output}/NONE.bed; "
-        "scripts/PrintUniqueEvents.py {output}/3.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
-        "scripts/PrintUniqueEvents.py {output}/4.bed --prefix L1HS  --maxNotPrefix 0 --remainder {output}/5.bed > {output}/L1HS.simple.bed; "
-        "scripts/PrintUniqueEvents.py {output}/5.bed --prefix Alu  --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/6.bed > {output}/Alu.Mosaic.bed; "
-        "scripts/PrintUniqueEvents.py {output}/6.bed --prefix Alu  --minSTR 1 --minPrefix 1 --maxNotPrefix 0 --remainder {output}/7.bed > {output}/Alu.STR.bed; "
-        "scripts/PrintUniqueEvents.py {output}/7.bed --prefix ALR   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/8.bed > {output}/ALR.bed; "
-        "scripts/PrintUniqueEvents.py {output}/8.bed --prefix SVA   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/9.bed > {output}/SVA.simple.bed; "
-        "scripts/PrintUniqueEvents.py {output}/9.bed --prefix HERV   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/10.bed > {output}/HERV.simple.bed; "
-        "scripts/PrintUniqueEvents.py {output}/10.bed --prefix L1P   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/11.bed > {output}/L1P.bed; "
-        "scripts/PrintUniqueEvents.py {output}/11.bed --prefix BSR/Beta   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/12.bed > {output}/Beta.bed; "
-        "scripts/PrintUniqueEvents.py {output}/12.bed --prefix HSAT   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/13.bed > {output}/HSAT.bed; "
-        "scripts/PrintUniqueEvents.py {output}/13.bed --prefix MER   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/14.bed > {output}/MER.bed; "
-        "scripts/PrintUniqueEvents.py {output}/14.bed --prefix L1   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/15.bed > {output}/L1.bed; "
-        "scripts/PrintUniqueEvents.py {output}/14.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {input} --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/2.bed --prefix NONE --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --remainder {output}/3.bed > {output}/NONE.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/3.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/4.bed --prefix L1HS  --maxNotPrefix 0 --remainder {output}/5.bed > {output}/L1HS.simple.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/5.bed --prefix Alu  --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/6.bed > {output}/Alu.Mosaic.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/6.bed --prefix Alu  --minSTR 1 --minPrefix 1 --maxNotPrefix 0 --remainder {output}/7.bed > {output}/Alu.STR.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/7.bed --prefix ALR   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/8.bed > {output}/ALR.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/8.bed --prefix SVA   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/9.bed > {output}/SVA.simple.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/9.bed --prefix HERV   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/10.bed > {output}/HERV.simple.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/10.bed --prefix L1P   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/11.bed > {output}/L1P.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/11.bed --prefix BSR/Beta   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/12.bed > {output}/Beta.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/12.bed --prefix HSAT   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/13.bed > {output}/HSAT.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/13.bed --prefix MER   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/14.bed > {output}/MER.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/14.bed --prefix L1   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/15.bed > {output}/L1.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/14.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
 
-        "scripts/PrintUniqueEvents.py {output}/16.bed --max 1 --remainder {output}/17.bed > {output}/Singletons.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/16.bed --max 1 --remainder {output}/17.bed > {output}/Singletons.bed; "
         "mv -f {output}/17.bed {output}/Complex.bed; "
         "rm -f {output}/[0-9]*.bed"
 
@@ -172,7 +172,7 @@ rule annotate_sv_calls:
     input: calls="sv_calls/calls.{sv_type}.bed", repeats="sv_calls/{sv_type}/rm/{sv_type}.fasta.out", masked_fasta="sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
     output: "sv_calls/all_annotated.{sv_type}.bed"
     params: sge_opts=""
-    shell: "scripts/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"
+    shell: "{SNAKEMAKE_DIR}/scripts/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"
 
 rule repeatmask_sv_fasta:
     input: "sv_calls/{sv_type}/{sv_type}.fasta"
@@ -184,7 +184,7 @@ rule create_sv_fasta:
     input: "sv_calls/calls.{sv_type}.bed"
     output: "sv_calls/{sv_type}/{sv_type}.fasta"
     params: sge_opts=""
-    shell: "scripts/GapBedToFasta.py {input} {output}"
+    shell: "{SNAKEMAKE_DIR}/scripts/GapBedToFasta.py {input} {output}"
 
 rule identify_calls_by_type:
     input: "sv_calls/gaps.bed"
@@ -193,7 +193,7 @@ rule identify_calls_by_type:
     # Filter input gaps by SV type and omit gaps containing N bases. Insertion
     # coordinates are resized to their single-bp representation prior to
     # clustering and returned to their original values after clustering.
-    shell: """awk '$4 == "{wildcards.sv_type}" && index($6, "N") == 0' {input} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python scripts/cluster_calls.py /dev/stdin | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n > {output}"""
+    shell: """awk '$4 == "{wildcards.sv_type}" && index($6, "N") == 0' {input} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python {SNAKEMAKE_DIR}/scripts/cluster_calls.py /dev/stdin | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n > {output}"""
 
 rule merge_inversions:
     input: "sv_calls/inversions.bed"
@@ -210,10 +210,10 @@ rule find_inversions:
     input: alignments=LOCAL_ASSEMBLY_ALIGNMENTS, reference=config["reference"]
     output: "sv_calls/inversions.bed"
     params: sge_opts="-pe serial 8 -l mfree=2G", reference_window="5000", threads="8"
-    shell: "samtools view {input.alignments} | scripts/mcst/screenInversions /dev/stdin {input.reference} {output} -w {params.reference_window} -r --noClip -j {params.threads}"
+    shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/mcst/screenInversions /dev/stdin {input.reference} {output} -w {params.reference_window} -r --noClip -j {params.threads}"
 
 rule find_calls_by_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/gaps.bed"
     params: sge_opts="", tsd_length="20", indel_pack_distance="20"
-    shell: "samtools view -h {input.alignments} | scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} --outFile {output}"
+    shell: "samtools view -h {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} --outFile {output}"
