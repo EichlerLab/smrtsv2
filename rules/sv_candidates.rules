@@ -147,7 +147,7 @@ rule find_hardstops_in_aligned_reads:
     shell:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
-        ". config.sh && scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
+        ". config.sh && {SNAKEMAKE_DIR}/scripts/mcst/hardstop {input} {params.mapping_quality_threshold} {params.min_clipping} {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
         "sort -k 1,1 -k 2,2n -o {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed; "
         "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/hardstops.{wildcards.alignment_name}.bed {output}"
 
@@ -166,7 +166,7 @@ rule plot_candidate_summary:
     input: "sv_candidate_summary.tab"
     output: lengths="sv_candidate_lengths.pdf", support="sv_candidate_support.pdf"
     params: sge_opts=""
-    shell: "Rscript scripts/plot_SV_candidate_summary.R {input} {output.lengths} {output.support}"
+    shell: "Rscript {SNAKEMAKE_DIR}/scripts/plot_SV_candidate_summary.R {input} {output.lengths} {output.support}"
 
 # Summarize filtered candidates by event attributes.
 rule summarize_filtered_candidates:
@@ -214,7 +214,7 @@ rule merge_gap_support_from_aligned_reads:
     input: expand("aligned_reads_{{event_type}}/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
     output: "merged_support_for_{event_type}.bed"
     params: sge_opts="-l mfree=5G"
-    shell: "set -o pipefail; sort -k 1,1 -k 2,2n --buffer-size=4G {input} | python scripts/PrintGapSupport.py /dev/stdin /dev/stdout | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 > {output}"
+    shell: "set -o pipefail; sort -k 1,1 -k 2,2n --buffer-size=4G {input} | python {SNAKEMAKE_DIR}/scripts/PrintGapSupport.py /dev/stdin /dev/stdout | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 > {output}"
 
 # Classify insertions and deletions into their own output files.
 rule classify_gaps_in_aligned_reads:
@@ -232,7 +232,7 @@ rule find_gaps_in_aligned_reads:
         "mkdir -p `dirname {output}`; "
         "mkdir -p {TMP_DIR}; "
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
-            "| python scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed; "
+            "| python {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed; "
         "rsync -W --bwlimit={params.bwlimit} --remove-source-files {TMP_DIR}/gaps_in_aligned_reads.{wildcards.alignment_name}.bed {output}"
 
 # Collect coverages from all alignments.
@@ -250,7 +250,7 @@ rule calculate_coverage_per_batch:
     shell:
         "mkdir -p {TMP_DIR}; "
         "mkdir -p `dirname {output}`; "
-        ". config.sh && scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
+        ". config.sh && {SNAKEMAKE_DIR}/scripts/mcst/coverage {TMP_DIR}/{wildcards.alignment_name}.bed -in {input}; "
         "rsync -W --bwlimit {params.bwlimit} --remove-source-files {TMP_DIR}/{wildcards.alignment_name}.bed {output}"
 
 # Collect coverages from all alignments.
