@@ -4,53 +4,23 @@ SMRT SV depends on Python 2.7 and Python 3 which are both available through the
 free [Anaconda Scientific Python
 Distribution](https://store.continuum.io/cshop/anaconda/).
 
+## Get the code
+
+Check out the repository with a recursive clone to fetch submodules.
+
+```bash
+mkdir ~/src/smrtsv
+cd ~/src/smrtsv
+git clone --recursive git@github.com:EichlerLab/pacbio_variant_caller.git .
+```
+
 ## Install Python
 
-Download the latest Anaconda installation (e.g.,
-"Anaconda-2.3.0-Linux-x86_64.sh" for 64-bit Linux systems). Run the installation
-script and follow on-screen instructions.
+Install the miniconda distribution of python.
 
 ```bash
-bash Anaconda-2.3.0-Linux-x86_64.sh
-```
-
-Create a conda environment for Python 2.
-
-```bash
-conda create --name python2 biopython
-```
-
-Install [intervaltree](https://pypi.python.org/pypi/intervaltree/) in the Python
-2 environment.
-
-```bash
-source activate python2
-pip install intervaltree
-source deactivate
-```
-
-Create a conda environment for Python 3.
-
-```bash
-conda create --name python3 python=3
-```
-
-Install [Snakemake](https://bitbucket.org/johanneskoester/snakemake/) in the
-Python 3 environment.
-
-```bash
-source activate python3
-pip install snakemake
-source deactivate
-```
-
-Finally, prepare your environment to run Snakemake with Python 3 and all other
-scripts with Python 2. This works by placing Python 2 binaries on the system
-PATH before Python 3 binaries. The following example assumes Anaconda is
-installed in the current user's home directory.
-
-```bash
-export PATH=$HOME/anaconda/envs/python2/bin:$HOME/anaconda/envs/python3/bin:$PATH
+cd dist/miniconda
+make
 ```
 
 ## Install BLASR
