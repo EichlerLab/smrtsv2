@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 import csv
 import networkx as nx
 import operator
@@ -40,14 +41,16 @@ if __name__ == "__main__":
     # will exist as singleton graphs while all nodes that overlap each other
     # directly or transitively will be clustered in the same graph.
     for subgraph in nx.connected_component_subgraphs(graph):
-        # Identify the node in this subgraph that covers the most genomic space
-        # (i.e., the largest call) and whose start position occurs earliest from
-        # left to right. This node represents all other nodes that overlap in
-        # the same region.
-        max_node_size = get_node_size(max(subgraph.nodes(), key=get_node_size))
-        earliest_max_node = min([node for node in subgraph.nodes()
-                                 if get_node_size(node) == max_node_size], key=lambda node: int(node[1]))
+        # Collect all nodes in this group by their start positions.
+        nodes_by_start = defaultdict(list)
+        for node in subgraph.nodes():
+            nodes_by_start[int(node[1])].append(node)
+
+        # Find the start position with the most nodes (i.e., the consensus start
+        # position) and return one of the nodes from this set as the
+        # representative node.
+        consensus_nodes = max(nodes_by_start.values(), key=lambda nodes: len(nodes))
 
         # Report the representative node along with the number of nodes in the
         # subgraph corresponding to the support for the representative event.
-        print "\t".join(earliest_max_node + (str(len(subgraph.nodes())),))
+        print "\t".join(consensus_nodes[0] + (str(len(subgraph.nodes())),))
