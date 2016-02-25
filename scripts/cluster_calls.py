@@ -4,6 +4,7 @@ import csv
 import networkx as nx
 import operator
 import pybedtools
+import sys
 
 
 def get_node_size(node):
