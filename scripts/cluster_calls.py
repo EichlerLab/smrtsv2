@@ -40,7 +40,9 @@ def find_consensus_calls(graph):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("calls", help="BED file of calls from various callsets")
+    parser.add_argument("action", choices=("intersect", "window"), help="type of comparison to use to identify overlapping calls")
     parser.add_argument("--reciprocal_overlap", type=float, default=0.5, help="proportion of reciprocal overlap required to consider two calls the same")
+    parser.add_argument("--window", type=int, default=100, help="inspect a window on either side of each call position to determine overlap")
     args = parser.parse_args()
 
     # Load all calls from the given BED file. Loading directly into a BedTool
@@ -52,10 +54,17 @@ if __name__ == "__main__":
         calls = pybedtools.BedTool([row for row in reader])
         columns_per_call = len(list(calls[0]))
 
-    # Intersect the given calls with themselves. Self-self overlaps will be
-    # reported along with any other overlaps matching the given reciprocal
-    # overlap proportion.
-    intersected_calls = calls.intersect(b=calls, f=args.reciprocal_overlap, r=True, wao=True)
+    if args.action == "intersect":
+        # Intersect the given calls with themselves. Self-self overlaps will be
+        # reported along with any other overlaps matching the given reciprocal
+        # overlap proportion.
+        intersected_calls = calls.intersect(b=calls, f=args.reciprocal_overlap, r=True, wao=True)
+    else:
+        # Inspect a window on either side of each call to determine
+        # "overlap". This approach is useful for insertions which have single
+        # base pair lengths, but may be effectively overlapping if close enough
+        # together.
+        intersected_calls = calls.window(b=calls, w=args.window)
 
     # Create a graph connecting all calls that share a reciprocal overlap.
     current_contig = None
@@ -72,7 +81,15 @@ if __name__ == "__main__":
             graph = nx.Graph()
 
         left = tuple(call[:columns_per_call])
-        right = tuple(call[columns_per_call:-1])
+
+        # If we're intersecting, omit the final column that contains the total
+        # bases overlapping between inputs. Otherwise, we're windowing and need
+        # to keep the entire output.
+        if args.action == "intersect":
+            right = tuple(call[columns_per_call:-1])
+        else:
+            right = tuple(call[columns_per_call:])
+
         graph.add_edge(left, right)
     else:
         # If we've finished processing the last call, get consensus calls for
