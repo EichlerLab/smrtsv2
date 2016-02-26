@@ -40,7 +40,7 @@ rule annotate_coverage_for_candidates:
     input: candidates="assembly_candidates_and_windows.bed", coverage="coverage.bed"
     output: "assembly_candidates_with_coverage.bed"
     params: sge_opts="-l mfree=4G"
-    shell: "bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"
+    shell: """bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($7 == ".") {{ $7 = 0 }} print }}' | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"""
 
 # Merge filtered candidates with tiled windows.
 rule merge_filtered_candidates_with_tiled_windows:
