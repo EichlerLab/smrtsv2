@@ -23,6 +23,13 @@ cd dist/miniconda
 make
 ```
 
+## Install all other dependencies
+
+```bash
+cd ~/src/smrtsv
+make
+```
+
 ## Install BLASR
 
 ### Install HDF5 with C++ support
