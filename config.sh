@@ -1,5 +1,6 @@
 export PATH=/usr/local/bin:/usr/bin:/bin
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/dist/hdf5/lib
+export INSTALL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_DIR}/dist/hdf5/lib
 
 # Use modules to load dependencies if that environment is available.
 module list &> /dev/null
@@ -21,6 +22,5 @@ then
     #module load mpfr/3.1.0 mpc/0.8.2 gmp/5.0.2 gcc/4.9.1
 fi
 
-export INSTALL_DIR=`pwd`
-export PATH=`pwd`/bin:$PATH
+export PATH=${INSTALL_DIR}/bin:$PATH
 export PATH=${INSTALL_DIR}/dist/miniconda/envs/python2/bin:${INSTALL_DIR}/dist/miniconda/envs/python3/bin:${INSTALL_DIR}/dist/miniconda/bin:$PATH
