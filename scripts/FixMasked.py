@@ -15,5 +15,5 @@ while sys.stdin:
 	v = line.split()
 	nl = sum([v[5].count(i) for i in ['a','g','c','t']])
 	t = len(v[5])
-	v[11] = "{:2.2f}".format(float(nl)/t)
+	v[idx] = "{:2.2f}".format(float(nl)/t)
 	sys.stdout.write('\t'.join(v) + '\n')
