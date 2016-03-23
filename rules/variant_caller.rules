@@ -130,15 +130,19 @@ rule summarize_sv_calls:
     input: expand("sv_calls/summarized_{sv_type}", sv_type=SV_TYPES)
 
 rule summarize_calls_by_repeat_type:
-    input: "sv_calls/all_annotated.{sv_type}.bed"
+    input: "sv_calls/all_annotated_with_trf.{sv_type}.bed"
     output: "sv_calls/summarized_{sv_type}"
     params: sge_opts=""
     shell:
         "mkdir -p {output}; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {input} --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
+        "awk '$20 > 0.8' {input} > {output}/TRF.bed; "
+        "awk '$20 <= 0.8' {input} > sv_calls/not_trf.bed; "
+        "{SNAKEMAKE_DIR}/scripts/FixMasked.py < sv_calls/not_trf.bed | awk '$18 < 0.7' > {output}/NotMasked.bed; "
+        "{SNAKEMAKE_DIR}/scripts/FixMasked.py < sv_calls/not_trf.bed | awk '$18 >= 0.7' > sv_calls/repeat.bed; "
+
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py sv_calls/repeat.bed --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/2.bed --prefix NONE --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --remainder {output}/3.bed > {output}/NONE.bed; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/3.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/2.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/4.bed --prefix L1HS  --maxNotPrefix 0 --remainder {output}/5.bed > {output}/L1HS.simple.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/5.bed --prefix Alu  --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/6.bed > {output}/Alu.Mosaic.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/6.bed --prefix Alu  --minSTR 1 --minPrefix 1 --maxNotPrefix 0 --remainder {output}/7.bed > {output}/Alu.STR.bed; "
@@ -150,8 +154,7 @@ rule summarize_calls_by_repeat_type:
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/12.bed --prefix HSAT   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/13.bed > {output}/HSAT.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/13.bed --prefix MER   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/14.bed > {output}/MER.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/14.bed --prefix L1   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/15.bed > {output}/L1.bed; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/14.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
-
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/15.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/16.bed --max 1 --remainder {output}/17.bed > {output}/Singletons.bed; "
         "mv -f {output}/17.bed {output}/Complex.bed; "
         "rm -f {output}/[0-9]*.bed"
@@ -166,13 +169,26 @@ rule filter_annotated_sv_calls:
     input: "sv_calls/all_annotated.{sv_type}.bed"
     output: "sv_calls/annotated.{sv_type}.bed"
     params: sge_opts=""
-    shell: "grep -v NONE {input} | awk '$10 >= 0.70' > {output}"
+    # Filter out non-repetitive SVs or SVs with less than 70% masked sequence.
+    shell: "grep -v NONE {input} | awk '$18 >= 0.70' > {output}"
 
-rule annotate_sv_calls:
+rule annotate_sv_calls_with_trf:
+    input: "sv_calls/all_annotated.{sv_type}.bed", "sv_calls/{sv_type}/rm/{sv_type}.fasta.trf"
+    output: "sv_calls/all_annotated_with_trf.{sv_type}.bed"
+    params: sge_opts=""
+    shell: "{SNAKEMAKE_DIR}/scripts/AnnotateWithTRF.py {input} {output}"
+
+rule annotate_sv_calls_with_repeatmasker:
     input: calls="sv_calls/calls.{sv_type}.bed", repeats="sv_calls/{sv_type}/rm/{sv_type}.fasta.out", masked_fasta="sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
     output: "sv_calls/all_annotated.{sv_type}.bed"
     params: sge_opts=""
     shell: "{SNAKEMAKE_DIR}/scripts/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"
+
+rule trf_mask_sv_fasta:
+    input: "sv_calls/{sv_type}/{sv_type}.fasta"
+    output: "sv_calls/{sv_type}/rm/{sv_type}.fasta.trf"
+    params: sge_opts="-pe serial 1 -l mfree=2G"
+    shell: "{SNAKEMAKE_DIR}/bin/trf {input} 2 7 7 80 10 20 500 -m -ngs -h > {output}"
 
 rule repeatmask_sv_fasta:
     input: "sv_calls/{sv_type}/{sv_type}.fasta"
