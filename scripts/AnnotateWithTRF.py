@@ -37,9 +37,17 @@ for line in bedFile:
         i = 0
         annotations[seqTitle].merge_overlaps()
         for intv in annotations[seqTitle]:
+            # Count total bases of tandem repeats annotated for this SV
+            # sequence.
             totalTR += intv[1] - intv[0]
+
+            # Lowercase sequence annotated as a tandem repeat.
             seq = seq[:intv[0]] + seq[intv[0]:intv[1]].lower() + seq[intv[1]:]
+
         vals[5] = seq
+
+        # Annotate the input BED with total tandem repeat bases and the
+        # proportion of bases annotated as tandem repeats.
  	vals.append(str(totalTR))
 	vals.append("{:2.2f}".format(float(totalTR)/len(seq)))
     else:
