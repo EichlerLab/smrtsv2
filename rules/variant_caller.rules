@@ -232,7 +232,7 @@ rule merge_inversions:
 rule find_inversions:
     input: alignments=LOCAL_ASSEMBLY_ALIGNMENTS, reference=config["reference"]
     output: "sv_calls/inversions.bed"
-    params: sge_opts="-pe serial 8 -l mfree=2G", reference_window="5000", threads="8"
+    params: sge_opts="-pe serial 8 -l mfree=2G -l h_rt=03:00:00", reference_window="5000", threads="8"
     shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/mcst/screenInversions /dev/stdin {input.reference} {output} -w {params.reference_window} -r --noClip -j {params.threads}"
 
 rule find_calls_by_gaps_in_alignments:
