@@ -126,19 +126,32 @@ rule call_svs:
     input: "sv_calls.bed"
     params: sge_opts=""
 
-rule summarize_sv_calls:
-    input: expand("sv_calls/summarized_{sv_type}", sv_type=SV_TYPES)
+rule collect_all_summarized_sv_calls:
+    input: expand("sv_calls/repeat_classified_{sv_type}.bed", sv_type=SV_TYPES)
+    output: "sv_calls/sv_calls_with_repeats.bed"
+    params: sge_opts=""
+    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
+
+rule collect_summarized_sv_calls_within_type:
+    input: "sv_calls/summarized_{sv_type}"
+    output: "sv_calls/repeat_classified_{sv_type}.bed"
+    params: sge_opts=""
+    shell: """for file in {input}/*.bed; do repeat_type=`basename ${{file/.bed/}} | sed 's/\./_/g'`; awk -v repeat_type=$repeat_type 'OFS="\\t" {{ print $0,repeat_type }}' $file; done | sort -k 1,1 -k 2,2n > {output}"""
 
 rule summarize_calls_by_repeat_type:
-    input: "sv_calls/all_annotated.{sv_type}.bed"
+    input: "sv_calls/all_annotated_with_trf.{sv_type}.bed"
     output: "sv_calls/summarized_{sv_type}"
     params: sge_opts=""
     shell:
         "mkdir -p {output}; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {input} --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
+        "awk '$20 > 0.8' {input} > {output}/TRF.bed; "
+        "awk '$20 <= 0.8' {input} > sv_calls/not_trf.bed; "
+        "{SNAKEMAKE_DIR}/scripts/FixMasked.py < sv_calls/not_trf.bed | awk '$18 < 0.7' > {output}/NotMasked.bed; "
+        "{SNAKEMAKE_DIR}/scripts/FixMasked.py < sv_calls/not_trf.bed | awk '$18 >= 0.7' > sv_calls/repeat.bed; "
+
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py sv_calls/repeat.bed --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/2.bed --prefix NONE --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --remainder {output}/3.bed > {output}/NONE.bed; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/3.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/2.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/4.bed --prefix L1HS  --maxNotPrefix 0 --remainder {output}/5.bed > {output}/L1HS.simple.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/5.bed --prefix Alu  --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/6.bed > {output}/Alu.Mosaic.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/6.bed --prefix Alu  --minSTR 1 --minPrefix 1 --maxNotPrefix 0 --remainder {output}/7.bed > {output}/Alu.STR.bed; "
@@ -150,8 +163,7 @@ rule summarize_calls_by_repeat_type:
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/12.bed --prefix HSAT   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/13.bed > {output}/HSAT.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/13.bed --prefix MER   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/14.bed > {output}/MER.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/14.bed --prefix L1   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/15.bed > {output}/L1.bed; "
-        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/14.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
-
+        "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/15.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/16.bed --max 1 --remainder {output}/17.bed > {output}/Singletons.bed; "
         "mv -f {output}/17.bed {output}/Complex.bed; "
         "rm -f {output}/[0-9]*.bed"
@@ -166,13 +178,26 @@ rule filter_annotated_sv_calls:
     input: "sv_calls/all_annotated.{sv_type}.bed"
     output: "sv_calls/annotated.{sv_type}.bed"
     params: sge_opts=""
-    shell: "grep -v NONE {input} | awk '$10 >= 0.70' > {output}"
+    # Filter out non-repetitive SVs or SVs with less than 70% masked sequence.
+    shell: "grep -v NONE {input} | awk '$18 >= 0.70' > {output}"
 
-rule annotate_sv_calls:
+rule annotate_sv_calls_with_trf:
+    input: "sv_calls/all_annotated.{sv_type}.bed", "sv_calls/{sv_type}/rm/{sv_type}.fasta.trf"
+    output: "sv_calls/all_annotated_with_trf.{sv_type}.bed"
+    params: sge_opts=""
+    shell: "{SNAKEMAKE_DIR}/scripts/AnnotateWithTRF.py {input} {output}"
+
+rule annotate_sv_calls_with_repeatmasker:
     input: calls="sv_calls/calls.{sv_type}.bed", repeats="sv_calls/{sv_type}/rm/{sv_type}.fasta.out", masked_fasta="sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
     output: "sv_calls/all_annotated.{sv_type}.bed"
     params: sge_opts=""
     shell: "{SNAKEMAKE_DIR}/scripts/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"
+
+rule trf_mask_sv_fasta:
+    input: "sv_calls/{sv_type}/{sv_type}.fasta"
+    output: "sv_calls/{sv_type}/rm/{sv_type}.fasta.trf"
+    params: sge_opts="-pe serial 1 -l mfree=2G"
+    shell: "{SNAKEMAKE_DIR}/bin/trf {input} 2 7 7 80 10 20 500 -m -ngs -h > {output}"
 
 rule repeatmask_sv_fasta:
     input: "sv_calls/{sv_type}/{sv_type}.fasta"
@@ -203,20 +228,20 @@ rule identify_calls_by_type:
     shell: """awk '$4 == "{wildcards.sv_type}" && index($6, "N") == 0' {input.gaps} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python {SNAKEMAKE_DIR}/scripts/cluster_calls.py --window {params.window} --reciprocal_overlap {params.overlap} /dev/stdin {params.call_comparison_action} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n | while read line; do set -- $line; coverage=`samtools view -c {input.alignments} $1:$2-$3`; echo -e "$line\\t$coverage"; done > {output}"""
 
 rule merge_inversions:
-    input: "sv_calls/inversions.bed"
+    input: inversions="sv_calls/inversions.bed", alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/merged_inversions.bed"
     params: sge_opts=""
     run:
         # Only try to sort and merge inversions if any exist.
-        if os.stat(input[0]).st_size > 0:
-            shell("sort -k 1,1 -k 2,2n {input} | bedtools merge -i stdin -d 0 -c 4 -o count > {output}")
+        if os.stat(input.inversions).st_size > 0:
+            shell("""sort -k 1,1 -k 2,2n {input.inversions} | bedtools merge -i stdin -d 0 -c 4 -o count | while read line; do set -- $line; coverage=`samtools view -c {input.alignments} $1:$2-$3`; echo -e "$line\\t$coverage"; done > {output}""")
         else:
             shell("touch {output}")
 
 rule find_inversions:
     input: alignments=LOCAL_ASSEMBLY_ALIGNMENTS, reference=config["reference"]
     output: "sv_calls/inversions.bed"
-    params: sge_opts="-pe serial 8 -l mfree=2G", reference_window="5000", threads="8"
+    params: sge_opts="-pe serial 8 -l mfree=2G -l h_rt=03:00:00", reference_window="5000", threads="8"
     shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/mcst/screenInversions /dev/stdin {input.reference} {output} -w {params.reference_window} -r --noClip -j {params.threads}"
 
 rule find_calls_by_gaps_in_alignments:

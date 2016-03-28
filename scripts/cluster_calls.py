@@ -6,6 +6,11 @@ import operator
 import pybedtools
 import sys
 
+# Constants related to zero-based indexing of fields from the SV call format.
+QUERY_START = 10
+QUERY_END = 11
+QUERY_LENGTH = 13
+
 
 def get_node_size(node):
     return int(node[4])
@@ -32,9 +37,23 @@ def find_consensus_calls(graph):
         # representative node.
         consensus_nodes = max(nodes_by_start.values(), key=lambda nodes: len(nodes))
 
+        # If not more than one node shares the same breakpoint, search all nodes
+        # for optimally placed variant.
+        if len(consensus_nodes) == 1:
+            consensus_nodes = [node for start_nodes in nodes_by_start.values() for node in start_nodes]
+
+        # Get the node with the smallest difference between distances from
+        # breakpoints to the edge of the local assembly. This corresponds to
+        # the node located as close to the middle of a local assembly as
+        # possible.
+        if len(consensus_nodes) > 1:
+            consensus_node = min(consensus_nodes, key=lambda node: abs((int(node[QUERY_LENGTH]) - int(node[QUERY_END])) - int(node[QUERY_START])))
+        else:
+            consensus_node = consensus_nodes[0]
+
         # Report the representative node along with the number of nodes in the
         # subgraph corresponding to the support for the representative event.
-        print "\t".join(consensus_nodes[0] + (str(len(subgraph.nodes())),))
+        print "\t".join(consensus_node + (str(len(subgraph.nodes())),))
 
 
 if __name__ == "__main__":
