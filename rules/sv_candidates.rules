@@ -39,7 +39,7 @@ rule get_regions:
 rule annotate_coverage_for_candidates:
     input: candidates="assembly_candidates_and_windows.bed", coverage="coverage.bed"
     output: "assembly_candidates_with_coverage.bed"
-    params: sge_opts="-l mfree=4G"
+    params: sge_opts="-l mfree=10G"
     shell: """bedtools intersect -a {input.candidates} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($7 == ".") {{ $7 = 0 }} print }}' | groupBy -i stdin -g 1,2,3 -c 7 -o mean > {output}"""
 
 # Merge filtered candidates with tiled windows.
@@ -191,7 +191,7 @@ rule filter_candidates:
         min_coverage=str(config["detection"]["min_coverage"]),
         max_coverage=str(config["detection"]["max_coverage"])
     run:
-        shell("awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $10 >= {params.min_coverage} && $10 <= {params.max_coverage}' {input} > {output}.tmp")
+        shell("awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $9 >= {params.min_coverage} && $9 <= {params.max_coverage}' {input} > {output}.tmp")
         if os.stat("%s.tmp" % output[0]).st_size > 0:
             shell("bedtools merge -i {output}.tmp -d 1 -c 6,4,5 -o distinct,mean,mean > {output}")
         else:
@@ -203,8 +203,8 @@ rule filter_candidates:
 rule annotate_coverage_of_merged_gap_support:
     input: support="merged_support_for_{event_type}.bed", coverage="coverage.bed"
     output: "coverage_and_merged_support_for_{event_type}.bed"
-    params: sge_opts="-l mfree=15G"
-    shell: """set -e; set -o pipefail; bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($13 == ".") {{ $13 = 0 }} print }}' | groupBy -i stdin -g 1,2,3,4,5,6,7,8,9 -c 13 -o mean > {output}"""
+    params: sge_opts="-l mfree=25G"
+    shell: """set -e; set -o pipefail; bedtools intersect -a {input.support} -b {input.coverage} -sorted -wao | awk 'OFS="\\t" {{ if ($13 == ".") {{ $13 = 0 }} print }}' | cut -f 1-6,8- | groupBy -i stdin -g 1,2,3,4,5,6,7,8 -c 12 -o mean > {output}"""
 
 # Merge gap support for each type of event.
 rule merge_gap_support_from_aligned_reads:
