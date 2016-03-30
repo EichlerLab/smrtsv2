@@ -5,7 +5,6 @@ import sys
 import os
 
 logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
-
 CLUSTER_SETTINGS = '"qsub -sync y -q all.q -V -cwd -e ./log -o ./log {params.sge_opts} -S /bin/bash"'
 CLUSTER_FLAG = ("--cluster-sync", CLUSTER_SETTINGS, "-w", "120")
 
