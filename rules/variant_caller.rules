@@ -146,8 +146,8 @@ rule summarize_calls_by_repeat_type:
         "mkdir -p {output}; "
         "awk '$20 > 0.8' {input} > {output}/TRF.bed; "
         "awk '$20 <= 0.8' {input} > sv_calls/not_trf.bed; "
-        "{SNAKEMAKE_DIR}/scripts/FixMasked.py < sv_calls/not_trf.bed | awk '$18 < 0.7' > {output}/NotMasked.bed; "
-        "{SNAKEMAKE_DIR}/scripts/FixMasked.py < sv_calls/not_trf.bed | awk '$18 >= 0.7' > sv_calls/repeat.bed; "
+        "{SNAKEMAKE_DIR}/scripts/FixMasked.py 17 < sv_calls/not_trf.bed | awk '$18 < 0.7' > {output}/NotMasked.bed; "
+        "{SNAKEMAKE_DIR}/scripts/FixMasked.py 17 < sv_calls/not_trf.bed | awk '$18 >= 0.7' > sv_calls/repeat.bed; "
 
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py sv_calls/repeat.bed --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; "
         "{SNAKEMAKE_DIR}/scripts/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; "
