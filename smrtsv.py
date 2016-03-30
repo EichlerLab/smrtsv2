@@ -1,7 +1,10 @@
 import argparse
+import logging
 import subprocess
 import sys
 import os
+
+logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
 
 CLUSTER_SETTINGS = '" -q all.q -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash"'
 CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "30")
@@ -84,6 +87,7 @@ def assemble(args):
     if args.assembly_alignments:
         command = command + ("assembly_alignments=%s" % args.assembly_alignments,)
 
+    logging.debug("Assembly command: %s", " ".join(command))
     return subprocess.call(" ".join(command), shell=True)
 
 def call(args):
