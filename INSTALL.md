@@ -20,7 +20,7 @@ Install the miniconda distribution of python.
 
 ```bash
 cd dist/miniconda
-make
+sh install.sh
 ```
 
 ## Install all other dependencies

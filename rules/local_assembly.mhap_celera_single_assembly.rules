@@ -73,9 +73,13 @@ rule quiver_assembly:
     input: assembly="assembly.fasta", alignments="alignment.cmp.h5", assembly_index="assembly.fasta.fai"
     output: "consensus.fasta"
     params: sge_opts="", threads="4"
-    shell:
-        "quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; "
-        "sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}; "
+    run:
+        try:
+            shell("quiver -j {params.threads} --referenceFilename {input.assembly} {input.alignments} -o {output}; ")
+            shell("sed -i 's/^>\(.\+\)/>{REGION}|\\1/' {output}; ")
+        except:
+            shell("""echo -e "{REGION}\tquiver_failed" >> %s""" % config["log"])
+            shell("cat {input.assembly} > {output}")
 
 rule convert_assembly_alignments_to_hdf5:
     input: alignments="alignment.sam", assembly="assembly.fasta", reads="reads.bas.h5"

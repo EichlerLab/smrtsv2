@@ -18,9 +18,9 @@ then
     module load R/2.15.0
     module load perl/5.14.2
     module load RepeatMasker/3.3.0
-
-    #module load mpfr/3.1.0 mpc/0.8.2 gmp/5.0.2 gcc/4.9.1
+    module load java/8u25
+    module load mpfr/3.1.0 mpc/0.8.2 gmp/5.0.2 gcc/4.9.1
 fi
 
 export PATH=${INSTALL_DIR}/bin:$PATH
-export PATH=${INSTALL_DIR}/dist/miniconda/envs/python2/bin:${INSTALL_DIR}/dist/miniconda/envs/python3/bin:${INSTALL_DIR}/dist/miniconda/bin:$PATH
+export PATH=${INSTALL_DIR}/dist/miniconda/envs/python2/bin:${INSTALL_DIR}/dist/miniconda/envs/python3/bin:${INSTALL_DIR}/dist/miniconda/bin:${INSTALL_DIR}/dist/celera/wgs-8.3rc2/Linux-amd64/bin/:${INSTALL_DIR}/dist/amos-3.1.0/bin:${INSTALL_DIR}/canu/Linux-amd64/bin:$PATH
