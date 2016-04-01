@@ -47,16 +47,16 @@ rule align_consensus_to_reference_region:
     shell: """blasr {input} -clipping subread -out /dev/stdout -sam {params.alignment_parameters} | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' | sed 's/RG:Z:\w\+\\t//' > {output}"""
 
 rule extract_reference_sequence:
-    input: config["reference"], "reference_region.slop.txt"
+    input: reference=config["reference"], region="reference_region.slop.bed"
     output: temp("reference_region.fasta")
     params: sge_opts=""
-    shell: "samtools faidx {input[0]} `cat {input[1]}` > {output}"
+    shell: "bedtools getfasta -fi {input.reference} -bed {input.region} -fo {output}"
 
 rule extend_reference_region:
     input: bed="reference_region.bed", chromosomes=CHROMOSOME_LENGTHS
-    output: "reference_region.slop.txt"
+    output: "reference_region.slop.bed"
     params: sge_opts="", slop=str(REFERENCE_SLOP)
-    shell: """bedtools slop -i {input.bed} -g {input.chromosomes} -b {params.slop} | awk '{{ print $1":"$2"-"$3 }}' > {output}"""
+    shell: """bedtools slop -i {input.bed} -g {input.chromosomes} -b {params.slop} > {output}"""
 
 rule create_reference_region:
     output: "reference_region.bed"
