@@ -14,6 +14,12 @@ ALIGNMENTS = config.get("alignments", "alignments.fofn")
 ALIGNMENTS_DIR = config.get("alignments_dir", "alignments")
 THREADS = int(config.get("threads", "1"))
 
+# Calculate SGE requirements per core.
+TOTAL_DISK_REQUIRED = config["alignment"]["total_disk_required"]
+TOTAL_MEMORY_REQUIRED = config["alignment"]["total_memory_required"]
+DISK_PER_CORE = math.ceil(TOTAL_DISK_REQUIRED / THREADS)
+MEMORY_PER_CORE = math.ceil(TOTAL_MEMORY_REQUIRED / THREADS)
+
 # Create a list of BAM files for downstream analysis.
 rule align_reads:
     input: expand("%s/{batch_id}.bam" % ALIGNMENTS_DIR, batch_id=BATCHES)
@@ -48,10 +54,11 @@ rule get_subread_and_alignment_lengths:
 
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
+ALIGNMENT_SGE_OPTS = "-l h_rt=10:00:00 -l disk_free=%iG -l mfree=%iG -pe serial %i -N align_batch_{batch_id}" % (DISK_PER_CORE, MEMORY_PER_CORE, THREADS)
 rule align_batch:
     input: reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR, reference=config["reference"], suffix=config.get("suffix_array", "%s.sa" % config["reference"]), ctab=config.get("ctab", "%s.ctab" % config["reference"])
     output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
-    params: sge_opts="-l disk_free=10G -l mfree=8.25G -pe serial 8 -N align_batch_{batch_id}", threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment"]["alignment_parameters"]
+    params: sge_opts=ALIGNMENT_SGE_OPTS, threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment"]["alignment_parameters"]
     shell:
         "export REFERENCE_PATH=`readlink -f {input.reference}`; "
         "export REFERENCE_SUFFIX_PATH=`readlink -f {input.suffix}`; "
