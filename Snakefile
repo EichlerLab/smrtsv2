@@ -13,7 +13,6 @@ shell.prefix(". {SNAKEMAKE_DIR}/config.sh; ")
 #
 # Define internal constants.
 #
-BLASR_BIN = "/net/eichler/vol20/projects/pacbio/nobackups/users/jlhudd/blasr_jlhudd/alignment/bin/blasr"
 CWD = os.getcwd()
 
 #
