@@ -17,7 +17,7 @@
         "max_inaccessible_support": 5,
         "max_candidate_length": 60000,
         "tile_window_size": 60000,
-        "tile_window_slide": 20000
+        "tile_window_slide": 30000
     },
     "assembly": {
         "assembler": "mhap_celera",
