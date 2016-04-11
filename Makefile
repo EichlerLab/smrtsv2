@@ -2,17 +2,9 @@
 #  A makefile for dist  #
 ############################
 
-SAMTOOLS  := $(shell samtools --version 2>/dev/null)
-BEDTOOLS  := $(shell bedtools --version 2>/dev/null)
-FREEBAYES := $(shell freebayes --version 2>/dev/null)
-BLASR     := $(shell bin/blasr 2> /dev/null)
-CELERA    := $(shell bin/PBcR 2> /dev/null)
-JAVA      := $(shell bin/java 2> /dev/null)
-QUIVER    := $(shell quiver --version 2> /dev/null)
-PBH5TOOLS := $(shell cmph5tools.py --help 2> /dev/null)
 PWD  = $(shell pwd)
 
-all: checkBedtools checkSamtools checkFreebayes checkBlasr checkCelera checkJava checkQuiver checkPbH5Tools
+all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py
 
 #
 # Install core genomics tools.
@@ -40,27 +32,27 @@ samtools:
 # Install Celera/PBcR and its dependencies.
 #
 
-dist/java:
-	-cd $@ && make
-	-@ln -s ../$@/jre1.8.0_65/bin/java bin/java
+bin/java:
+	-cd dist/java && $(MAKE)
+	-@ln -s ../dist/java/jre1.8.0_65/bin/java bin/java
 
-dist/celera:
-	-cd $@ && make
-	-@ln -s ../$@/wgs-8.3rc2/Linux-amd64/bin/PBcR bin/PBcR
+bin/PBcR:
+	-cd dist/celera && $(MAKE)
+	-@ln -s ../dist/celera/wgs-8.3rc2/Linux-amd64/bin/PBcR bin/PBcR
 
 #
 # Install BLASR and its dependencies.
 #
 
-dist/hdf5:
-	cd $@ && $(MAKE)
+dist/hdf5/lib/libhdf5_cpp.so:
+	cd dist/hdf5 && $(MAKE)
 
-dist/zlib:
-	cd $@ && $(MAKE)
+dist/zlib/lib/libz.so:
+	cd dist/zlib && $(MAKE)
 
-dist/blasr: dist/hdf5 dist/zlib
-	git submodule update --init $@
-	-cd $@ && make HDF5INCLUDEDIR=$(PWD)/$</include HDF5LIBDIR=$(PWD)/$</lib LIBRARY_PATH=$(PWD)/$(word 2,$^)/lib:$(LIBRARY_PATH) && make install PREFIX=$(PWD) && make clean
+bin/blasr: dist/hdf5/lib/libhdf5_cpp.so dist/zlib/lib/libz.so
+	git submodule update --init dist/blasr
+	-cd dist/blasr && make HDF5INCLUDEDIR=$(PWD)/dist/hdf5/include HDF5LIBDIR=$(PWD)/dist/hdf5/lib LIBRARY_PATH=$(PWD)/dist/zlib/lib:$(LIBRARY_PATH) && make install PREFIX=$(PWD) && make clean
 
 #
 # Install Quiver and its dependencies.
@@ -69,93 +61,23 @@ dist/blasr: dist/hdf5 dist/zlib
 dist/swig/bin/swig:
 	cd dist/swig && $(MAKE)
 
-pbcore:
-	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && sed -i 's/pysam == 0.8.1/pysam >= 0.8.1/' setup.py && python setup.py install && make clean
+dist/miniconda/envs/python2/lib/python2.7/site-packages/pbcore-1.0.0-py2.7.egg:
+	git submodule update --init dist/pbcore
+	-cd dist/pbcore && source $(PWD)/dist/miniconda/bin/activate python2 && sed -i 's/pysam == 0.8.1/pysam >= 0.8.1/' setup.py && python setup.py install && make clean
 
-ConsensusCore: dist/swig dist/swig/bin/swig
-	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8 && make clean
+dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.0-py2.7.egg: dist/swig dist/swig/bin/swig
+	git submodule update --init dist/ConsensusCore
+	-cd dist/ConsensusCore && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8 && make clean
 
-GenomicConsensus:
-	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && sed -i 's/pysam == 0.8.1/pysam >= 0.8.1/' setup.py && python setup.py install && make clean
+dist/miniconda/envs/python2/bin/quiver: dist/miniconda/envs/python2/lib/python2.7/site-packages/pbcore-1.0.0-py2.7.egg dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.0-py2.7.egg
+	git submodule update --init dist/GenomicConsensus
+	-cd dist/GenomicConsensus && source $(PWD)/dist/miniconda/bin/activate python2 && sed -i 's/pysam == 0.8.1/pysam >= 0.8.1/' setup.py && python setup.py install && make clean
+	touch $@
 
 #
 # pbh5tools
 #
 
-pbh5tools:
-	git submodule update --init dist/$@
-	-cd dist/$@ && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
-
-#
-# Check for existing system-wide installations before building locally.
-#
-
-checkPbH5Tools:
-ifdef PBH5TOOLS
-	@echo "Found pbh5tools"
-else
-	@echo "Trying to install pbh5tools"
-	$(MAKE) pbh5tools
-endif
-
-checkQuiver:
-ifdef QUIVER
-	@echo "Found Quiver version: $(QUIVER)"
-else
-	@echo "Trying to install Quiver"
-	$(MAKE) pbcore ConsensusCore GenomicConsensus
-endif
-
-checkSamtools:
-ifdef SAMTOOLS
-	@echo "Found samtools version: $(SAMTOOLS)"
-	-@ln -s $(shell which samtools) bin/samtools
-else
-	@echo "Trying to install samtools"
-	$(MAKE) samtools
-endif
-
-checkBedtools:
-ifdef BEDTOOLS
-	@echo "Found bedtools version: $(BEDTOOLS)"
-	-@ln -s $(shell which bedtools) bin/bedtools
-else
-	@echo "Trying to install bedtools"
-	$(MAKE) bedtools2
-endif
-
-checkFreebayes:
-ifdef FREEBAYES
-	@echo "Found freebayes version: $(FREEBAYES)"
-	-@ln -s $(shell which freebayes) bin/freebayes
-else
-	@echo "Trying to install freebayes"
-	$(MAKE) freebayes
-endif
-
-checkBlasr:
-ifdef BLASR
-	@echo "Found BLASR"
-else
-	@echo "Trying to install BLASR"
-	$(MAKE) dist/blasr
-endif
-
-checkCelera:
-ifdef CELERA
-	@echo "Found Celera"
-else
-	@echo "Trying to install Celera"
-	$(MAKE) dist/celera
-endif
-
-checkJava:
-ifdef JAVA
-	@echo "Found Java"
-else
-	@echo "Trying to install Java"
-	$(MAKE) dist/java
-endif
+dist/miniconda/envs/python2/bin/cmph5tools.py:
+	git submodule update --init dist/pbh5tools
+	-cd dist/pbh5tools && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install
