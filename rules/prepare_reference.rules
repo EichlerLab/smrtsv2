@@ -1,5 +1,3 @@
-configfile: "config.json"
-
 REFERENCE = config.get("reference", "")
 
 rule prepare_reference:
