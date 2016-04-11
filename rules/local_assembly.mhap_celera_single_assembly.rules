@@ -3,6 +3,13 @@ import os
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 
+# If the user has a config file in the current working directory, use
+# that. Otherwise, use SMRT SV defaults.
+if os.path.exists("config.json"):
+    configfile: "config.json"
+else:
+    configfile: "%s/../config.template.json" % SNAKEMAKE_DIR
+
 INPUT_READS = config.get("reads", "input.fofn")
 CELERA_SPEC = config.get("celera_spec", "%s/../celera/pacbio.local_human.spec" % SNAKEMAKE_DIR)
 CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
