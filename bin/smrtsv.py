@@ -195,5 +195,11 @@ if __name__ == "__main__":
     parser_genotyper.set_defaults(func=genotype)
 
     args = parser.parse_args()
+
+    # Make a log directory for grid-engine-style error logs if commands are
+    # being distributed in non-dryrun mode.
+    if args.distribute and not args.dryrun and not os.path.isdir("log"):
+        os.mkdir("log")
+
     return_code = args.func(args)
     sys.exit(return_code)
