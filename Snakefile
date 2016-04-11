@@ -19,7 +19,14 @@ CWD = os.getcwd()
 #
 # Load user variables.
 #
-configfile: "config.json"
+
+# If the user has a config file in the current working directory, use
+# that. Otherwise, use SMRT SV defaults.
+if os.path.exists("config.json"):
+    configfile: "config.json"
+else:
+    configfile: "%s/config.template.json" % SNAKEMAKE_DIR
+
 TMP_DIR = config["tmp_dir"]
 EVENT_TYPES = ("insertion", "deletion")
 
