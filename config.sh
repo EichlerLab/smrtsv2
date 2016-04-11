@@ -1,4 +1,3 @@
-export PATH=/usr/local/bin:/usr/bin:/bin
 export INSTALL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_DIR}/dist/hdf5/lib
 
