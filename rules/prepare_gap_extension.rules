@@ -1,6 +1,4 @@
 
-configfile: "config.json"
-
 rule filter_gaps_by_coverage:
     input: gaps="gaps_to_assemble.bed", coverage="coverage.bed"
     output: "filtered_gaps_to_assemble.bed"

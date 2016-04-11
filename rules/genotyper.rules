@@ -1,7 +1,5 @@
 import pandas as pd
 
-configfile: "config.json"
-
 SAMPLES = sorted(config["samples"].keys())
 
 def _get_bam_for_sample(wildcards):

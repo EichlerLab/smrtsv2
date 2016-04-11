@@ -1,8 +1,6 @@
 import operator
 import os
 
-configfile: "config.json"
-
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 
 INPUT_READS = config.get("reads", "input.fofn")

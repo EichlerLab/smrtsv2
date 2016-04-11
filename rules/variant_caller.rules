@@ -1,7 +1,5 @@
 import os
 
-configfile: "config.json"
-
 localrules: call_variants
 
 SV_TYPES = ("insertion", "deletion")
