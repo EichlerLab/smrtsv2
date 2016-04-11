@@ -26,7 +26,6 @@ ASSEMBLY_DIR = "mhap_assembly"
 OVERLAPPING_ASSEMBLY_DIR = "mhap_overlapping_assembly"
 LOG_FILE = config.get("log", "{SNAKEMAKE_DIR}/assembly.log")
 REFERENCE = config["reference"]
-CADIR = config["celera_dir"]
 
 # User-defined file of alignments with one absolute path to a BAM per line.
 ALIGNMENTS = config.get("alignments", "")
@@ -131,7 +130,7 @@ rule assemble_overlapping_region:
         assembly_output = "%s/9-terminator/region.utg.fasta" % assembly_output_dir
         assembly_exists = False
         try:
-            shell(". config.sh; timeout {params.max_runtime} {CADIR}/runCA -p region -d {assembly_output_dir} {input} ovlThreads={params.threads} doOverlapBasedTrimming=0 doDeDuplication=0 &> {assembly_region_dir}/assembly.log")
+            shell(". config.sh; timeout {params.max_runtime} runCA -p region -d {assembly_output_dir} {input} ovlThreads={params.threads} doOverlapBasedTrimming=0 doDeDuplication=0 &> {assembly_region_dir}/assembly.log")
             if os.path.exists(assembly_output):
                 shell("cp {assembly_output} {output}")
                 shell("""echo -e "{wildcards.region}\tassembly_exists" >> %s""" % config["assembly"]["log"])
@@ -150,7 +149,7 @@ rule get_celera_fragments_for_overlapping_region:
     output: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.frg"
     params: sge_opts=""
     priority: 15
-    shell: "{CADIR}/fastqToCA -libraryname region -technology pacbio-corrected -reads {input} > {output}"
+    shell: "fastqToCA -libraryname region -technology pacbio-corrected -reads {input} > {output}"
 
 rule get_fastq_for_overlapping_region:
     input: "{OVERLAPPING_ASSEMBLY_DIR}/{region}/contigs.fasta"
