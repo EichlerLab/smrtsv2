@@ -9,4 +9,4 @@ hdf5-1.8.15-patch1 : hdf5-1.8.15-patch1.tar.gz
 	tar zxvf $<
 
 hdf5-1.8.15-patch1.tar.gz :
-	wget http://www.hdfgroup.org/ftp/HDF5/current/src/$@ -O $@
+	wget http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8.15-patch1/src/$@ -O $@
