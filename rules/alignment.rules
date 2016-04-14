@@ -54,7 +54,7 @@ rule get_subread_and_alignment_lengths:
 
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
-ALIGNMENT_SGE_OPTS = "-l h_rt=10:00:00 -l disk_free=%iG -l mfree=%iG -pe serial %i -N align_batch_{batch_id}" % (DISK_PER_CORE, MEMORY_PER_CORE, THREADS)
+ALIGNMENT_SGE_OPTS = "-l h_rt=48:00:00 -l disk_free=%iG -l mfree=%iG -pe serial %i -N align_batch_{batch_id}" % (DISK_PER_CORE, MEMORY_PER_CORE, THREADS)
 rule align_batch:
     input: reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR, reference=config["reference"], suffix=config.get("suffix_array", "%s.sa" % config["reference"]), ctab=config.get("ctab", "%s.ctab" % config["reference"])
     output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
