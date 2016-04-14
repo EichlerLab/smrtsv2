@@ -10,7 +10,7 @@ all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/mi
 # Install core genomics tools.
 #
 
-bedtools2:
+bin/bedtools:
 	git submodule update --init dist/bedtools
 	-cd dist/bedtools && make && make install prefix=$(PWD)
 
