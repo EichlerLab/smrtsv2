@@ -6,7 +6,7 @@ import sys
 import os
 
 logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
-CLUSTER_SETTINGS = '" -q eichler-short.q -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash"'
+CLUSTER_SETTINGS = '" -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash"'
 CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "30")
 
 def _get_dist_dir():
