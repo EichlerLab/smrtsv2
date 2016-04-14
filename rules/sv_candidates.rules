@@ -224,7 +224,7 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
-    params: sge_opts="-l mfree=6G -l disk_free=1G -pe serial 1", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
+    params: sge_opts="-l mfree=6G -l disk_free=1G", mapping_quality_threshold=str(config["alignment"]["mapping_quality"])
     shell:
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
             "| python {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {output}"
@@ -254,7 +254,7 @@ rule merge_coverage_per_batch_bedops:
 rule calculate_coverage_per_batch_bedops:
     input: bam=_get_bam_path_for_batch, windows="coverage_windows.bed"
     output: "bedops_coverage/{alignment_name}.bed"
-    params: sge_opts="-l mfree=4G -l disk_free=3G -pe serial 1", bwlimit=str(BANDWIDTH_LIMIT)
+    params: sge_opts="-l mfree=4G -l disk_free=3G", bwlimit=str(BANDWIDTH_LIMIT)
     shell:
         "mkdir -p {TMP_DIR}; "
         "mkdir -p `dirname {output}`; "
