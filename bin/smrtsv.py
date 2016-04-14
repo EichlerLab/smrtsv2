@@ -38,7 +38,8 @@ def align(args):
         "alignments=%s" % args.alignments,
         "alignments_dir=%s" % args.alignments_dir,
         "batches=%s" % args.batches,
-        "threads=%s" % args.threads
+        "threads=%s" % args.threads,
+        "tmp_dir=%s" % args.tmpdir
     )
     return subprocess.call(" ".join(command), shell=True)
 
@@ -136,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--dryrun", "-n", action="store_true", help="Print commands that will run without running them")
     parser.add_argument("--distribute", action="store_true", help="Distribute analysis to Grid Engine-style cluster")
     parser.add_argument("--jobs", help="number of jobs to run simultaneously", type=int, default=1)
+    parser.add_argument("--tmpdir", help="temporary directory to use for distributed jobs", default="/var/tmp")
     subparsers = parser.add_subparsers()
 
     # Index a reference for use by BLASR.
