@@ -74,7 +74,7 @@ def assemble(args):
     sys.stdout.write("Starting local assemblies\n")
     prefix = _build_prefix(args)
 
-    command = prefix + (
+    base_command = prefix + (
         "collect_assembly_alignments",
         "--config",
         "reference=%s" % args.reference,
@@ -83,13 +83,71 @@ def assemble(args):
     )
 
     if args.regions:
-        command = command + ("regions_to_assemble=%s" % args.regions,)
+        # For each contig/chromosome in the regions file, submit a separate
+        # Snakemake command. To do so, first split regions to assemble into one
+        # file per contig in a temporary directory.
+        tmpdir = os.path.join(os.getcwd(), "regions_by_contig")
 
-    if args.assembly_alignments:
-        command = command + ("assembly_alignments=%s" % args.assembly_alignments,)
+        rebuild_regions_by_contig = False
+        if not os.path.exists(tmpdir) or os.stat(args.regions).st_mtime > os.stat(tmpdir).st_mtime:
+            rebuild_regions_by_contig = True
 
-    logging.debug("Assembly command: %s", " ".join(command))
-    return subprocess.call(" ".join(command), shell=True)
+        if rebuild_regions_by_contig:
+            try:
+                os.mkdir(tmpdir)
+            except OSError:
+                pass
+
+        previous_contig = None
+        with open(args.regions, "r") as fh:
+            contigs = set()
+            for line in fh:
+                contig = line.strip().split()[0]
+
+                if previous_contig != contig:
+                    if previous_contig is not None and rebuild_regions_by_contig:
+                        contig_file.close()
+
+                    previous_contig = contig
+                    contigs.add(contig)
+
+                    if rebuild_regions_by_contig:
+                        contig_file = open(os.path.join(tmpdir, "%s.bed" % contig), "w")
+
+                if rebuild_regions_by_contig:
+                    contig_file.write(line)
+
+        if rebuild_regions_by_contig:
+            contig_file.close()
+
+        # Assemble regions per contig creating a single merged BAM for each contig.
+        local_assembly_basename = os.path.basename(args.assembly_alignments)
+        local_assemblies = set()
+        return_code = 0
+        for contig in contigs:
+            contig_local_assemblies = os.path.join("local_assemblies", local_assembly_basename.replace(".bam", ".%s.bam" % contig))
+            local_assemblies.add(contig_local_assemblies)
+            command = base_command + ("regions_to_assemble=%s" % os.path.join(tmpdir, "%s.bed" % contig),)
+            command = command + ("assembly_alignments=%s" % contig_local_assemblies,)
+            sys.stdout.write("Starting local assemblies for %s\n" % contig)
+            logging.debug("Assembly command: %s", " ".join(command))
+            #return_code = subprocess.call(" ".join(command), shell=True)
+            #if return_code != 0:
+            #    break
+
+        # If the last command executed successfully, try to merge all local
+        # assemblies per contig into a single file.
+        if return_code == 0:
+            return_code = subprocess.call(" ".join (["samtools", "merge", args.assembly_alignments] + list(local_assemblies)), shell=True)
+
+        # Return the last return code.
+        return return_code
+    else:
+        if args.assembly_alignments:
+            command = base_command + ("assembly_alignments=%s" % args.assembly_alignments,)
+
+            logging.debug("Assembly command: %s", " ".join(command))
+            return subprocess.call(" ".join(command), shell=True)
 
 def call(args):
     # Call SVs, indels, and inversions.
