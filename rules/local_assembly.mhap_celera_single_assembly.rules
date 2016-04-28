@@ -111,7 +111,7 @@ rule index_assembly:
 rule assemble_reads:
     input: "reads.fastq"
     output: "assembly.fasta"
-    params: sge_opts="-l mfree=4G -pe serial 2 -l disk_free=10G", threads="4", read_length="1000", partitions="50", max_runtime="45m"
+    params: sge_opts="-l mfree=4G -pe serial 2 -l disk_free=10G", threads="4", read_length="1000", partitions="25", max_runtime="10m"
     run:
         assembly_output = "local/9-terminator/asm.ctg.fasta"
         unitig_output = "local/9-terminator/asm.utg.fasta"
