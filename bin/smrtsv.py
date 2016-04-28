@@ -90,7 +90,7 @@ def assemble(args):
         tmpdir = os.path.join(os.getcwd(), "regions_by_contig")
 
         rebuild_regions_by_contig = False
-        if not os.path.exists(tmpdir) or os.stat(args.regions).st_mtime > os.stat(tmpdir).st_mtime:
+        if not args.dryrun and (not os.path.exists(tmpdir) or os.stat(args.regions).st_mtime > os.stat(tmpdir).st_mtime):
             rebuild_regions_by_contig = True
 
         if rebuild_regions_by_contig:
@@ -138,7 +138,7 @@ def assemble(args):
 
         # If the last command executed successfully, try to merge all local
         # assemblies per contig into a single file.
-        if return_code == 0:
+        if not args.dryrun and return_code == 0:
             return_code = subprocess.call(" ".join (["samtools", "merge", args.assembly_alignments] + list(local_assemblies)), shell=True)
 
         # Return the last return code.
