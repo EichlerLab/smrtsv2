@@ -132,9 +132,9 @@ def assemble(args):
             command = command + ("assembly_alignments=%s" % contig_local_assemblies,)
             sys.stdout.write("Starting local assemblies for %s\n" % contig)
             logging.debug("Assembly command: %s", " ".join(command))
-            #return_code = subprocess.call(" ".join(command), shell=True)
-            #if return_code != 0:
-            #    break
+            return_code = subprocess.call(" ".join(command), shell=True)
+            if return_code != 0:
+               break
 
         # If the last command executed successfully, try to merge all local
         # assemblies per contig into a single file.
