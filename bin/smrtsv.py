@@ -141,6 +141,9 @@ def assemble(args):
         if not args.dryrun and return_code == 0:
             return_code = subprocess.call(" ".join (["samtools", "merge", args.assembly_alignments] + list(local_assemblies)), shell=True)
 
+            if return_code == 0:
+                return_code = subprocess.call(["samtools", "index", args.assembly_alignments])
+
         # Return the last return code.
         return return_code
     else:
