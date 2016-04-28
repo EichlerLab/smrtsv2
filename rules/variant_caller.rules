@@ -209,7 +209,7 @@ rule annotate_sv_calls_with_repeatmasker:
 rule trf_mask_sv_fasta:
     input: "sv_calls/{sv_type}/{sv_type}.fasta"
     output: "sv_calls/{sv_type}/rm/{sv_type}.fasta.trf"
-    params: sge_opts="-pe serial 1 -l mfree=2G"
+    params: sge_opts="-l h_rt=01:00:00 -l mfree=2G"
     shell: "{SNAKEMAKE_DIR}/bin/trf {input} 2 7 7 80 10 20 500 -m -ngs -h > {output}"
 
 rule repeatmask_sv_fasta:
