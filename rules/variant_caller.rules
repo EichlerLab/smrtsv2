@@ -23,6 +23,22 @@ rule call_variants:
         "sed '/^#/d' {input} | sort -k 1,1 -k 2,2n >> {output}"
 
 #
+# SNVs
+#
+
+rule merge_snvs_calls:
+    input: "snvs.bed"
+    output: "merged_snvs.bed"
+    params: sge_opts=""
+    shell: "cut -f 1-5 {input} | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4 -k 5,5 | groupBy -i stdin -g 1,2,3,4,5 -c 4 -o count | sort -k 1,1 -k 2,2n -k 3,3n -k 6,6rn | groupBy -i stdin -g 1,2,3 -c 4,5,6 -o first,first,first | awk '$6 > 1' > {output}"
+
+rule find_snvs_alignments:
+    input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
+    output: "snvs.bed"
+    params: sge_opts="", min_contig_length=str(MIN_CONTIG_LENGTH)
+    shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 0 --minContigLength {params.min_contig_length} --outFile /dev/null --snv {output}"
+
+#
 # Small insertion/deletion (indel) calls
 #
 
