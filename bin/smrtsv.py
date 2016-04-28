@@ -79,7 +79,8 @@ def assemble(args):
         "--config",
         "reference=%s" % args.reference,
         "alignments=%s" % args.alignments,
-        "reads=%s" % args.reads
+        "reads=%s" % args.reads,
+        "tmp_dir=%s" % args.tmpdir
     )
 
     if args.regions:
