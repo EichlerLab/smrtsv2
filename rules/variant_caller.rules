@@ -212,11 +212,17 @@ rule trf_mask_sv_fasta:
     params: sge_opts="-l h_rt=01:00:00 -l mfree=2G"
     shell: "{SNAKEMAKE_DIR}/bin/trf {input} 2 7 7 80 10 20 500 -m -ngs -h > {output}"
 
+def _get_repeat_species(wildcards):
+    if "species" in config:
+        return config["species"]
+    else:
+        return "Homo sapiens"
+
 rule repeatmask_sv_fasta:
     input: "sv_calls/{sv_type}/{sv_type}.fasta"
     output: "sv_calls/{sv_type}/rm/{sv_type}.fasta.out", "sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
-    params: sge_opts="-pe serial 8 -l mfree=1G", threads="8"
-    shell: "RepeatMasker -dir `dirname {output[0]}` -xsmall -no_is -e wublast -s -pa {params.threads} {input}"
+    params: sge_opts="-l h_rt=01:00:00 -pe serial 8 -q eichler-short.q -l mfree=1G", threads="8", species=_get_repeat_species
+    shell: """RepeatMasker -species "{params.species}" -dir `dirname {output[0]}` -xsmall -no_is -e hmmer -s -pa {params.threads} {input}"""
 
 rule create_sv_fasta:
     input: "sv_calls/calls.{sv_type}.bed"
