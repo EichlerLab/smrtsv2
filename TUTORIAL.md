@@ -73,11 +73,11 @@ smrtsv.py assemble reference/sacCer3.fasta reads.fofn alignments.fofn candidates
 
 ## Call variants
 
-Call variants by creating tiles of local assemblies across the reference and
-aligning assemblies back to the reference. Optionally, specify the sample name
-for annotation of the final VCF file and a species name (common or scientific as
-supported by [RepeatMasker](http://www.repeatmasker.org/)) for repeat masking of
-structural variants.
+Call variants by aligning tiled local assemblies back to the
+reference. Optionally, specify the sample name for annotation of the final VCF
+file and a species name (common or scientific as supported by
+[RepeatMasker](http://www.repeatmasker.org/)) for repeat masking of structural
+variants.
 
 ```bash
 smrtsv.py call reference/sacCer3.fasta alignments.fofn local_assembly_alignments.bam variants.vcf --sample UCSF_Yeast9464 --species yeast
