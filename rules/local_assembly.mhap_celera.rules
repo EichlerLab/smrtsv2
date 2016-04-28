@@ -212,7 +212,7 @@ rule build_local_assemblies_fasta:
 rule collect_assembly_alignments:
     input: alignments=_get_assembly_alignments, chromosome_lengths=CHROMOSOME_LENGTHS, reference=config["reference"]
     output: LOCAL_ASSEMBLY_ALIGNMENTS
-    params: sge_opts="-l mfree=30G"
+    params: sge_opts="-l mfree=30G -l disk_free=10G -l h_rt=01:00:00"
     run:
         list_filename = output[0].replace("bam", "list.txt")
         with open(list_filename, "w") as oh:
