@@ -163,7 +163,9 @@ def call(args):
         "reference=%s" % args.reference,
         "alignments=%s" % args.alignments,
         "local_assembly_alignments=%s" % args.assembly_alignments,
-        "variants=%s" % args.variants
+        "variants=%s" % args.variants,
+        "species=%s" % args.species,
+        "sample=%s" % args.sample
     )
     return_code = subprocess.call(" ".join(command), shell=True)
 
@@ -240,6 +242,8 @@ if __name__ == "__main__":
     parser_caller.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
     parser_caller.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
+    parser_caller.add_argument("--sample", help="Sample name to use in final variant calls", default="UnnamedSample")
+    parser_caller.add_argument("--species", help="Species name to use for repeat masking", default="Homo sapiens")
     parser_caller.set_defaults(func=call)
 
     # Call SVs and indels from BLASR alignments of raw reads.
