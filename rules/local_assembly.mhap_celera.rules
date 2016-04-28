@@ -215,11 +215,12 @@ rule collect_assembly_alignments:
     params: sge_opts="-l mfree=30G -l disk_free=10G -l h_rt=01:00:00"
     run:
         list_filename = output[0].replace("bam", "list.txt")
+        base_filename = os.path.basename(list_filename)
         with open(list_filename, "w") as oh:
             for i in input.alignments:
                 oh.write("%s\n" % i)
 
-        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/{output} -o {output}""" % list_filename)
+        shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/%s -o {output}""" % (list_filename, base_filename))
 
 # TODO: remove dependencies on mchaisso's scripts (*.py) and Celera installation.
 # TODO: remove dependencies on Eichler modules.
