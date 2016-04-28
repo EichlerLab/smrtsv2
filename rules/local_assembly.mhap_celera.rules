@@ -240,4 +240,5 @@ rule assemble_region:
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
-        "rm -rf {TMP_DIR}/{wildcards.region}"
+        "rm -rf {TMP_DIR}/{wildcards.region}; "
+        "touch {output}"
