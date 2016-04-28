@@ -42,7 +42,7 @@ def _get_overlapping_assembly_outputs(wildcards):
         return []
 
 def _get_assembly_alignments(wildcards):
-    if os.path.exists(REGIONS_TO_ASSEMBLE):
+    if os.path.exists(REGIONS_TO_ASSEMBLE) and not os.path.exists(LOCAL_ASSEMBLY_ALIGNMENTS):
         with open(REGIONS_TO_ASSEMBLE, "r") as fh:
             LIST_OF_REGIONS_TO_ASSEMBLE = ["-".join(line.rstrip().split("\t")[:3]) for line in fh if line.rstrip()]
 
