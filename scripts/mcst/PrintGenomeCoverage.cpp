@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 			outFile << header->target_name[i] << "\t" << p*bin << "\t" << (p+1)*bin << "\t" << std::setw(4) << float(coverage[i][p]) / bin << endl;
 		}
 		int lastBinLength = header->target_len[i] - (lastBinIndex -1) * bin;
-		if (lastBinLength > 0) {
+		if (header->target_len[i] > 0 and lastBinLength > 0) {
 			outFile << header->target_name[i] << "\t" << p *bin << "\t" << header->target_len[i] << "\t" << float(coverage[i][p]) / lastBinLength << endl;
 
 		}
