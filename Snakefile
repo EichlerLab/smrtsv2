@@ -5,6 +5,7 @@ See also: https://github.com/EichlerLab/pacbio_variant_caller
 """
 import math
 import os
+import tempfile
 
 # Always source config file.
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
@@ -26,7 +27,7 @@ if os.path.exists("config.json"):
 else:
     configfile: "%s/config.template.json" % SNAKEMAKE_DIR
 
-TMP_DIR = config["tmp_dir"]
+TMP_DIR = config.get("tmp_dir", tempfile.gettempdir())
 EVENT_TYPES = ("insertion", "deletion")
 
 CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
