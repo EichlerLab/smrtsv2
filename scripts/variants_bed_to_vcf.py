@@ -6,6 +6,13 @@ import pandas as pd
 import pysam
 
 
+def calculate_variant_quality(variant):
+    try:
+        return int(min(100, round(-10 * np.log10(1 - (variant.contig_support / float(variant.contig_depth))) * np.log(variant.contig_depth), 0)))
+    except ZeroDivisionError:
+        return 0
+
+
 def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, variant_type):
     # Get variants.
     if variant_type == "sv":
@@ -24,7 +31,7 @@ def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, v
     calls = pd.read_table(bed_filename, header=None, usecols=columns, names=names)
     calls["sample_name"] = sample
     calls["call_id"] = "."
-    calls["quality"] = calls.apply(lambda row: int(min(100, round(-10 * np.log10(1 - (row.contig_support / float(row.contig_depth))) * np.log(row.contig_depth), 0))), axis=1)
+    calls["quality"] = calls.apply(calculate_variant_quality, axis=1)
     calls["filter"] = "PASS"
 
     # Get the reference base at the position of the variant start.
