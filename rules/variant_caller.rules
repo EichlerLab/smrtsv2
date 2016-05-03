@@ -89,7 +89,7 @@ rule calculate_coverage_from_assembled_contigs:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "assembled_contigs.depth.bed"
     params: sge_opts="-l mfree=12G"
-    shell: "bedtools bamtobed -i {input.alignments} | {SNAKEMAKE_DIR}/scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | bedtools sort > {output}"
+    shell: "bedtools bamtobed -i {input.alignments} | {SNAKEMAKE_DIR}/scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | sort -k 1,1 -k 2,2n > {output}"
 
 rule cut_indel_events_by_columns:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
@@ -120,7 +120,7 @@ rule split_indels_by_type:
     input: "indel_calls/gaps.tiled.bed"
     output: "indel_calls/{indel_type}/gaps.bed"
     params: sge_opts=""
-    shell: "grep {wildcards.indel_type} {input} | bedtools sort -i stdin > {output}"
+    shell: "grep {wildcards.indel_type} {input} | sort -k 1,1 -k 2,2n > {output}"
 
 rule filter_indel_gaps_by_tiling_path:
     input: "indel_calls/gaps.bed", "indel_calls/tiling_contigs.tab"
