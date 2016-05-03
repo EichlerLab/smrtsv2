@@ -55,7 +55,9 @@ def detect(args):
         "get_regions",
         "--config",
         "reference=%s" % args.reference,
-        "alignments=%s" % args.alignments
+        "alignments=%s" % args.alignments,
+        "assembly_window_size=%s" % args.assembly_window_size,
+        "assembly_window_slide=%s" % args.assembly_window_slide
     )
 
     if args.exclude:
@@ -225,6 +227,8 @@ if __name__ == "__main__":
     parser_detector.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
     parser_detector.add_argument("candidates", help="BED file of candidates detected in read alignments")
     parser_detector.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
+    parser_detector.add_argument("--assembly_window_size", type=int, help="size of reference window for local assemblies", default=60000)
+    parser_detector.add_argument("--assembly_window_slide", type=int, help="size of reference window slide for local assemblies", default=30000)
     parser_detector.set_defaults(func=detect)
 
     # Assemble candidate regions and align assemblies back to the reference.
