@@ -65,7 +65,7 @@ rule merge_filtered_candidates:
 rule create_windows_for_tiled_assemblies:
     input: CHROMOSOME_LENGTHS
     output: "windows_for_tiled_assembly.bed"
-    params: sge_opts="", window=str(config["detection"].get("tile_window_size")), slide=str(config["detection"].get("tile_window_slide"))
+    params: sge_opts="", window=str(config.get("assembly_window_size")), slide=str(config.get("assembly_window_slide"))
     shell: "bedtools makewindows -g {input} -w {params.window} -s {params.slide} | sort -k 1,1 -k 2,2n > {output}"
 
 #
