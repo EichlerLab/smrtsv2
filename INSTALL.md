@@ -9,7 +9,7 @@ Distribution](https://store.continuum.io/cshop/anaconda/).
 Check out the repository with a recursive clone to fetch submodules.
 
 ```bash
-mkdir ~/src/smrtsv
+mkdir -p ~/src/smrtsv
 cd ~/src/smrtsv
 git clone --recursive git@github.com:EichlerLab/pacbio_variant_caller.git .
 ```
