@@ -247,7 +247,7 @@ if __name__ == "__main__":
     parser_caller.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_caller.add_argument("variants", help="VCF of variants called by local assembly alignments")
     parser_caller.add_argument("--sample", help="Sample name to use in final variant calls", default="UnnamedSample")
-    parser_caller.add_argument("--species", help="Species name to use for repeat masking", default="Homo sapiens")
+    parser_caller.add_argument("--species", help="Common or scientific species name to pass to RepeatMasker", default="human")
     parser_caller.set_defaults(func=call)
 
     # Call SVs and indels from BLASR alignments of raw reads.
