@@ -19,7 +19,7 @@ rule call_variants:
     shell:
         """grep "^##" {input[0]} | sed '/INFO/d' > {output}; """
         """grep -h "^##" {input} | grep INFO | sort | uniq >> {output}; """
-        """grep -h "^#CHROM" {input} | sort | uniq >> {output}; """
+        """grep -h "^#CHROM" {input[0]} >> {output}; """
         "sed '/^#/d' {input} | sort -k 1,1 -k 2,2n >> {output}"
 
 #
