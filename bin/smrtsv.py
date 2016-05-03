@@ -166,8 +166,8 @@ def call(args):
         "alignments=%s" % args.alignments,
         "local_assembly_alignments=%s" % args.assembly_alignments,
         "variants=%s" % args.variants,
-        "species=%s" % args.species,
-        "sample=%s" % args.sample
+        "species=\"%s\"" % args.species,
+        "sample=\"%s\"" % args.sample
     )
     return_code = subprocess.call(" ".join(command), shell=True)
 
