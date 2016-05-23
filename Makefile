@@ -4,11 +4,18 @@
 
 PWD  = $(shell pwd)
 
-all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py
+all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/phmmer
 
 #
 # Install core genomics tools.
 #
+
+bin/RepeatMasker:
+	-cd dist/RepeatMasker && make
+
+bin/phmmer:
+	-cd dist/hmmer && make
+	-@cp -f dist/hmmer/bin/* bin/
 
 bin/bedtools:
 	git submodule update --init dist/bedtools
