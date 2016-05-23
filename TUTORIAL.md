@@ -1,5 +1,13 @@
 # Calling SVs in yeast
 
+## Configure DRMAA
+
+SMRT SV uses DRMAA to submit jobs to a grid-engine-style cluster. To enable the `--distribute` option of SMRT SV, add the following line to your `.bash_profile` with the correct path to the DRMAA library for your cluster.
+
+```bash
+export DRMAA_LIBRARY_PATH=/opt/uge/lib/lx-amd64/libdrmaa.so.1.0
+```
+
 ## Download PacBio reads
 
 ```bash
