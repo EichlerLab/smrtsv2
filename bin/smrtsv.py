@@ -92,7 +92,7 @@ def assemble(args):
         tmpdir = os.path.join(os.getcwd(), "regions_by_contig")
 
         rebuild_regions_by_contig = False
-        if not args.dryrun and (not os.path.exists(tmpdir) or os.stat(args.regions).st_mtime > os.stat(tmpdir).st_mtime):
+        if not args.dryrun and (not os.path.exists(tmpdir) or args.rebuild_regions):
             rebuild_regions_by_contig = True
 
         if rebuild_regions_by_contig:
@@ -238,6 +238,7 @@ if __name__ == "__main__":
     parser_assembler.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
     parser_assembler.add_argument("regions", help="BED file of regions to assemble from raw read alignments")
     parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
+    parser_assembler.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
     parser_assembler.set_defaults(func=assemble)
 
     # Call SVs and indels from BLASR alignments of local assemblies.
