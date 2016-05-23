@@ -130,6 +130,11 @@ def assemble(args):
         for contig in contigs:
             contig_local_assemblies = os.path.join("local_assemblies", local_assembly_basename.replace(".bam", ".%s.bam" % contig))
             local_assemblies.add(contig_local_assemblies)
+
+            if os.path.exists(contig_local_assemblies):
+                sys.stdout.write("Local assemblies already exist for %s\n" % contig)
+                continue
+
             command = base_command + ("regions_to_assemble=%s" % os.path.join(tmpdir, "%s.bed" % contig),)
             command = command + ("assembly_alignments=%s" % contig_local_assemblies,)
             sys.stdout.write("Starting local assemblies for %s\n" % contig)
