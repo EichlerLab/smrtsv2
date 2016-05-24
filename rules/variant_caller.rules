@@ -128,12 +128,6 @@ rule filter_indel_gaps_by_tiling_path:
     params: sge_opts="-l mfree=4G"
     shell: "{SNAKEMAKE_DIR}/scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
 
-rule tile_contigs_from_alignments:
-    input: LOCAL_ASSEMBLY_ALIGNMENTS
-    output: "indel_calls/tiling_contigs.tab"
-    params: sge_opts=""
-    shell: "samtools view -h {input} | {SNAKEMAKE_DIR}/scripts/TilingPath.py /dev/stdin > {output}"
-
 rule find_indel_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/gaps.bed"
@@ -267,6 +261,12 @@ rule find_calls_by_gaps_in_alignments:
     output: "sv_calls/gaps.bed"
     params: sge_opts="", tsd_length="20", indel_pack_distance="20"
     shell: "samtools view -h {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} --outFile {output}"
+
+rule tile_contigs_from_alignments:
+    input: LOCAL_ASSEMBLY_ALIGNMENTS
+    output: "indel_calls/tiling_contigs.tab"
+    params: sge_opts=""
+    shell: "samtools view -h {input} | {SNAKEMAKE_DIR}/scripts/TilingPath.py /dev/stdin > {output}"
 
 #
 # Inversions
