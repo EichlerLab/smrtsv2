@@ -247,14 +247,14 @@ def _get_call_comparison_action(wildcards):
         return "intersect"
 
 rule identify_calls_by_type:
-    input: gaps="sv_calls/gaps.bed", alignments=LOCAL_ASSEMBLY_ALIGNMENTS
+    input: gaps="sv_calls/gaps.bed", tiling_path="tiling_contigs.tab", alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/calls.{sv_type}.bed"
     params: sge_opts="", call_comparison_action=_get_call_comparison_action, window="20", overlap="0.5"
     # Filter input gaps by SV type and omit gaps containing N bases. Insertion
     # coordinates are resized to their single-bp representation prior to
     # clustering and returned to their original values after clustering. After
     # clustering each call is annotated by the coverage of local assemblies.
-    shell: """awk '$4 == "{wildcards.sv_type}" && index($6, "N") == 0' {input.gaps} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python {SNAKEMAKE_DIR}/scripts/cluster_calls.py --window {params.window} --reciprocal_overlap {params.overlap} /dev/stdin {params.call_comparison_action} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n | while read line; do set -- $line; coverage=`samtools view -c {input.alignments} $1:$2-$3`; echo -e "$line\\t$coverage"; done > {output}"""
+    shell: """awk '$4 == "{wildcards.sv_type}" && index($6, "N") == 0' {input.gaps} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + 1 }} print }}' | python {SNAKEMAKE_DIR}/scripts/cluster_calls.py --window {params.window} --reciprocal_overlap {params.overlap} /dev/stdin {input.tiling_path} {params.call_comparison_action} | awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "insertion") {{ $3=$2 + $5 }} print }}' | sort -k 1,1 -k 2,2n | while read line; do set -- $line; coverage=`samtools view -c {input.alignments} $1:$2-$3`; echo -e "$line\\t$coverage"; done > {output}"""
 
 rule find_calls_by_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
