@@ -123,7 +123,7 @@ rule split_indels_by_type:
     shell: "grep {wildcards.indel_type} {input} | sort -k 1,1 -k 2,2n > {output}"
 
 rule filter_indel_gaps_by_tiling_path:
-    input: "indel_calls/gaps.bed", "indel_calls/tiling_contigs.tab"
+    input: "indel_calls/gaps.bed", "tiling_contigs.tab"
     output: "indel_calls/gaps.tiled.bed", "indel_calls/gaps.tiled.log"
     params: sge_opts="-l mfree=4G"
     shell: "{SNAKEMAKE_DIR}/scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
@@ -264,7 +264,7 @@ rule find_calls_by_gaps_in_alignments:
 
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
-    output: "indel_calls/tiling_contigs.tab"
+    output: "tiling_contigs.tab"
     params: sge_opts=""
     shell: "samtools view -h {input} | {SNAKEMAKE_DIR}/scripts/TilingPath.py /dev/stdin > {output}"
 
