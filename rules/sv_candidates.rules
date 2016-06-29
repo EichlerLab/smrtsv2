@@ -232,7 +232,7 @@ rule find_gaps_in_aligned_reads:
 rule merge_coverage_per_batch:
     input: expand("coverage/{alignment_name}.bed", alignment_name=ALIGNMENT_NAMES)
     output: "coverage.bed"
-    params: sge_opts="-l mfree=2G -l h_rt=01:00:00"
+    params: sge_opts="-l mfree=1G -l h_rt=08:00:00"
     shell: """paste {input} | awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' | sort -k 1,1 -k 2,2n > {output}"""
 
 # Calculate coverage from each batch.
