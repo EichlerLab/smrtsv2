@@ -15,7 +15,7 @@ MIN_CONTIG_LENGTH = 40000
 rule call_variants:
     input: "sv_calls.vcf", "indel_calls.vcf", "inversions.vcf"
     output: VARIANTS
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell:
         """grep "^##" {input[0]} | sed '/INFO/d' > {output}; """
         """grep -h "^##" {input} | grep INFO | sort | uniq >> {output}; """
@@ -29,13 +29,13 @@ rule call_variants:
 rule merge_snvs_calls:
     input: "snvs.bed"
     output: "merged_snvs.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell: "cut -f 1-5 {input} | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4 -k 5,5 | groupBy -i stdin -g 1,2,3,4,5 -c 4 -o count | sort -k 1,1 -k 2,2n -k 3,3n -k 6,6rn | groupBy -i stdin -g 1,2,3 -c 4,5,6 -o first,first,first | awk '$6 > 1' > {output}"
 
 rule find_snvs_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "snvs.bed"
-    params: sge_opts="", min_contig_length=str(MIN_CONTIG_LENGTH)
+    params: sge_opts="-l h_rt=02:00:00", min_contig_length=str(MIN_CONTIG_LENGTH)
     shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 0 --minContigLength {params.min_contig_length} --outFile /dev/null --snv {output}"
 
 #
@@ -45,68 +45,68 @@ rule find_snvs_alignments:
 rule convert_indel_bed_to_vcf:
     input: "indel_calls.bed", config["reference"]
     output: "indel_calls.vcf"
-    params: sge_opts="", sample=config.get("sample", "UnnamedSample")
+    params: sge_opts="-l h_rt=00:30:00", sample=config.get("sample", "UnnamedSample")
     shell: "{SNAKEMAKE_DIR}/scripts/variants_bed_to_vcf.py {input} {output} {params.sample} indel"
 
 rule call_indels:
     input: expand("indel_calls/{indel_type}.tab", indel_type=INDEL_TYPES)
     output: "indel_calls.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 rule combine_annotations_for_indel_type:
     input: "indel_calls/{indel_type}/filtered_gaps.bed", "indel_calls/{indel_type}/support_by_assembled_contigs.txt", "indel_calls/{indel_type}/assembled_contigs_coverage.txt", "indel_calls/{indel_type}/read_coverage.txt"
     output: "indel_calls/{indel_type}.tab"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: """paste {input} | awk 'OFS="\\t" {{ print $0,"{wildcards.indel_type}" }}' > {output}"""
 
 rule annotate_support_from_assembled_contigs_for_indels:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
     output: "indel_calls/{indel_type}/support_by_assembled_contigs.txt"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "cut -f 6 {input} > {output}"
 
 rule annotate_strs_in_indels:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed", "strs_in_reference.bed"
     output: "indel_calls/{indel_type}/strs.txt"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o first -full | cut -f 7 > {output}"
 
 # TODO: confirm that this coverage.bed works like the original hg19 bed from Mark
 rule annotate_coverage_of_pacbio_reads_for_indels:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed", "coverage.bed"
     output: "indel_calls/{indel_type}/read_coverage.txt"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=01:00:00"
     shell: """cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o mean -full | cut -f 8 | awk '{{ printf("%2.2f\\n", $1) }}' > {output}"""
 
 rule annotate_coverage_of_assembled_contigs_for_indels:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed", "assembled_contigs.depth.bed"
     output: "indel_calls/{indel_type}/assembled_contigs_coverage.txt"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=01:00:00"
     shell: "cut -f 1-3 {input[0]} | bedtools intersect -a stdin -b {input[1]} -loj -sorted | sed 's/\\t\./\\t0/g' | bedtools groupby -c 7 -o max -full | cut -f 8 > {output}"
 
 rule calculate_coverage_from_assembled_contigs:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "assembled_contigs.depth.bed"
-    params: sge_opts="-l mfree=12G"
+    params: sge_opts="-l mfree=12G -l h_rt=01:00:00"
     shell: "bedtools bamtobed -i {input.alignments} | {SNAKEMAKE_DIR}/scripts/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | sort -k 1,1 -k 2,2n > {output}"
 
 rule cut_indel_events_by_columns:
     input: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
     output: "indel_calls/{indel_type}/filtered_gaps.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "cut -f 1-5 {input} > {output}"
 
 rule filter_indel_events_by_size:
     input: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
     output: "indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "awk '$4 >= 2' {input} | bedtools groupby -c 6 -o max -full > {output}"
 
 rule remove_indel_events_in_homopolymers:
     input: "indel_calls/{indel_type}/gaps.bed"
     output: "indel_calls/{indel_type}/gaps_without_homopolymers.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     run:
         command = """awk '$11 == "F"' {input} | cut -f 1,2,3,5,6,8 | sort -k 1,1 -k 2,2n -k 4,4n | {SNAKEMAKE_DIR}/scripts/PrintSNVSupport.py /dev/stdin /dev/stdout"""
         if wildcards.indel_type == "insertion":
@@ -119,19 +119,19 @@ rule remove_indel_events_in_homopolymers:
 rule split_indels_by_type:
     input: "indel_calls/gaps.tiled.bed"
     output: "indel_calls/{indel_type}/gaps.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell: "grep {wildcards.indel_type} {input} | sort -k 1,1 -k 2,2n > {output}"
 
 rule filter_indel_gaps_by_tiling_path:
     input: "indel_calls/gaps.bed", "tiling_contigs.tab"
     output: "indel_calls/gaps.tiled.bed", "indel_calls/gaps.tiled.log"
-    params: sge_opts="-l mfree=4G"
+    params: sge_opts="-l mfree=4G -l h_rt=00:30:00"
     shell: "{SNAKEMAKE_DIR}/scripts/FilterGapsByTilingPath.py {input} > {output[0]} 2> {output[1]}"
 
 rule find_indel_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "indel_calls/gaps.bed"
-    params: sge_opts="", indel_pack_distance="0", min_contig_length=str(MIN_CONTIG_LENGTH)
+    params: sge_opts="-l h_rt=02:00:00", indel_pack_distance="0", min_contig_length=str(MIN_CONTIG_LENGTH)
     shell: "samtools view {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --minLength 0 --maxLength 50 --context 6 --removeAdjacentIndels --onTarget --minContigLength {params.min_contig_length} --condense {params.indel_pack_distance} --outFile {output}"
 
 
@@ -142,29 +142,29 @@ rule find_indel_gaps_in_alignments:
 rule convert_sv_bed_to_vcf:
     input: "sv_calls/sv_calls_with_repeats.bed", config["reference"]
     output: "sv_calls.vcf"
-    params: sge_opts="", sample=config.get("sample", "UnnamedSample")
+    params: sge_opts="-l h_rt=00:30:00", sample=config.get("sample", "UnnamedSample")
     shell: "{SNAKEMAKE_DIR}/scripts/variants_bed_to_vcf.py {input} {output} {params.sample} sv"
 
 rule call_svs:
     input: "sv_calls.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
 
 rule collect_all_summarized_sv_calls:
     input: expand("sv_calls/repeat_classified_{sv_type}.bed", sv_type=SV_TYPES)
     output: "sv_calls/sv_calls_with_repeats.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
 
 rule collect_summarized_sv_calls_within_type:
     input: "sv_calls/summarized_{sv_type}"
     output: "sv_calls/repeat_classified_{sv_type}.bed"
-    params: sge_opts=""
-    shell: """for file in {input}/*.bed; do repeat_type=`basename ${{file/.bed/}} | sed 's/\./_/g'`; awk -v repeat_type=$repeat_type 'OFS="\\t" {{ print $0,repeat_type }}' $file; done | sort -k 1,1 -k 2,2n > {output}"""
+    params: sge_opts="-l h_rt=00:10:00"
+    shell: """for file in {input}/*.bed; do repeat_type=`basename ${{file/.bed/}} | sed 's/\./_/g'`; awk -v repeat_type=$repeat_type 'OFS="\\t" {{ print $0,repeat_type }}' $file; done | sort -k 1,1 -k 2,2n | uniq > {output}"""
 
 rule summarize_calls_by_repeat_type:
     input: "sv_calls/all_annotated_with_trf.{sv_type}.bed"
     output: "sv_calls/summarized_{sv_type}"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell:
         "mkdir -p {output}; "
         "awk '$20 > 0.8' {input} > {output}/TRF.bed; "
@@ -194,26 +194,26 @@ rule summarize_calls_by_repeat_type:
 rule merge_sv_calls:
     input: expand("sv_calls/all_annotated.{sv_type}.bed", sv_type=SV_TYPES)
     output: "sv_calls.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     shell: "sort -k 1,1 -k 2,2n {input} > {output}"
 
 rule filter_annotated_sv_calls:
     input: "sv_calls/all_annotated.{sv_type}.bed"
     output: "sv_calls/annotated.{sv_type}.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:10:00"
     # Filter out non-repetitive SVs or SVs with less than 70% masked sequence.
     shell: "grep -v NONE {input} | awk '$18 >= 0.70' > {output}"
 
 rule annotate_sv_calls_with_trf:
     input: "sv_calls/all_annotated.{sv_type}.bed", "sv_calls/{sv_type}/rm/{sv_type}.fasta.trf"
     output: "sv_calls/all_annotated_with_trf.{sv_type}.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell: "{SNAKEMAKE_DIR}/scripts/AnnotateWithTRF.py {input} {output}"
 
 rule annotate_sv_calls_with_repeatmasker:
     input: calls="sv_calls/calls.{sv_type}.bed", repeats="sv_calls/{sv_type}/rm/{sv_type}.fasta.out", masked_fasta="sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
     output: "sv_calls/all_annotated.{sv_type}.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell: "{SNAKEMAKE_DIR}/scripts/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"
 
 rule trf_mask_sv_fasta:
@@ -232,12 +232,12 @@ rule repeatmask_sv_fasta:
     input: "sv_calls/{sv_type}/{sv_type}.fasta"
     output: "sv_calls/{sv_type}/rm/{sv_type}.fasta.out", "sv_calls/{sv_type}/rm/{sv_type}.fasta.masked"
     params: sge_opts="-l h_rt=01:00:00 -pe serial 8 -q eichler-short.q -l mfree=1G", threads="8", species=_get_repeat_species
-    shell: """RepeatMasker -species "{params.species}" -dir `dirname {output[0]}` -xsmall -no_is -e hmmer -s -pa {params.threads} {input}"""
+    shell: """/net/eichler/vol6/software/modules-sw/RepeatMasker/3.3.0/Linux/RHEL6/x86_64/RepeatMasker -species "{params.species}" -dir `dirname {output[0]}` -xsmall -no_is -e wublast -s -pa {params.threads} {input}"""
 
 rule create_sv_fasta:
     input: "sv_calls/calls.{sv_type}.bed"
     output: "sv_calls/{sv_type}/{sv_type}.fasta"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     shell: "{SNAKEMAKE_DIR}/scripts/GapBedToFasta.py {input} {output}"
 
 def _get_call_comparison_action(wildcards):
@@ -249,7 +249,7 @@ def _get_call_comparison_action(wildcards):
 rule identify_calls_by_type:
     input: gaps="sv_calls/gaps.bed", tiling_path="tiling_contigs.tab", alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/calls.{sv_type}.bed"
-    params: sge_opts="", call_comparison_action=_get_call_comparison_action, window="20", overlap="0.5"
+    params: sge_opts="-l h_rt=00:30:00 -l mfree=8G", call_comparison_action=_get_call_comparison_action, window="20", overlap="0.5"
     # Filter input gaps by SV type and omit gaps containing N bases. Insertion
     # coordinates are resized to their single-bp representation prior to
     # clustering and returned to their original values after clustering. After
@@ -259,13 +259,13 @@ rule identify_calls_by_type:
 rule find_calls_by_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/gaps.bed"
-    params: sge_opts="", tsd_length="20", indel_pack_distance="20"
+    params: sge_opts="-l h_rt=02:00:00", tsd_length="20", indel_pack_distance="20"
     shell: "samtools view -h {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} --outFile {output}"
 
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
     output: "tiling_contigs.tab"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=01:00:00"
     shell: "samtools view -h {input} | {SNAKEMAKE_DIR}/scripts/TilingPath.py /dev/stdin > {output}"
 
 #
@@ -275,13 +275,13 @@ rule tile_contigs_from_alignments:
 rule convert_inversion_bed_to_vcf:
     input: "sv_calls/merged_inversions.bed", config["reference"]
     output: "inversions.vcf"
-    params: sge_opts="", sample=config.get("sample", "UnnamedSample")
+    params: sge_opts="-l h_rt=00:30:00", sample=config.get("sample", "UnnamedSample")
     shell: "{SNAKEMAKE_DIR}/scripts/variants_bed_to_vcf.py {input} {output} {params.sample} inversion"
 
 rule merge_inversions:
     input: inversions="sv_calls/inversions.bed", alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/merged_inversions.bed"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00"
     run:
         # Only try to sort and merge inversions if any exist.
         if os.stat(input.inversions).st_size > 0:
