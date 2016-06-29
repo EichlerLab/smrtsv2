@@ -260,7 +260,7 @@ rule find_calls_by_gaps_in_alignments:
     input: reference=config["reference"], alignments=LOCAL_ASSEMBLY_ALIGNMENTS
     output: "sv_calls/gaps.bed"
     params: sge_opts="-l h_rt=02:00:00", tsd_length="20", indel_pack_distance="20"
-    shell: "samtools view -h {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} --outFile {output}"
+    shell: "samtools view -h {input.alignments} | {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} | sort -k 1,1 -k 2,2n > {output}"
 
 rule tile_contigs_from_alignments:
     input: LOCAL_ASSEMBLY_ALIGNMENTS
