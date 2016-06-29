@@ -32,7 +32,7 @@ freebayes:
 samtools:
 	git submodule update --init dist/samtools
 	git submodule update --init dist/htslib
-	-cd dist/samtools && make
+	-cd dist/samtools && $(MAKE)
 	-@ln -s ../dist/samtools/samtools bin/samtools
 
 #
