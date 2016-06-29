@@ -77,7 +77,7 @@ if __name__ == "__main__":
         # Intersect the given calls with themselves. Self-self overlaps will be
         # reported along with any other overlaps matching the given reciprocal
         # overlap proportion.
-        intersected_calls = calls.intersect(b=calls, f=args.reciprocal_overlap, r=True, wao=True)
+        intersected_calls = calls.intersect(b=calls, f=args.reciprocal_overlap, r=True, wao=True, sorted=True)
     else:
         # Inspect a window on either side of each call to determine
         # "overlap". This approach is useful for insertions which have single
