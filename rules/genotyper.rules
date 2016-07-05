@@ -85,7 +85,7 @@ rule calculate_depth_across_PacBio_SVs:
 
 # Map paired-end reads with BWA MEM
 rule map_sample_reads:
-    input: regions=_get_sv_sequence_regions_for_sample, bam=_get_bam_for_sample, bam_reference=_get_reference_path_by_sample, sv_reference="sv_reference.fasta", sv_index="sv_reference.fasta.bwt"
+    input: regions=_get_sv_sequence_regions_for_sample, bam=_get_bam_for_sample, bam_reference=_get_reference_path_by_sample, sv_reference="sv_reference.fasta", sv_index="sv_reference.fasta.bwt", alts="local_assemblies_for_genotyping.sam"
     output: alignments="samples/{sample}/alignments.bam"
     benchmark: "benchmarks/map_sample_reads/{sample}.txt"
     log: "samples/{sample}/alignments.log"
@@ -93,8 +93,8 @@ rule map_sample_reads:
     shell:
         """{{
     while read line; do set -- $line; samtools view {input.bam} $1:$2-$3; done < {input.regions} | samtools view -S -t {input.bam_reference}.fai -u -b - | samtools bamshuf -n 128 -O - {TMPDIR}/shuffled_reads.{wildcards.sample} | samtools bam2fq - | seqtk dropse -;
-    samtools view {input.bam} '*' | samtools bam2fq - | python ~jlhudd/fasta_tools/filter_fastq_with_Ns.py --proportion_of_Ns_allowed=0.05 /dev/stdin | seqtk dropse -;
-}} | bwa mem -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}' -j -p -t {params.threads} {input.sv_reference} - 2> {log} | samblaster --removeDups | samtools sort -m {params.samtools_memory} -T {TMPDIR}/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"""
+    samtools view {input.bam} '*' | samtools bam2fq - | python ~jlhudd/src/smrtsv/scripts/filter_fastq_with_Ns.py --proportion_of_Ns_allowed=0.05 /dev/stdin | seqtk dropse -;
+}} | bwa mem -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}' -p -t {params.threads} {input.sv_reference} - 2> {log} | samblaster --removeDups | k8 /net/eichler/vol4/home/jlhudd/src/bwakit/bwa.kit/bwa-postalt.js {input.alts} | samtools view -S -h -f 0x2 -q 1 - | samtools sort -m {params.samtools_memory} -T {TMPDIR}/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"""
 
 #
 # Prepare local assembly sequences and references.
@@ -256,29 +256,17 @@ rule index_assemblies:
     params: sge_opts="-l h_rt=00:05:00"
     shell: "samtools faidx {input}"
 
-# Convert tiling path through uncontained assemblies with SVs into corresponding
-# space in contigs
-rule convert_tiling_path_into_local_assembly_coordinates:
-    input: local_assemblies=config["local_assembly_alignments"], tiling_path="tiling_path_of_contigs_with_variants.bed"
-    output: "tiling_path_in_contigs.bed"
-    params: sge_opts="-l h_rt=02:00:00"
-    shell: "python ~jlhudd/src/smrtsv/scripts/tiling_path_in_reference_to_contigs.py {input.local_assemblies} {input.tiling_path} | sort -k 1,1 -k 2,2n > {output}"
-
-rule filter_tiling_path_by_contigs_with_variants:
-    input: tiling_path=config["local_assembly_tiling_path"], contigs_with_variants="local_assembly_contigs_for_genotyping.txt"
-    output: "tiling_path_of_contigs_with_variants.bed"
-    params: sge_opts="-l h_rt=00:15:00"
-    run:
-        tiling_path = pd.read_table(input.tiling_path, header=None, names=("chr", "start", "end", "contig", "opt_distance"))
-        contigs_with_variants = pd.read_table(input.contigs_with_variants, header=None, names=("contig",))
-        filtered_tiling_path = tiling_path.merge(contigs_with_variants, how="inner", on="contig")
-        filtered_tiling_path.to_csv(output[0], sep="\t", header=False, index=False)
-
 rule get_sequences_for_local_assemblies:
     input: "local_assemblies_for_genotyping.bam"
     output: "local_assemblies_for_genotyping.fasta"
     params: sge_opts="-l h_rt=00:15:00"
-    shell: """samtools view {input} | awk '{{ print ">"$1; print $10 }}' > {output}"""
+    shell: """samtools bam2fq {input} | seqtk seq -A - > {output}"""
+
+rule get_sam_of_local_assemblies_for_genotyping:
+    input: "local_assemblies_for_genotyping.bam"
+    output: "local_assemblies_for_genotyping.sam"
+    params: sge_opts="-l h_rt=00:15:00"
+    shell: "samtools view -h {input} > {output}"
 
 rule get_bam_of_local_assemblies_for_genotyping:
     input: local_assemblies=config["local_assembly_alignments"], calls="local_assembly_contigs_for_genotyping.txt"
