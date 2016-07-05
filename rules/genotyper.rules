@@ -107,7 +107,7 @@ rule bwa_index_combined_reference:
     shell: "bwa index {input}"
 
 rule merge_reference_and_local_assemblies:
-    input: config["sv_reference"], "local_assemblies_for_genotyping.masked.fasta"
+    input: config["sv_reference"], "local_assemblies_for_genotyping.fasta"
     output: "sv_reference.fasta"
     params: sge_opts="-l h_rt=01:00:00"
     shell: "cat {input} > {output}"
@@ -194,24 +194,10 @@ rule get_sv_calls_in_query_coordinates:
     shell: """awk 'OFS="\\t" {{ print $8,$9,$10,$4,$5 }}' {input} | sort -k 1,1 -k 2,2n > {output}"""
 
 #
-# Prepare SV calls from a non-redundant tiling path of local assemblies.
+# Prepare SV calls from local assemblies.
 #
 # The final output of this step are the files:
-#  - local_assemblies_for_genotyping.masked.fasta
-
-# Mask the local assemblies in the tiling path.
-rule mask_uncontained_assemblies:
-    input: local_assemblies="local_assemblies_for_genotyping.fasta", mask="mask_for_tiling_path_of_contigs.bed"
-    output: "local_assemblies_for_genotyping.masked.fasta"
-    params: sge_opts="-l h_rt=00:05:00"
-    shell: "bedtools maskfasta -fi {input.local_assemblies} -bed {input.mask} -fo {output}"
-
-# Complement the coordinates to keep in contigs to generate a mask for contigs.
-rule complement_coordinates_to_keep_in_contigs:
-    input: tiling_path="tiling_path_in_contigs.bed", contig_lengths="local_assemblies_for_genotyping.fasta.fai"
-    output: "mask_for_tiling_path_of_contigs.bed"
-    params: sge_opts="-l h_rt=00:05:00"
-    shell: "cut -f 4-6 {input.tiling_path} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 | bedtools complement -i stdin -g {input.contig_lengths} > {output}"
+#  - local_assemblies_for_genotyping.fasta
 
 # Index assemblies.
 rule index_assemblies:
