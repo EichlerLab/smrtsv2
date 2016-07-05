@@ -100,42 +100,6 @@ rule map_sample_reads:
 # Prepare local assembly sequences and references.
 #
 
-rule mrsfast_index_reference:
-    input: "sv_reference.masked.fasta"
-    output: "sv_reference.masked.fasta.index"
-    params: sge_opts="-l mfree=10G"
-    shell: "mrsfast --index {input}"
-
-rule mrsfast_index_local_assemblies:
-    input: "local_assemblies.masked.fasta"
-    output: "local_assemblies.masked.fasta.index"
-    params: sge_opts="-l mfree=10G"
-    shell: "mrsfast --index {input}"
-
-rule apply_mask_for_reference:
-    input: reference=config["sv_reference"], mask="reference_mask.bed"
-    output: "sv_reference.masked.fasta"
-    params: sge_opts=""
-    shell: "bedtools maskfasta -fi {input.reference} -bed {input.mask} -fo {output}"
-
-rule apply_mask_for_local_assemblies:
-    input: assemblies="local_assemblies.fasta", mask="local_assembly_mask.bed"
-    output: "local_assemblies.masked.fasta"
-    params: sge_opts=""
-    shell: "bedtools maskfasta -fi {input.assemblies} -bed {input.mask} -fo {output}"
-
-rule create_mask_for_reference:
-    input: calls="sv_calls_for_genotyping.bed", genome=config["sv_reference_lengths"]
-    output: "reference_mask.bed"
-    params: sge_opts="", slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
-    shell: "bedtools slop -i {input.calls} -g {input.genome} -b {params.slop} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 | bedtools complement -i stdin -g {input.genome} > {output}"
-
-rule create_mask_for_local_assemblies:
-    input: calls="sv_calls_in_query_for_genotyping.bed", genome="local_assemblies_for_genotyping.fasta.fai"
-    output: "local_assembly_mask.bed"
-    params: sge_opts="", slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
-    shell: "bedtools slop -i {input.calls} -g {input.genome} -b {params.slop} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 | bedtools complement -i stdin -g {input.genome} > {output}"
-
 rule bwa_index_combined_reference:
     input: "sv_reference.fasta"
     output: "sv_reference.fasta.bwt"
