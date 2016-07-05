@@ -12,7 +12,7 @@ install: Miniconda3-latest-Linux-x86_64.sh
 	rm -f ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
 	ln -s $(shell pwd)/../snakemake/cluster/UGE/jobscript.sh ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
 	. bin/deactivate
-	./bin/conda create --yes --name python2 python=2 biopython h5py networkx
+	./bin/conda create --yes --name python2 python=2 biopython h5py networkx pandas
 	. ./bin/activate python2
 	pip install intervaltree
 	pip install pysam==0.8.4
