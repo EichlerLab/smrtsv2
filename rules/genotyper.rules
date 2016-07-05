@@ -72,12 +72,12 @@ rule genotype_PacBio_SVs:
     shell: "python ~jlhudd/projects/SMRT_SV/genotyper/regenotype.py {input} {output}"
 
 rule calculate_depth_across_PacBio_SVs:
-    input: sv_calls="sv_calls_for_genotyping.bed", control_locations="control_locations.hg38.bed", alignments="samples/{sample}/alignments.bam"
+    input: sv_calls="sv_calls_for_genotyping.bed", alignments="samples/{sample}/alignments.bam"
     output: "samples/{sample}/concordant_support.tab"
     log: "samples/{sample}/concordant_support.log"
     benchmark: "benchmarks/concordant_support/{sample}.txt"
     params: sge_opts="-l h_rt=01:00:00 -l mfree=4G"
-    shell: "python ~jlhudd/projects/SMRT_SV/genotyper/genotype_with_reference.unmerged.py {input.sv_calls} {input.control_locations} {input.alignments} > {output} 2> {log}"
+    shell: "python ~jlhudd/projects/SMRT_SV/genotyper/genotype_with_reference.fast.py {input.sv_calls} {input.alignments} > {output} 2> {log}"
 
 #
 # Map reads.
