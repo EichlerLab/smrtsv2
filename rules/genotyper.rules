@@ -137,7 +137,7 @@ rule map_sv_sequences_to_bam_reference:
     input: reference=_get_reference_path_by_wildcards, sequences="sv_sequences.fragmented.fasta"
     output: "sv_sequences_in_reference/{reference}.bam"
     benchmark: "benchmarks/sv_sequences_in_bam_reference/{reference}.txt"
-    params: sge_opts="-q eichler-short.q -l h_rt=01:00:00 -pe serial 6 -l mfree=5.5G -R y", threads="6"
+    params: sge_opts="-l h_rt=01:00:00 -pe serial 6 -l mfree=5.5G -R y", threads="6"
     shell: "bwa mem -t {params.threads} {input.reference} {input.sequences} | samtools sort -o {output} -O bam -T /var/tmp/sv_sequences"
 
 #
