@@ -77,50 +77,6 @@ def get_min_depth_for_region(bam_fields, breakpoints, region_type="control"):
     return high_quality_depth
 
 
-def genotype_call_with_read_pair(concordant, discordant, std_depth):
-    """
-    Genotype call based on total depth of concordant and discordant reads a la
-    Hormozdiari et al. 2010 (Genome Research).
-    """
-    #homozygous_deletion_threshold = std_depth
-    homozygous_deletion_threshold = 5
-
-    if concordant < homozygous_deletion_threshold and discordant < homozygous_deletion_threshold:
-        genotype = "./."
-        discordant_genotype_likelihood = np.power(2, discordant) / np.power(2, homozygous_deletion_threshold)
-        concordant_genotype_likelihood = np.power(2, concordant) / np.power(2, homozygous_deletion_threshold)
-        shared_likelihood = np.sqrt(np.square(concordant_genotype_likelihood) + np.square(discordant_genotype_likelihood))
-        genotype_likelihood = np.floor(-10 * np.log10(shared_likelihood))
-    else:
-        expected_discordant_lower_bound = concordant * 0.25
-        expected_discordant_upper_bound = concordant * 4
-
-        if discordant < expected_discordant_lower_bound:
-            genotype = "1/1"
-            # Calculate likelihood of homozygous alternate genotype as
-            # Phred-scaled proportion of distance between the observed
-            # discordant depth and expected depth for the corresponding
-            # concordant depth.
-            genotype_likelihood = np.floor(-10 * np.log10(np.power(2, discordant) / np.power(2, expected_discordant_lower_bound)))
-        elif expected_discordant_lower_bound <= discordant < expected_discordant_upper_bound:
-            # Calculate likelihood of heterozygous genotype as Phred-scaled
-            # proportion of distance between the observed discordant depth and
-            # expected depth for the corresponding concordant depth.
-            genotype_ratio = np.power(2, np.abs(discordant - expected_discordant_upper_bound)) / np.power(2, expected_discordant_upper_bound)
-            genotype_likelihood = np.floor(-10 * np.log10(1 - min(genotype_ratio, 1)))
-            genotype = "1/0"
-        else:
-            # Calculate likelihood of homozygous "reference" genotype as
-            # Phred-scaled proportion of distance between the observed
-            # discordant depth and expected depth for the corresponding
-            # concordant depth.
-            genotype_ratio = np.power(2, np.abs(discordant - expected_discordant_upper_bound)) / np.power(2, expected_discordant_upper_bound)
-            genotype_likelihood = np.floor(-10 * np.log10(1 - min(genotype_ratio, 1)))
-            genotype = "0/0"
-
-    return genotype, genotype_likelihood
-
-
 def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes):
     SLOP_FOR_BREAKPOINTS = 50
 
