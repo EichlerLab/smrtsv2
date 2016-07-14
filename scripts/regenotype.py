@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("output", help="file to emit VCF output to; use /dev/stdout for piping")
     parser.add_argument("--min_depth", type=int, default=5, help="minimum depth required across at least one haplotype to genotype a region")
     parser.add_argument("--homozygous_binomial_probability", type=float, default=0.95, help="binomial probability for a homozygous genotype")
-    parser.add_argument("--heterozygous_binomial_probability", type=float, default=0.5, help="binomial probability for a heterozygous genotype")
+    parser.add_argument("--heterozygous_binomial_probability", type=float, default=0.4, help="binomial probability for a heterozygous genotype")
     args = parser.parse_args()
 
     complete_df = pd.read_table(args.genotypes)
