@@ -71,8 +71,6 @@ def get_min_depth_for_region(bam_fields, breakpoints, region_type="control"):
     logger.debug("Standard deviation depths: %s", np.std(depths))
     logger.debug("Standard error depths: %s", stats.sem(depths))
     high_quality_depth = max(int(np.round(np.median(depths) - np.std(depths))), 0)
-    # median_total_depth = int(np.median([int(line.rstrip().split("\t")[-1])
-    #                                     for line in pysam.depth("-r", region, bam_fields["filename"])]))
 
     return high_quality_depth
 
