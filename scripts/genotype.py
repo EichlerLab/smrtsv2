@@ -163,7 +163,7 @@ if __name__ == "__main__":
     print("\t".join(columns))
 
     sv_calls = pybedtools.BedTool(args.sv_calls)
-    # for sv_call in sv_calls:
-    #     get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes)
+    for sv_call in sv_calls:
+        get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes)
 
-    Parallel(n_jobs=args.nproc, verbose=verbosity)(delayed(get_depth_for_sv_call)(sv_call, bams_by_name, chromosome_sizes) for sv_call in sv_calls)
+    #Parallel(n_jobs=args.nproc, verbose=verbosity)(delayed(get_depth_for_sv_call)(sv_call, bams_by_name, chromosome_sizes) for sv_call in sv_calls)
