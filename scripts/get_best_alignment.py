@@ -84,15 +84,21 @@ def get_best_alignment(alignments_by_read_name, filtered_reads):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("reads")
+    parser.add_argument("--uncompressed", action="store_true", help="output uncompressed BAM for piping")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
+
+    if args.uncompressed:
+        write_mode = "wbu"
+    else:
+        write_mode = "wb"
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
 
     reads = pysam.AlignmentFile(args.reads, "rb")
-    filtered_reads = pysam.AlignmentFile("-", "wbu", template=reads)
+    filtered_reads = pysam.AlignmentFile("-", write_mode, template=reads)
 
     current_read_name = None
     alignments_by_read_name = defaultdict(list)
