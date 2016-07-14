@@ -147,7 +147,7 @@ if __name__ == "__main__":
         bams_by_name[bam]["sample"] = bam_file.header["RG"][0]["SM"]
         bam_file.close()
 
-    columns = ("sample", "chr", "start", "end", "sv_call", "contig", "contig_start", "contig_end", "concordant", "discordant", "total_concordant", "total_discordant")
+    columns = ("sample", "chr", "start", "end", "sv_call", "contig", "contig_start", "contig_end", "concordant", "discordant")
     print("\t".join(columns))
 
     sv_calls = pybedtools.BedTool(args.sv_calls)
