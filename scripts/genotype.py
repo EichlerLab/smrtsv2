@@ -42,7 +42,7 @@ CONTIG_START=9
 CONTIG_END=10
 
 
-def get_min_depth_for_region(bam_fields, breakpoints, region_type="control"):
+def get_min_depth_for_region(bam_fields, breakpoints):
     """
     Return read depth for concordant reads in the given dictionary
     ``bam_fields`` with a pysam.AlignmentFile in the field "bam" and the given
@@ -98,8 +98,8 @@ def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes):
     logger.debug("Breakpoint intervals: %s", breakpoint_intervals)
 
     for bam_name, bam in bams_by_name.iteritems():
-        breakpoint_concordant_depth = get_min_depth_for_region(bam, breakpoint_intervals, sv_call[EVENT_TYPE])
-        breakpoint_discordant_depth = get_min_depth_for_region(bam, reference_intervals, reference_call_type)
+        breakpoint_concordant_depth = get_min_depth_for_region(bam, breakpoint_intervals)
+        breakpoint_discordant_depth = get_min_depth_for_region(bam, reference_intervals)
         logger.debug("Found concordant depth for %s: %s", sv_call[EVENT_TYPE], breakpoint_concordant_depth)
         logger.debug("Found discordant depth for %s: %s", sv_call[EVENT_TYPE], breakpoint_discordant_depth)
 
