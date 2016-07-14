@@ -8,7 +8,8 @@ import logging
 import numpy as np
 import pybedtools
 import pysam
-from scipy import stats
+import subprocess
+import tempfile
 
 np.random.seed(1)
 
@@ -42,66 +43,77 @@ CONTIG_START=9
 CONTIG_END=10
 
 
-def get_min_depth_for_region(bam_fields, breakpoints):
+def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints):
     """
-    Return read depth for concordant reads in the given dictionary
-    ``bam_fields`` with a pysam.AlignmentFile in the field "bam" and the given
-    pybedtools.BedTool of regions, ``regions``.
-
-    The depth calculated across the given regions depends on the type of region
-    which is "control" by default. Other acceptable values for the region type
-    are "insertion" or "deletion". If the region type is not "control" then the
-    coordinates given by ``breakpoints`` are used to evaluate concordant and
-    discordant read pairs.
+    Return median minus standard deviation of read depth across variant
+    breakpoints in the given alternate and reference haplotypes.
     """
     # Convert breakpoints to a list for easier indexing.
-    region = "%s:%s-%s" % list(breakpoints)[0]
-    region_size = breakpoints[0][2] - breakpoints[0][1]
-    logger.debug("Min depth for region %s (size: %s)", region, region_size)
-    depths = [int(line.rstrip().split("\t")[-1])
-              for line in pysam.depth("-Q", "20", "-q", "20", "-r", region, bam_fields["filename"])]
+    alt_region = "%s:%s-%s" % alt_breakpoints
+    ref_region = "%s:%s-%s" % ref_breakpoints
+    alt_region_size = alt_breakpoints[2] - alt_breakpoints[1]
+    ref_region_size = ref_breakpoints[2] - ref_breakpoints[1]
+    logger.debug("Min depth for alt region %s (size: %s)", alt_region, alt_region_size)
+    logger.debug("Min depth for ref region %s (size: %s)", ref_region, ref_region_size)
+
+    arguments = {
+        "BAM": bam_fields["filename"],
+        "REF_REGION": ref_region,
+        "ALT_REGION": alt_region,
+        "TMPDIR": tempfile.gettempdir()
+    }
+    command = "samtools view -bu %(BAM)s '%(REF_REGION)s' '%(ALT_REGION)s' | samtools sort -l 0 -n -O bam -T %(TMPDIR)s/reads - | python ~jlhudd/src/smrtsv/scripts/get_best_alignment.py /dev/stdin | samtools sort -l 0 -O bam -T %(TMPDIR)s/filtered_reads - | samtools depth -q 20 -Q 20 -" % arguments
+    logger.debug("Running command: %s", command)
+    result = subprocess.check_output(command, shell=True)
+    alt_depths = []
+    ref_depths = []
+    for line in result.splitlines():
+        contig, position, depth = line.split("\t")
+        position = int(position)
+        depth = int(depth)
+
+        if contig == ref_breakpoints[0] and position >= ref_breakpoints[1] and position <= ref_breakpoints[2]:
+            ref_depths.append(depth)
+        elif contig == alt_breakpoints[0] and position >= alt_breakpoints[1] and position <= alt_breakpoints[2]:
+            alt_depths.append(depth)
 
     # If there are not depths for every base of the given region, fill those
     # missing values with enough additional zeroes to equal the region size.
-    if len(depths) < region_size:
-        depths = depths + [0] * (region_size - len(depths))
+    if len(alt_depths) < alt_region_size:
+        alt_depths = alt_depths + [0] * (alt_region_size - len(alt_depths))
 
-    logger.debug("Found %i depths for region %s: %s", len(depths), region, depths)
-    logger.debug("Median depths: %s", np.median(depths))
-    logger.debug("Standard deviation depths: %s", np.std(depths))
-    logger.debug("Standard error depths: %s", stats.sem(depths))
-    high_quality_depth = max(int(np.round(np.median(depths) - np.std(depths))), 0)
+    if len(ref_depths) < ref_region_size:
+        ref_depths = ref_depths + [0] * (ref_region_size - len(ref_depths))
 
-    return high_quality_depth
+    logger.debug("Found %i depths for region %s: %s", len(alt_depths), alt_region, alt_depths)
+    logger.debug("Found %i depths for region %s: %s", len(ref_depths), ref_region, ref_depths)
+    logger.debug("Median alt depths: %s", np.median(alt_depths))
+    logger.debug("Standard deviation alt depths: %s", np.std(alt_depths))
+    logger.debug("Median ref depths: %s", np.median(ref_depths))
+    logger.debug("Standard deviation ref depths: %s", np.std(ref_depths))
+    high_quality_alt_depth = max(int(np.round(np.median(alt_depths) - np.std(alt_depths))), 0)
+    high_quality_ref_depth = max(int(np.round(np.median(ref_depths) - np.std(ref_depths))), 0)
+
+    return high_quality_alt_depth, high_quality_ref_depth
 
 
 def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes):
-    SLOP_FOR_BREAKPOINTS = 50
+    SLOP_FOR_BREAKPOINTS = 25
 
     if sv_call[EVENT_TYPE] == "deletion":
-        breakpoint_intervals = [
-            (sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_END]) + SLOP_FOR_BREAKPOINTS),
-        ]
-        reference_intervals = [
-            (sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[END]))
-        ]
+        breakpoint_intervals = (sv_call[CONTIG_NAME], max(0, int(sv_call[CONTIG_START]) - SLOP_FOR_BREAKPOINTS), int(sv_call[CONTIG_END]) + SLOP_FOR_BREAKPOINTS)
+        reference_intervals = (sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[END]))
         reference_call_type = "insertion"
     else:
-        breakpoint_intervals = [
-            (sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_END]))
-        ]
-        reference_intervals = [
-            (sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[START]) + SLOP_FOR_BREAKPOINTS),
-        ]
+        breakpoint_intervals = (sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_END]))
+        reference_intervals = (sv_call[CHROMOSOME], max(0, int(sv_call[START]) - SLOP_FOR_BREAKPOINTS), int(sv_call[START]) + SLOP_FOR_BREAKPOINTS)
         reference_call_type = "deletion"
 
     logger.debug("Breakpoint intervals: %s", breakpoint_intervals)
 
     for bam_name, bam in bams_by_name.iteritems():
-        breakpoint_concordant_depth = get_min_depth_for_region(bam, breakpoint_intervals)
-        breakpoint_discordant_depth = get_min_depth_for_region(bam, reference_intervals)
-        logger.debug("Found concordant depth for %s: %s", sv_call[EVENT_TYPE], breakpoint_concordant_depth)
-        logger.debug("Found discordant depth for %s: %s", sv_call[EVENT_TYPE], breakpoint_discordant_depth)
+        breakpoint_concordant_depth, breakpoint_discordant_depth = get_depth_for_regions(bam, breakpoint_intervals, reference_intervals)
+        logger.debug("Found concordant/discordant depth for %s: %s / %s", sv_call[EVENT_TYPE], breakpoint_concordant_depth, breakpoint_discordant_depth)
 
         print("\t".join(map(str, (
             bam["sample"],
