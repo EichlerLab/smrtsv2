@@ -95,7 +95,7 @@ rule map_sample_reads:
         """{{
     while read line; do set -- $line; samtools view {input.bam} $1:$2-$3; done < {input.regions} | samtools view -S -t {input.bam_reference}.fai -u -b - | samtools bamshuf -n 32 -O - {TMPDIR}/shuffled_reads.{wildcards.sample} | samtools bam2fq - | seqtk dropse -;
     samtools view {input.bam} '*' | samtools bam2fq - | python ~jlhudd/src/smrtsv/scripts/filter_fastq_with_Ns.py --proportion_of_Ns_allowed=0.05 /dev/stdin | seqtk dropse -;
-}} | bwa mem -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}' -p -t {params.threads} {input.sv_reference} - 2> {log} | samblaster --removeDups | k8 /net/eichler/vol4/home/jlhudd/src/bwakit/bwa.kit/bwa-postalt.js {input.alts} | samtools view -S -h -f 0x2 -q 1 - | samtools sort -m {params.samtools_memory} -T {TMPDIR}/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"""
+}} | bwa mem -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}' -p -t {params.threads} {input.sv_reference} - 2> {log} | samblaster --removeDups | k8 /net/eichler/vol4/home/jlhudd/src/bwakit/bwa.kit/bwa-postalt.js {input.alts} | samtools view -S -h -f 0x2 -q 20 - | samtools sort -m {params.samtools_memory} -T {TMPDIR}/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"""
 
 #
 # Prepare local assembly sequences and references.
