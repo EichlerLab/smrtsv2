@@ -23,22 +23,28 @@ logger.addHandler(ch)
 BAM_CMATCH = 0
 
 
-def calculate_differences_in_read(read):
+def calculate_differences_in_alignment(alignment):
     # Calculate indel and softclipped bases from the sum of lengths for CIGAR
     # options that aren't matches.
-    indels_and_softclips = sum([cigar[1] for cigar in read.cigar if cigar[0] != BAM_CMATCH])
+    indels_and_softclips = sum([cigar[1] for cigar in alignment.cigar if cigar[0] != BAM_CMATCH])
 
     # Calculate mismatches from the NM tags.
-    mismatches = read.get_tag("NM")
+    mismatches = alignment.get_tag("NM")
 
     differences = indels_and_softclips + mismatches
 
-    logger.debug("Found %i differences in read %s", differences, read)
+    logger.debug("Found %i differences in alignment %s", differences, alignment)
     return differences
 
 
-def get_best_reads(alignments_by_read_name, filtered_reads):
+def get_best_alignment(alignments_by_read_name, filtered_reads):
     """
+    For a given dictionary of lists of alignments indexed by read name and
+    number (e.g., "read_name/1"), find the alignment with the fewest differences
+    (mismatches, indels, and softclips). If all alignments for a given read have the
+    same number of differences, don't return any alignment for that read since its
+    mapping quality would have been 0 by traditional BWA MEM alignment rules.
+
     Example duplicates:
 
     HJ2HJCCXX160108:5:2220:13311:66496      83      40
@@ -50,13 +56,29 @@ def get_best_reads(alignments_by_read_name, filtered_reads):
     HJ2HJCCXX160108:5:2220:13311:66496      83      40
     HJ2HJCCXX160108:5:2220:13311:66496      163     60
     """
-    for name, reads in alignments_by_read_name.iteritems():
-        if len(reads) > 1:
-            # Sort reads by total differences from reference in ascending order.
-            reads = sorted(reads, key=lambda read: calculate_differences_in_read(read))
+    for name, alignments in alignments_by_read_name.iteritems():
+        if len(alignments) > 1:
+            # Calculate differences between read and the reference for each
+            # alignment.
+            alignments_by_differences = defaultdict(list)
+            for alignment in alignments:
+                differences = calculate_differences_in_alignment(alignment)
+                alignments_by_differences[differences].append(alignment)
 
-        # Either print the only read or print the best read.
-        filtered_reads.write(reads[0])
+            # Find the alignments(s) with the fewest differences.
+            min_differences = min(alignments_by_differences.keys())
+
+            # If there is more than one alignment with the fewest differences,
+            # don't emit any alignments to be consistent with a mapping quality
+            # of 0. If there is only one best alignment, emit that.
+            if len(alignments_by_differences[min_differences]) == 1:
+                filtered_reads.write(alignments_by_differences[min_differences][0])
+                logger.debug("Found best alignment for %s", name)
+            else:
+                logger.debug("Skipping equally scored alignments for %s", name)
+        else:
+            # Emit the only read in the set.
+            filtered_reads.write(alignments[0])
 
 
 if __name__ == "__main__":
@@ -75,10 +97,12 @@ if __name__ == "__main__":
     current_read_name = None
     alignments_by_read_name = defaultdict(list)
 
+    reads_processed = 0
     for read in reads:
+        reads_processed += 1
         if read.query_name != current_read_name:
             if current_read_name is not None:
-                get_best_reads(alignments_by_read_name, filtered_reads)
+                get_best_alignment(alignments_by_read_name, filtered_reads)
 
             current_read_name = read.query_name
             alignments_by_read_name = defaultdict(list)
@@ -89,4 +113,6 @@ if __name__ == "__main__":
         alignments_by_read_name[read_name].append(read)
     else:
         # Get best reads from the last set in the for loop.
-        get_best_reads(alignments_by_read_name, filtered_reads)
+        get_best_alignment(alignments_by_read_name, filtered_reads)
+
+    logger.debug("Processed %i reads for filtering", reads_processed)
