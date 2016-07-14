@@ -51,8 +51,8 @@ rule convert_genotypes_to_vcf:
 rule genotype_across_all_samples:
     input: "genotypes.tab", "samples.tab"
     output: "genotypes_by_all_samples.tab"
-    params: sge_opts="-l h_rt=00:30:00"
-    shell: "python ~jlhudd/projects/SMRT_SV/genotyper/regenotype.py {input} {output}"
+    params: sge_opts="-l h_rt=00:30:00 -l mfree=2G"
+    shell: "python ~jlhudd/src/smrtsv/scripts/regenotype.py --homozygous_binomial_probability=0.95 --heterozygous_binomial_probability=0.4 {input} {output}"
 
 rule merge_per_sample_genotypes:
     input: expand("samples/{sample}/genotypes.tab", sample=SAMPLES)
