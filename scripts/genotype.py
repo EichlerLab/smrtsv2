@@ -62,7 +62,7 @@ def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints):
         "ALT_REGION": alt_region,
         "TMPDIR": tempfile.gettempdir()
     }
-    command = "samtools view -bu %(BAM)s '%(REF_REGION)s' '%(ALT_REGION)s' | samtools sort -l 0 -n -O bam -T %(TMPDIR)s/reads - | python ~jlhudd/src/smrtsv/scripts/get_best_alignment.py /dev/stdin | samtools sort -l 0 -O bam -T %(TMPDIR)s/filtered_reads - | samtools depth -q 20 -Q 20 -" % arguments
+    command = "samtools view -q 20 -bu %(BAM)s '%(REF_REGION)s' '%(ALT_REGION)s' | samtools sort -l 0 -n -O bam -T %(TMPDIR)s/reads - | python ~jlhudd/src/smrtsv/scripts/get_best_alignment.py /dev/stdin | samtools sort -l 0 -O bam -T %(TMPDIR)s/filtered_reads - | samtools depth -q 20 -Q 20 -" % arguments
     logger.debug("Running command: %s", command)
     result = subprocess.check_output(command, shell=True)
     alt_depths = []
