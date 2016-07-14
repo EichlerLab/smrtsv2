@@ -34,18 +34,19 @@ def _get_reference_path_by_sample(wildcards):
 
 rule all:
     input: "genotypes.vcf.gz"
+    params: sge_opts="-l h_rt=00:05:00"
 
 rule compress_and_index_genotypes:
     input: "genotypes.vcf"
     output: "genotypes.vcf.gz", "genotypes.vcf.gz.tbi"
-    params: sge_opts=""
+    params: sge_opts="-l h_rt=00:30:00 -l mfree=4G"
     shell: "vcffixup {input} | bgzip -c > {output[0]}; tabix -p vcf {output[0]}"
 
 rule convert_genotypes_to_vcf:
     input: genotypes="genotypes_by_all_samples.tab", calls=config["sv_calls"], reference=config["sv_reference"]
     output: temp("genotypes.vcf")
-    params: sge_opts=""
-    shell: "python ~jlhudd/projects/SMRT_SV/genotyper/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} {output}"
+    params: sge_opts="-l h_rt=00:30:00 -l mfree=4G"
+    shell: "python ~jlhudd/src/smrtsv/scripts/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} {output}"
 
 rule genotype_across_all_samples:
     input: "genotypes.tab", "samples.tab"
@@ -89,7 +90,7 @@ rule map_sample_reads:
     output: alignments="samples/{sample}/alignments.bam"
     benchmark: "benchmarks/map_sample_reads/{sample}.txt"
     log: "samples/{sample}/alignments.log"
-    params: sge_opts="-l mfree=4G -pe serial 12 -l disk_free=17G -l h_rt=24:00:00 -R y", threads="12", samtools_memory="8G"
+    params: sge_opts="-l mfree=4G -pe serial 12 -l disk_free=17G -l h_rt=24:00:00 -R y -l ssd=FALSE", threads="12", samtools_memory="8G"
     shell:
         """{{
     while read line; do set -- $line; samtools view {input.bam} $1:$2-$3; done < {input.regions} | samtools view -S -t {input.bam_reference}.fai -u -b - | samtools bamshuf -n 128 -O - {TMPDIR}/shuffled_reads.{wildcards.sample} | samtools bam2fq - | seqtk dropse -;
