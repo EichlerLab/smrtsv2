@@ -35,9 +35,6 @@ def get_depth_by_reference_and_position(alignments, bam, base_quality):
 
         pairs = np.array([pair for pair in alignment.aligned_pairs if pair[0] is not None])
 
-        if len(pairs) != len(alignment.query_qualities):
-            raise Exception("Mismatch")
-
         for base in pairs[np.array(alignment.query_qualities) >= base_quality][:,1]:
             if base is not None:
                 depth_by_reference_and_position[ref][base] += 1
