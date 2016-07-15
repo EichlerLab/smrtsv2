@@ -25,7 +25,7 @@ logger.addHandler(ch)
 BAM_CMATCH = 0
 
 
-def get_depth_by_reference_and_position(alignments, bam, base_quality):
+def get_depth_by_reference_and_position(alignments, bam, min_base_quality):
     # Index number of reads supporting a given position in a given reference.
     depth_by_reference_and_position = {}
 
@@ -47,7 +47,7 @@ def get_depth_by_reference_and_position(alignments, bam, base_quality):
 
         # Consider only aligned pairs where the query's base qualities are
         # greater than or equal to the minimum base quality threshold.
-        for base in pairs[np.array(alignment.query_qualities) >= base_quality][:,1]:
+        for base in pairs[np.array(alignment.query_qualities) >= min_base_quality][:,1]:
             if base is not None:
                 depth_by_reference_and_position[ref][base] += 1
 

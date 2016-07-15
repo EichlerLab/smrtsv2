@@ -56,7 +56,7 @@ def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints, min_mapp
     logger.debug("Min depth for ref region %s (size: %s)", ref_region, ref_region_size)
 
     best_alignments = get_best_alignments(bam_fields["file"], (ref_region, alt_region), quality=min_mapping_quality)
-    depth_by_reference_and_position = get_depth_by_reference_and_position(best_alignments, bam_fields["file"], base_quality=min_base_quality)
+    depth_by_reference_and_position = get_depth_by_reference_and_position(best_alignments, bam_fields["file"], min_base_quality)
 
     alt_depths = [depth_by_reference_and_position.get(alt_breakpoints[0], {}).get(i, 0)
                   for i in xrange(alt_breakpoints[1], alt_breakpoints[2] + 1)]
