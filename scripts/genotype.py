@@ -77,17 +77,30 @@ def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints, min_mapp
     return high_quality_alt_depth, high_quality_ref_depth
 
 
-def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, min_mapping_quality, min_base_quality, slop_for_insertion_breakpoints):
+def add_slop_to_breakpoint(breakpoint, slop):
+    return (breakpoint[0], max(0, breakpoint[1] - slop), breakpoint[2] + slop)
+
+
+def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, min_mapping_quality, min_base_quality, slop_for_breakpoints):
+    # Deletions are single-base events in the alternate haplotype and multiple-base events in the reference.
+    # Insertions are multiple-base events in the alternate haplotype and single-base events in the reference.
     if sv_call[EVENT_TYPE] == "deletion":
-        breakpoint_intervals = ((sv_call[CONTIG_NAME], max(0, int(sv_call[CONTIG_START]) - slop_for_insertion_breakpoints), int(sv_call[CONTIG_END]) + slop_for_insertion_breakpoints),)
-        reference_intervals = ((sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[END])),)
+        breakpoint_intervals = ((sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_START])),)
+        reference_intervals = ((sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[START])),
+                               (sv_call[CHROMOSOME], int(sv_call[END]), int(sv_call[END])))
         reference_call_type = "insertion"
     else:
-        breakpoint_intervals = ((sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_END])),)
-        reference_intervals = ((sv_call[CHROMOSOME], max(0, int(sv_call[START]) - slop_for_insertion_breakpoints), int(sv_call[START]) + slop_for_insertion_breakpoints),)
+        breakpoint_intervals = ((sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_START])),
+                                (sv_call[CONTIG_NAME], int(sv_call[CONTIG_END]), int(sv_call[CONTIG_END])))
+        reference_intervals = ((sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[START])),)
         reference_call_type = "deletion"
 
-    logger.debug("Breakpoint intervals: %s", breakpoint_intervals)
+    # Add slop to breakpoints.
+    breakpoint_intervals = [add_slop_to_breakpoint(breakpoint, slop_for_breakpoints) for breakpoint in breakpoint_intervals]
+    reference_intervals = [add_slop_to_breakpoint(breakpoint, slop_for_breakpoints) for breakpoint in reference_intervals]
+
+    logger.debug("Alternate intervals: %s", breakpoint_intervals)
+    logger.debug("Reference intervals: %s", reference_intervals)
 
     for bam_name, bam in bams_by_name.iteritems():
         breakpoint_concordant_depth, breakpoint_discordant_depth = get_depth_for_regions(bam, breakpoint_intervals, reference_intervals, min_mapping_quality, min_base_quality)
@@ -114,7 +127,7 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--min_mapping_quality", type=int, default=20, help="minimum mapping quality of alignments to consider for genotyping")
     parser.add_argument("--min_base_quality", type=int, default=20, help="minimum base quality to consider for calculating read depth per haplotype")
-    parser.add_argument("--slop_for_insertion_breakpoints", type=int, default=25, help="number of bases on either side of an insertion breakpoint to calculate read depth across")
+    parser.add_argument("--slop_for_breakpoints", type=int, default=25, help="number of bases on either side of an insertion breakpoint to calculate read depth across")
     args = parser.parse_args()
 
     if args.debug:
@@ -143,4 +156,4 @@ if __name__ == "__main__":
 
     sv_calls = pybedtools.BedTool(args.sv_calls)
     for sv_call in sv_calls:
-        get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, args.min_mapping_quality, args.min_base_quality, args.slop_for_insertion_breakpoints)
+        get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, args.min_mapping_quality, args.min_base_quality, args.slop_for_breakpoints)
