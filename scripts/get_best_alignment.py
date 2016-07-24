@@ -161,7 +161,7 @@ def get_best_alignments(bam, regions, quality):
 
     logger.debug("Processed %i alignments and retained %i", alignments_processed, len(filtered_alignments_from_regions))
 
-    # Return filtered alignments .
+    # Return filtered alignments.
     return filtered_alignments_from_regions
 
 
