@@ -28,7 +28,7 @@ def convert_table_to_vcf(genotypes_filename, calls_filename, reference_filename,
     genotypes = genotypes[sample_specific_fields + ["call_id"]]
 
     # Build a genotype field for each call/sample combination.
-    format = "GT:GQ:GL:DPR:DPA"
+    format = "GT:GQ:PL:DPR:DPA"
     genotypes["genotype_data"] = genotypes.apply(lambda row: ":".join(map(str, [row.genotype, row.genotype_quality, row.genotype_likelihoods, int(round(row.discordant, 0)), int(round(row.concordant, 0))])), axis=1)
 
     # Pivot genotypes to wide format to match VCF style.
@@ -65,7 +65,7 @@ def convert_table_to_vcf(genotypes_filename, calls_filename, reference_filename,
         vcf.write('##INFO=<ID=SEQ,Number=1,Type=String,Description="Sequence associated with variant">' + "\n")
         vcf.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">' + "\n")
         vcf.write('##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality">' + "\n")
-        vcf.write('##FORMAT=<ID=GL,Number=1,Type=String,Description="Genotype likelihood">' + "\n")
+        vcf.write('##FORMAT=<ID=PL,Number=G,Type=String,Description="Genotype likelihood">' + "\n")
         vcf.write('##FORMAT=<ID=DPR,Number=1,Type=String,Description="Read depth supporting reference allele">' + "\n")
         vcf.write('##FORMAT=<ID=DPA,Number=1,Type=String,Description="Read depth supporting alternate allele">' + "\n")
         calls_with_genotypes.to_csv(vcf, sep="\t", index=False)
