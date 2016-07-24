@@ -125,9 +125,12 @@ def get_best_alignments(bam, regions, quality):
                                if read.mapping_quality >= quality]
     logger.debug("Loaded %i reads from BAM from %i regions", len(alignments_from_regions), len(regions))
 
-    # Sort alignments by read name.
+    # Sort alignments by read name and keep distinct alignments to prevent from
+    # double counting the same reads from adjacent breakpoints in the same
+    # region.
     logger.debug("Sorting alignments by read name")
-    alignments_from_regions = sorted(alignments_from_regions, key=lambda alignment: alignment.query_name)
+    alignments_from_regions = sorted(set(alignments_from_regions), key=lambda alignment: alignment.query_name)
+    logger.debug("Sorted %i distinct alignments by read name", len(alignments_from_regions))
 
     current_read_name = None
     alignments_by_read_name = defaultdict(list)

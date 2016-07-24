@@ -48,23 +48,25 @@ def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints, min_mapp
     breakpoints in the given alternate and reference haplotypes.
     """
     # Convert breakpoints to a list for easier indexing.
-    alt_region = "%s:%s-%s" % alt_breakpoints
-    ref_region = "%s:%s-%s" % ref_breakpoints
-    alt_region_size = alt_breakpoints[2] - alt_breakpoints[1]
-    ref_region_size = ref_breakpoints[2] - ref_breakpoints[1]
-    logger.debug("Min depth for alt region %s (size: %s)", alt_region, alt_region_size)
-    logger.debug("Min depth for ref region %s (size: %s)", ref_region, ref_region_size)
+    alt_regions = ["%s:%s-%s" % alt_breakpoint for alt_breakpoint in alt_breakpoints]
+    ref_regions = ["%s:%s-%s" % ref_breakpoint for ref_breakpoint in ref_breakpoints]
+    # alt_region_size = alt_breakpoints[2] - alt_breakpoints[1]
+    # ref_region_size = ref_breakpoints[2] - ref_breakpoints[1]
+    # logger.debug("Min depth for alt region %s (size: %s)", alt_region, alt_region_size)
+    # logger.debug("Min depth for ref region %s (size: %s)", ref_region, ref_region_size)
 
-    best_alignments = get_best_alignments(bam_fields["file"], (ref_region, alt_region), quality=min_mapping_quality)
+    best_alignments = get_best_alignments(bam_fields["file"], ref_regions + alt_regions, quality=min_mapping_quality)
     depth_by_reference_and_position = get_depth_by_reference_and_position(best_alignments, bam_fields["file"], min_base_quality)
 
-    alt_depths = [depth_by_reference_and_position.get(alt_breakpoints[0], {}).get(i, 0)
-                  for i in xrange(alt_breakpoints[1], alt_breakpoints[2] + 1)]
-    ref_depths = [depth_by_reference_and_position.get(ref_breakpoints[0], {}).get(i, 0)
-                  for i in xrange(ref_breakpoints[1], ref_breakpoints[2] + 1)]
+    alt_depths = [depth_by_reference_and_position.get(alt_breakpoint[0], {}).get(i, 0)
+                  for alt_breakpoint in alt_breakpoints
+                  for i in xrange(alt_breakpoint[1], alt_breakpoint[2] + 1)]
+    ref_depths = [depth_by_reference_and_position.get(ref_breakpoint[0], {}).get(i, 0)
+                  for ref_breakpoint in ref_breakpoints
+                  for i in xrange(ref_breakpoint[1], ref_breakpoint[2] + 1)]
 
-    logger.debug("Found %i depths for region %s: %s", len(alt_depths), alt_region, alt_depths)
-    logger.debug("Found %i depths for region %s: %s", len(ref_depths), ref_region, ref_depths)
+    logger.debug("Found %i depths for regions %s: %s", len(alt_depths), alt_regions, alt_depths)
+    logger.debug("Found %i depths for regions %s: %s", len(ref_depths), ref_regions, ref_depths)
     logger.debug("Median alt depths: %s", np.median(alt_depths))
     logger.debug("Standard deviation alt depths: %s", np.std(alt_depths))
     logger.debug("Median ref depths: %s", np.median(ref_depths))
@@ -77,12 +79,12 @@ def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints, min_mapp
 
 def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, min_mapping_quality, min_base_quality, slop_for_insertion_breakpoints):
     if sv_call[EVENT_TYPE] == "deletion":
-        breakpoint_intervals = (sv_call[CONTIG_NAME], max(0, int(sv_call[CONTIG_START]) - slop_for_insertion_breakpoints), int(sv_call[CONTIG_END]) + slop_for_insertion_breakpoints)
-        reference_intervals = (sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[END]))
+        breakpoint_intervals = ((sv_call[CONTIG_NAME], max(0, int(sv_call[CONTIG_START]) - slop_for_insertion_breakpoints), int(sv_call[CONTIG_END]) + slop_for_insertion_breakpoints),)
+        reference_intervals = ((sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[END])),)
         reference_call_type = "insertion"
     else:
-        breakpoint_intervals = (sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_END]))
-        reference_intervals = (sv_call[CHROMOSOME], max(0, int(sv_call[START]) - slop_for_insertion_breakpoints), int(sv_call[START]) + slop_for_insertion_breakpoints)
+        breakpoint_intervals = ((sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_END])),)
+        reference_intervals = ((sv_call[CHROMOSOME], max(0, int(sv_call[START]) - slop_for_insertion_breakpoints), int(sv_call[START]) + slop_for_insertion_breakpoints),)
         reference_call_type = "deletion"
 
     logger.debug("Breakpoint intervals: %s", breakpoint_intervals)
