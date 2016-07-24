@@ -7,7 +7,7 @@ import logging
 import numpy as np
 import pybedtools
 import pysam
-
+from scipy.stats import sem
 from get_best_alignment import get_best_alignments, get_depth_by_reference_and_position
 
 np.random.seed(1)
@@ -71,8 +71,8 @@ def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints, min_mapp
     logger.debug("Standard deviation alt depths: %s", np.std(alt_depths))
     logger.debug("Median ref depths: %s", np.median(ref_depths))
     logger.debug("Standard deviation ref depths: %s", np.std(ref_depths))
-    high_quality_alt_depth = max(int(np.round(np.median(alt_depths) - np.std(alt_depths))), 0)
-    high_quality_ref_depth = max(int(np.round(np.median(ref_depths) - np.std(ref_depths))), 0)
+    high_quality_alt_depth = max(int(np.round(np.median(alt_depths) - sem(alt_depths))), 0)
+    high_quality_ref_depth = max(int(np.round(np.median(ref_depths) - sem(ref_depths))), 0)
 
     return high_quality_alt_depth, high_quality_ref_depth
 
