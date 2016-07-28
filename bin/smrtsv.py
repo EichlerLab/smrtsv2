@@ -5,32 +5,130 @@ import subprocess
 import sys
 import os
 
+# Set logging
 logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
-CLUSTER_SETTINGS = '" -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash"'
+
+# Set cluster parameters
+CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash'
 CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "60")
 
+# Setup environment for executing commands
+PROCESS_ENV = os.environ.copy()
+
+# Prepend to PROCESS_ENV["PATH"]
+INSTALL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+INSTALL_PATH = [  # List of paths relative to INSTALL_DIR to be added to the environment $PATH
+    "bin",
+    "dist/miniconda/envs/python2/bin",
+    "dist/miniconda/envs/python3/bin",
+    "dist/miniconda/bin",
+    "dist/celera/wgs-8.3rc2/Linux-amd64/bin/",
+    "dist/amos-3.1.0/bin",
+    "canu/Linux-amd64/bin"
+]
+
+PROCESS_ENV_PATH = ":".join([os.path.join(INSTALL_DIR, THIS_PATH) for THIS_PATH in INSTALL_PATH])
+
+if "PATH" in PROCESS_ENV:
+    PROCESS_ENV["PATH"] = PROCESS_ENV_PATH + ":" + PROCESS_ENV["PATH"]
+else:
+    PROCESS_ENV["PATH"] = PROCESS_ENV_PATH
+
+# Prepend to PROCESS_ENV["LD_LIBRARY_PATH"]
+INSTALL_LD_PATH = [
+    "dist/hdf5/lib"
+]
+
+PROCESS_ENV_LD_PATH = ":".join([os.path.join(INSTALL_DIR, THIS_PATH) for THIS_PATH in INSTALL_LD_PATH])
+
+if "LD_LIBRARY_PATH" in PROCESS_ENV:
+    PROCESS_ENV["LD_LIBRARY_PATH"] = PROCESS_ENV_LD_PATH + ":" + PROCESS_ENV["LD_LIBRARY_PATH"]
+else:
+    PROCESS_ENV["LD_LIBRARY_PATH"] = PROCESS_ENV_LD_PATH
+
+os.environ["LD_LIBRARY_PATH"] = PROCESS_ENV["LD_LIBRARY_PATH"]
+
+
+# Function definitions
 def _get_dist_dir():
     dirname, filename = os.path.split(os.path.abspath(__file__))
     return dirname
 
-def _build_prefix(args):
-    prefix = ["snakemake", "-T", "--rerun-incomplete", "--snakefile", os.path.join(os.path.dirname(_get_dist_dir()), "Snakefile"), "-j", str(args.jobs)]
+# def _build_prefix(args):
+#     prefix = ["snakemake", "-T", "--rerun-incomplete", "--snakefile", os.path.join(os.path.dirname(_get_dist_dir()), "Snakefile"), "-j", str(args.jobs)]
+#     if args.dryrun:
+#         prefix.append("-n")
+#
+#     if args.distribute:
+#         prefix.extend(CLUSTER_FLAG)
+#
+#     return tuple(prefix)
+
+def _run_cmd(args):
+    """
+    Run a command with the proper environment set.
+
+    :param args: A tuple of arguments starting with the command name.
+
+    :return: Return code or -1 if the process did not complete.
+    """
+    sys.stdout.flush()
+
+    p = subprocess.Popen(args, env=PROCESS_ENV)
+
+    p.wait()
+
+    ret_code = p.returncode
+
+    return ret_code if ret_code is not None else -1
+
+def _run_snake_target(args, *cmd):
+    """
+    Run a snakemake target.
+
+    :param args: Arguments processed from the command line.
+    :param cmd: The command to run as a tuple starting with the name of the snakemake target.
+
+    :return: Return code from snakemake.
+    """
+
+    # Setup snakemake command
+    prefix = [
+        "snakemake",
+        "-T",
+        "--rerun-incomplete",
+        "--snakefile", os.path.join(os.path.dirname(_get_dist_dir()), "Snakefile"),
+        "-j", str(args.jobs)
+    ]
+
     if args.dryrun:
         prefix.append("-n")
 
     if args.distribute:
         prefix.extend(CLUSTER_FLAG)
 
-    return tuple(prefix)
+    # Append command
+    prefix.extend(cmd)
+
+    # Report (verbose)
+    if args.verbose:
+        print("Running snakemake command: %s" % " ".join(prefix))
+
+    # Run snakemake command
+    return _run_cmd(prefix)
 
 def index(args):
-    prefix = _build_prefix(args)
-    command = prefix + ("prepare_reference", "--config", "reference=%s" % args.reference)
-    return subprocess.call(" ".join(command), shell=True)
+    return _run_snake_target(
+        args,
+        "prepare_reference",
+        "--config",
+        "reference=%s" % args.reference
+    )
 
 def align(args):
-    prefix = _build_prefix(args)
-    command = prefix + (
+    return _run_snake_target(
+        args,
         "align_reads",
         "--config",
         "reference=%s" % args.reference,
@@ -41,7 +139,6 @@ def align(args):
         "threads=%s" % args.threads,
         "tmp_dir=%s" % args.tmpdir
     )
-    return subprocess.call(" ".join(command), shell=True)
 
 def detect(args):
     """
@@ -49,9 +146,8 @@ def detect(args):
     """
     # Find candidate regions in alignments.
     sys.stdout.write("Searching for candidate regions\n")
-    prefix = _build_prefix(args)
 
-    command = prefix + (
+    command = (
         "get_regions",
         "--config",
         "reference=%s" % args.reference,
@@ -66,7 +162,7 @@ def detect(args):
     if args.candidates:
         command = command + ("candidates=%s" % args.candidates,)
 
-    return subprocess.call(" ".join(command), shell=True)
+    return _run_snake_target(args, *command)
 
 def assemble(args):
     """
@@ -74,15 +170,16 @@ def assemble(args):
     """
     # Generate local assemblies across the genome.
     sys.stdout.write("Starting local assemblies\n")
-    prefix = _build_prefix(args)
 
-    base_command = prefix + (
+    base_command = (
         "collect_assembly_alignments",
         "--config",
         "reference=%s" % args.reference,
         "alignments=%s" % args.alignments,
         "reads=%s" % args.reads,
-        "tmp_dir=%s" % args.tmpdir
+        "tmp_dir=%s" % args.tmpdir,
+        "ld_path=%s" % PROCESS_ENV["LD_LIBRARY_PATH"],
+        "path=%s" % PROCESS_ENV["PATH"]
     )
 
     if args.regions:
@@ -126,7 +223,9 @@ def assemble(args):
         # Assemble regions per contig creating a single merged BAM for each contig.
         local_assembly_basename = os.path.basename(args.assembly_alignments)
         local_assemblies = set()
+
         return_code = 0
+
         for contig in contigs:
             contig_local_assemblies = os.path.join("local_assemblies", local_assembly_basename.replace(".bam", ".%s.bam" % contig))
             local_assemblies.add(contig_local_assemblies)
@@ -139,17 +238,19 @@ def assemble(args):
             command = command + ("assembly_alignments=%s" % contig_local_assemblies,)
             sys.stdout.write("Starting local assemblies for %s\n" % contig)
             logging.debug("Assembly command: %s", " ".join(command))
-            return_code = subprocess.call(" ".join(command), shell=True)
+
+            return_code = _run_snake_target(args, *command)
+
             if return_code != 0:
-               break
+                break
 
         # If the last command executed successfully, try to merge all local
         # assemblies per contig into a single file.
         if not args.dryrun and return_code == 0:
-            return_code = subprocess.call(" ".join (["samtools", "merge", args.assembly_alignments] + list(local_assemblies)), shell=True)
+            return_code = _run_cmd(["samtools", "merge", args.assembly_alignments] + list(local_assemblies))
 
             if return_code == 0:
-                return_code = subprocess.call(["samtools", "index", args.assembly_alignments])
+                return_code = _run_cmd(["samtools", "index", args.assembly_alignments])
 
         # Return the last return code.
         return return_code
@@ -158,13 +259,14 @@ def assemble(args):
             command = base_command + ("assembly_alignments=%s" % args.assembly_alignments,)
 
             logging.debug("Assembly command: %s", " ".join(command))
-            return subprocess.call(" ".join(command), shell=True)
+            return _run_cmd(command)
 
 def call(args):
     # Call SVs, indels, and inversions.
     sys.stdout.write("Calling variants\n")
-    prefix = _build_prefix(args)
-    command = prefix + (
+
+    return_code = _run_snake_target(
+        args,
         "call_variants",
         "--config",
         "reference=%s" % args.reference,
@@ -174,7 +276,6 @@ def call(args):
         "species=\"%s\"" % args.species,
         "sample=\"%s\"" % args.sample
     )
-    return_code = subprocess.call(" ".join(command), shell=True)
 
     if return_code != 0:
         sys.stderr.write("Failed to call variants\n")
@@ -203,12 +304,15 @@ def genotype(args):
     print("Genotype")
 
 
+# Main
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dryrun", "-n", action="store_true", help="Print commands that will run without running them")
     parser.add_argument("--distribute", action="store_true", help="Distribute analysis to Grid Engine-style cluster")
     parser.add_argument("--jobs", help="number of jobs to run simultaneously", type=int, default=1)
     parser.add_argument("--tmpdir", help="temporary directory to use for distributed jobs", default="/var/tmp")
+    parser.add_argument("--verbose", "-v", help="print extra runtime information", action="store_true")
     subparsers = parser.add_subparsers()
 
     # Index a reference for use by BLASR.
@@ -273,6 +377,11 @@ if __name__ == "__main__":
     parser_genotyper.set_defaults(func=genotype)
 
     args = parser.parse_args()
+
+    if args.verbose:
+        print("PATH=%s" % PROCESS_ENV["PATH"])
+        print("LD_LIBRARY_PATH=%s" % PROCESS_ENV["LD_LIBRARY_PATH"])
+        sys.stdout.flush()
 
     # Make a log directory for grid-engine-style error logs if commands are
     # being distributed in non-dryrun mode.
