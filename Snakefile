@@ -9,7 +9,7 @@ import tempfile
 
 # Always source config file.
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
-shell.prefix(". {SNAKEMAKE_DIR}/config.sh; ")
+#shell.prefix(". {SNAKEMAKE_DIR}/config.sh; ")
 
 #
 # Define internal constants.
@@ -42,9 +42,9 @@ include: "rules/prepare_reference.rules"
 
 # Only include alignment rules if alignments aren't defined already or don't
 # exist yet.
-if config.get("alignments") is None or not os.path.exists(config.get("alignments")):
-    include: "rules/alignment.rules"
+#if config.get("alignments") is None or not os.path.exists(config.get("alignments")):
 
+include: "rules/alignment.rules"
 include: "rules/sv_candidates.rules"
 include: "rules/local_assembly.mhap_celera.rules"
 include: "rules/variant_caller.rules"

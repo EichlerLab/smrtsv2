@@ -73,17 +73,18 @@ rule get_simple_repeats:
 rule prepare_tuple_count_table_for_reference:
     input: REFERENCE
     output: "%s.ctab" % REFERENCE
-    params: sge_opts=""
+    params: sge_opts="-l mfree=8G -l h_rt=00:30:00"
     shell: "printTupleCountTable {input} > {output}"
 
 rule prepare_suffix_array_for_reference:
     input: REFERENCE
     output: "%s.sa" % REFERENCE
-    params: sge_opts=""
+    params: sge_opts="-l mfree=40G -l h_rt=08:00:00"
     shell: "sawriter {output} {input}"
 
 rule index_reference:
     input: REFERENCE
     output: "%s.fai" % REFERENCE
-    params: sge_opts=""
+    params: sge_opts="-l mfree=16G -l h_rt=08:00:00"
     shell: "samtools faidx {input}"
+

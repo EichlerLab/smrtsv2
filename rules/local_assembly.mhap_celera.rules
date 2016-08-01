@@ -17,6 +17,8 @@ import os
 INPUT_READS = config.get("reads", "input.fofn")
 REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candidates_with_coverage.bed")
 LOCAL_ASSEMBLY_ALIGNMENTS = config.get("assembly_alignments", "local_assembly_alignments.bam")
+LD_LIBRARY_PATH = config.get("ld_path", "")
+PATH = config.get("path")
 
 #
 # Define internal constants.
@@ -229,6 +231,8 @@ rule assemble_region:
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
     params: sge_opts="-l mfree=12G -pe serial 1 -l disk_free=10G -l h_rt=01:00:00", threads="4"
     shell:
+        "export PATH={PATH}; "
+        "export LD_LIBRARY_PATH={LD_LIBRARY_PATH}; "
         "export ANALYSIS_DIR=`pwd`; "
         "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
         "export REFERENCE_PATH=`readlink -f {REFERENCE}`; "
