@@ -4,6 +4,7 @@ import logging
 import subprocess
 import sys
 import os
+import re
 
 # Set logging
 logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
@@ -182,8 +183,8 @@ def assemble(args):
         "path=%s" % PROCESS_ENV["PATH"]
     )
 
-    if args.regions:
-        # For each contig/chromosome in the regions file, submit a separate
+    if args.candidates:
+        # For each contig/chromosome in the candidates file, submit a separate
         # Snakemake command. To do so, first split regions to assemble into one
         # file per contig in a temporary directory.
         tmpdir = os.path.join(os.getcwd(), "regions_by_contig")
@@ -199,7 +200,7 @@ def assemble(args):
                 pass
 
         previous_contig = None
-        with open(args.regions, "r") as fh:
+        with open(args.candidates, "r") as fh:
             contigs = set()
             for line in fh:
                 contig = line.strip().split()[0]
@@ -279,26 +280,73 @@ def call(args):
 
     if return_code != 0:
         sys.stderr.write("Failed to call variants\n")
-        return return_code
+
+    return return_code
 
 def run(args):
+
+    # Get default jobs
+    if "jobs" in args:
+        default_jobs = args.jobs
+    else:
+        default_jobs = 1
+
+    # Get the number of jobs for each step
+    job_step = re.split("\\s*[,;:]\\s*", args.runjobs.strip())  # Split into array
+    job_step = [job_step[i] if len(job_step) > i else '' for i in range(4)]  # Extend to length 4
+
+    # Convert each number of jobs to integers
+    for i in range(4):
+        if job_step[i] != '':
+            try:
+                job_step[i] = int(job_step[i])
+            except ValueError:
+                sys.stderr.write("Invalid number of jobs for step %d: Must be an integer: \"%s\"\n" % ((i + 1), job_step[i]))
+                return 1
+        else:
+            job_step[i] = default_jobs
+
+    # Report the number of jobs for each task
+    if args.verbose and args.distribute:
+        print("Jobs per task:")
+        print("\t*    Align: %s" % job_step[0])
+        print("\t*   Detect: %s" % job_step[1])
+        print("\t* Assemble: %s" % job_step[2])
+        print("\t*     Call: %s" % job_step[3])
+
+    # Align
+    args.jobs = job_step[0]
+
+    return_code = align(args)
+    if return_code != 0:
+        sys.stderr.write("Failed to align reads\n")
+        return return_code
+
     # Detect SVs.
+    args.jobs = job_step[1]
+
     return_code = detect(args)
     if return_code != 0:
         sys.stderr.write("Failed to identify candidate regions\n")
         return return_code
 
     # Run local assemblies.
+    args.jobs = job_step[2]
+
     return_code = assemble(args)
     if return_code != 0:
         sys.stderr.write("Failed to generate local assemblies\n")
         return return_code
 
     # Call SVs, indels, and inversions.
+    args.jobs = job_step[3]
+
     return_code = call(args)
     if return_code != 0:
         sys.stderr.write("Failed to call variants\n")
         return return_code
+
+    return 0
 
 def genotype(args):
     print("Genotype")
@@ -313,6 +361,7 @@ if __name__ == "__main__":
     parser.add_argument("--jobs", help="number of jobs to run simultaneously", type=int, default=1)
     parser.add_argument("--tmpdir", help="temporary directory to use for distributed jobs", default="/var/tmp")
     parser.add_argument("--verbose", "-v", help="print extra runtime information", action="store_true")
+    parser.add_argument("--drmaalib", help="For jobs that are distributed, this is the location to the DRMAA library (libdrmaa.so) installed with Grid Engine. Use this to set DRMAA_LIBRARY_PATH in the environment for pipelined commands. If DRMAA_LIBRARY_PATH is already set in the environment when calling this program, this option is not required.")
     subparsers = parser.add_subparsers()
 
     # Index a reference for use by BLASR.
@@ -364,10 +413,22 @@ if __name__ == "__main__":
     parser_runner = subparsers.add_parser("run", help="call SVs and indels by local assembly of BLASR-aligned reads")
     parser_runner.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
     parser_runner.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
-    parser_runner.add_argument("alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line")
-    parser_runner.add_argument("variants", help="VCF of variants called by local assembly alignments")
+    parser_runner.add_argument("--variants", help="VCF of variants called by local assembly alignments", default="variants.vcf")
+    parser_runner.add_argument("--alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line", default="alignments.fofn")
+    parser_runner.add_argument("--alignments_dir", help="absolute path of directory for BLASR alignment files", default="alignments")
+    parser_runner.add_argument("--candidates", help="BED file of candidates detected in read alignments", default="candidates.bed")
+    parser_runner.add_argument("--assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference", default="local_assembly_alignments.bam")
+    parser_runner.add_argument("--batches", help="number of batches to split input reads into such that there will be one BAM output file per batch", type=int, default=1)
+    parser_runner.add_argument("--threads", help="number of threads to use for each BLASR alignment job", type=int, default=1)
     parser_runner.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
-    parser_runner.set_defaults(func=call)
+    parser_runner.add_argument("--assembly_window_size", type=int, help="size of reference window for local assemblies", default=60000)
+    parser_runner.add_argument("--assembly_window_slide", type=int, help="size of reference window slide for local assemblies", default=30000)
+    parser_runner.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
+    parser_runner.add_argument("--refindex", action="store_true", help="Generate a BLASR index on the reference sequence.")
+    parser_runner.add_argument("--sample", help="Sample name to use in final variant calls", default="UnnamedSample")
+    parser_runner.add_argument("--species", help="Common or scientific species name to pass to RepeatMasker", default="human")
+    parser_runner.add_argument("--runjobs", help="A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing number uses the value set by --jobs (or 1 if --jobs was not set).", default="")
+    parser_runner.set_defaults(func=run)
 
     # Genotype SVs with Illumina reads.
     parser_genotyper = subparsers.add_parser("genotype", help="Genotype SVs with Illumina reads")
@@ -378,9 +439,35 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # Set DRMAA library path
+    if args.drmaalib is not None:
+        PROCESS_ENV["DRMAA_LIBRARY_PATH"] = args.drmaalib
+    elif args.distribute and "DRMAA_LIBRARY_PATH" not in PROCESS_ENV:
+        sys.stderr.write("WARNING: --distribute is set, but DRMAA_LIBRARY_PATH is not set in the environment or via the --drmaalib option: Searching only in Python's library path for libdrmaa.so\n")
+
+    # Report paths if verbose
     if args.verbose:
-        print("PATH=%s" % PROCESS_ENV["PATH"])
-        print("LD_LIBRARY_PATH=%s" % PROCESS_ENV["LD_LIBRARY_PATH"])
+
+        # Print environment
+        print("PATH:")
+        for PATH_ELEMENT in PROCESS_ENV["PATH"].split(":"):
+            print("\t* %s" % PATH_ELEMENT)
+
+        print("LD_LIBRARY_PATH:")
+        for PATH_ELEMENT in PROCESS_ENV["LD_LIBRARY_PATH"].split(":"):
+            print("\t* %s" % PATH_ELEMENT)
+
+        if "DRMAA_LIBRARY_PATH" in PROCESS_ENV:
+            print("DRMAA_LIBRARY_PATH: %s" % PROCESS_ENV["DRMAA_LIBRARY_PATH"])
+        else:
+            print("DRMAA_LIBRARY_PATH: <NOT_SET>\n\t* Not required unless --distribute is set")
+
+        # Print arguments
+        print("Arguments:")
+        for key in sorted(vars(args).keys()):
+            print('\t* {} = {}'.format(key, getattr(args, key)))
+
+        # Flush output
         sys.stdout.flush()
 
     # Make a log directory for grid-engine-style error logs if commands are
@@ -388,5 +475,6 @@ if __name__ == "__main__":
     if args.distribute and not args.dryrun and not os.path.isdir("log"):
         os.mkdir("log")
 
+    # Run target command
     return_code = args.func(args)
     sys.exit(return_code)
