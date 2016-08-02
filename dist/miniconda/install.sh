@@ -15,7 +15,6 @@ ln -s `pwd`/../snakemake/cluster/UGE/jobscript.sh ./envs/python3/lib/python3.5/s
 . ./bin/activate python2
 pip install intervaltree
 pip install pandas
-#pip install pysam==0.8.4
-conda install -y -c http://conda.anaconda.org/cgat pysam
+pip install pysam==0.8.4
 pip install pybedtools
 . bin/deactivate
