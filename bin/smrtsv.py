@@ -322,6 +322,12 @@ def run(args):
         sys.stderr.write("Failed to align reads\n")
         return return_code
 
+    # Build reference indices
+    return_code = index(args)
+    if return_code != 0:
+        sys.stderr.write("Failed to index reference\n")
+        return return_code
+
     # Detect SVs.
     args.jobs = job_step[1]
 
