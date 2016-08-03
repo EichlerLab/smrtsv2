@@ -43,9 +43,12 @@ bin/java:
 	-cd dist/java && $(MAKE)
 	-@ln -s ../dist/java/jre1.8.0_65/bin/java bin/java
 
-bin/PBcR:
+bin/PBcR: dist/bz2/bin/bzip2
 	-cd dist/celera && $(MAKE)
 	-@ln -s ../dist/celera/wgs-8.3rc2/Linux-amd64/bin/PBcR bin/PBcR
+
+dist/bz2/bin/bzip2:
+	-cd dist/bz2 && $(MAKE)
 
 #
 # Install BLASR and its dependencies.
