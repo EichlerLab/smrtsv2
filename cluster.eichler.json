@@ -1,0 +1,8 @@
+{
+    "__default__": {
+        "params": "-l mfree=1G -l h_rt=00:15:00"
+    },
+    "prepare_tuple_count_table_for_reference": {"params": "-l mfree=8G -l h_rt=00:30:00"},
+    "prepare_suffix_array_for_reference": {"params": "-l mfree=40G -l h_rt=08:00:00"},
+    "index_reference": {"params": "-l mfree=16G -l h_rt=08:00:00"}
+}
