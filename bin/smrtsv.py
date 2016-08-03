@@ -248,7 +248,10 @@ def assemble(args):
         # If the last command executed successfully, try to merge all local
         # assemblies per contig into a single file.
         if not args.dryrun and return_code == 0:
-            return_code = _run_cmd(["samtools", "merge", args.assembly_alignments] + list(local_assemblies))
+            if len(local_assemblies) > 1:
+                return_code = _run_cmd(["samtools", "merge", args.assembly_alignments] + list(local_assemblies))
+            else:
+                return_code = _run_cmd(["samtools", "view", "-b", "-o", args.assembly_alignments] + list(local_assemblies))
 
             if return_code == 0:
                 return_code = _run_cmd(["samtools", "index", args.assembly_alignments])
