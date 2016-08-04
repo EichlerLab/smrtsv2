@@ -45,6 +45,8 @@ bin/samtools: dist/htslib/libhts.a
 dist/htslib/libhts.a:
 	git submodule update --init dist/htslib
 	-cd dist/htslib && $(MAKE)
+	-@ln -s ../dist/htslib/bgzip bin/bgzip
+	-@ln -s ../dist/htslib/tabix bin/tabix
 
 #
 # Install Celera/PBcR and its dependencies.
