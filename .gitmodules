@@ -28,3 +28,6 @@
 [submodule "dist/pbh5tools"]
 	path = dist/pbh5tools
 	url = https://github.com/PacificBiosciences/pbh5tools.git
+[submodule "dist/bcftools"]
+	path = dist/bcftools
+	url = git://github.com/samtools/bcftools.git
