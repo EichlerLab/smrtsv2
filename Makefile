@@ -4,14 +4,15 @@
 
 PWD  = $(shell pwd)
 
-all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/phmmer
+all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker
 
 #
 # Install core genomics tools.
 #
 
-bin/RepeatMasker:
+bin/RepeatMasker: bin/phmmer
 	-cd dist/RepeatMasker && make
+	-@ln -s ../dist/RepeatMasker/RepeatMasker/RepeatMasker bin/RepeatMasker
 
 bin/phmmer:
 	-cd dist/hmmer && make
