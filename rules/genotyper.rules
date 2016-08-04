@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import tempfile
 
+SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
+
 SSD_TMP_DIR = "/data/scratch/ssd"
 if os.path.exists(SSD_TMP_DIR):
     TMPDIR = SSD_TMP_DIR
@@ -46,13 +48,13 @@ rule convert_genotypes_to_vcf:
     input: genotypes="genotypes_by_all_samples.tab", calls=config["sv_calls"], reference=config["sv_reference"]
     output: temp("genotypes.vcf")
     params: sge_opts="-l h_rt=00:30:00 -l mfree=4G"
-    shell: "python ~jlhudd/src/smrtsv/scripts/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} {output}"
 
 rule genotype_across_all_samples:
     input: "genotypes.tab", "samples.tab"
     output: "genotypes_by_all_samples.tab"
     params: sge_opts="-l h_rt=00:30:00 -l mfree=2G"
-    shell: "python ~jlhudd/src/smrtsv/scripts/regenotype.py --homozygous_binomial_probability=0.95 --heterozygous_binomial_probability=0.4 {input} {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py --homozygous_binomial_probability=0.95 --heterozygous_binomial_probability=0.4 {input} {output}"
 
 rule merge_per_sample_genotypes:
     input: expand("samples/{sample}/genotypes.tab", sample=SAMPLES)
@@ -70,7 +72,7 @@ rule genotype_PacBio_SVs:
     input: "samples/{sample}/concordant_support.tab", "samples.tab"
     output: "samples/{sample}/genotypes.tab"
     params: sge_opts="-l h_rt=00:10:00"
-    shell: "python ~jlhudd/src/smrtsv/scripts/regenotype.py {input} {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py {input} {output}"
 
 rule calculate_depth_across_PacBio_SVs:
     input: sv_calls="sv_calls_for_genotyping.bed", alignments="samples/{sample}/alignments.bam"
@@ -78,7 +80,7 @@ rule calculate_depth_across_PacBio_SVs:
     log: "samples/{sample}/concordant_support.log"
     benchmark: "benchmarks/concordant_support/{sample}.txt"
     params: sge_opts="-l h_rt=06:00:00 -l mfree=4G"
-    shell: "python ~jlhudd/src/smrtsv/scripts/genotype.py {input.sv_calls} {input.alignments} > {output} 2> {log}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/genotype.py {input.sv_calls} {input.alignments} > {output} 2> {log}"
 
 #
 # Map reads.
@@ -94,7 +96,7 @@ rule map_sample_reads:
     shell:
         """{{
     while read line; do set -- $line; samtools view {input.bam} $1:$2-$3; done < {input.regions} | samtools view -S -t {input.bam_reference}.fai -u -b - | samtools bamshuf -n 32 -O - {TMPDIR}/shuffled_reads.{wildcards.sample} | samtools bam2fq - | seqtk dropse -;
-    samtools view {input.bam} '*' | samtools bam2fq - | python ~jlhudd/src/smrtsv/scripts/filter_fastq_with_Ns.py --proportion_of_Ns_allowed=0.05 /dev/stdin | seqtk dropse -;
+    samtools view {input.bam} '*' | samtools bam2fq - | python {SNAKEMAKE_DIR}/scripts/filter_fastq_with_Ns.py --proportion_of_Ns_allowed=0.05 /dev/stdin | seqtk dropse -;
 }} | bwa mem -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}' -p -t {params.threads} {input.sv_reference} - 2> {log} | samblaster --removeDups | k8 /net/eichler/vol4/home/jlhudd/src/bwakit/bwa.kit/bwa-postalt.js {input.alts} | samtools view -S -h -f 0x2 -q 20 - | samtools sort -m {params.samtools_memory} -T {TMPDIR}/alignments.{wildcards.sample} -O bam -o {output.alignments}; samtools index {output.alignments}"""
 
 #
@@ -143,7 +145,7 @@ rule fragment_sv_sequences:
     input: "sv_sequences.fasta"
     output: "sv_sequences.fragmented.fasta"
     params: sge_opts="-l h_rt=00:10:00", window="500", slide="250"
-    shell: "python ~jlhudd/src/smrtsv/scripts/fragment_fasta_records.py {input} {output} {params.window} --slide {params.slide}; touch {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/fragment_fasta_records.py {input} {output} {params.window} --slide {params.slide}; touch {output}"
 
 rule collect_sv_sequences:
     input: "sv_sequences/insertion.fasta", "sv_sequences/insertion_flanks_and_deletions.fasta"
@@ -210,7 +212,7 @@ rule get_bam_of_local_assemblies_for_genotyping:
     input: local_assemblies=config["local_assembly_alignments"], calls="local_assembly_contigs_for_genotyping.txt"
     output: "local_assemblies_for_genotyping.bam"
     params: sge_opts="-l h_rt=00:15:00"
-    shell: "python ~jlhudd/src/smrtsv/scripts/filter_bam_by_query_name.py {input.local_assemblies} {input.calls} {output}; samtools index {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/filter_bam_by_query_name.py {input.local_assemblies} {input.calls} {output}; samtools index {output}"
 
 rule get_local_assembly_contigs_for_genotyping:
     input: "sv_calls_for_genotyping.bed"

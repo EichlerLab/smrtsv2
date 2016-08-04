@@ -11,9 +11,9 @@
     "detection": {
         "min_length": 50,
         "min_support": 5,
-        "max_support": 200,
+        "max_support": 100,
         "min_coverage": 5,
-        "max_coverage": 200,
+        "max_coverage": 100,
         "min_hardstop_support": 11,
         "max_inaccessible_support": 5,
         "max_candidate_length": 60000

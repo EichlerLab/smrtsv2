@@ -153,7 +153,7 @@ rule collect_all_summarized_sv_calls:
     input: expand("sv_calls/repeat_classified_{sv_type}.bed", sv_type=SV_TYPES)
     output: "sv_calls/sv_calls_with_repeats.bed"
     params: sge_opts="-l h_rt=00:10:00"
-    shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
+    shell: "sort -k 1,1 -k 2,2n -m {input} | uniq > {output}"
 
 rule collect_summarized_sv_calls_within_type:
     input: "sv_calls/summarized_{sv_type}"

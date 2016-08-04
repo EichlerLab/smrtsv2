@@ -248,7 +248,10 @@ def assemble(args):
         # If the last command executed successfully, try to merge all local
         # assemblies per contig into a single file.
         if not args.dryrun and return_code == 0:
-            return_code = _run_cmd(["samtools", "merge", args.assembly_alignments] + list(local_assemblies))
+            if len(local_assemblies) > 1:
+                return_code = _run_cmd(["samtools", "merge", args.assembly_alignments] + list(local_assemblies))
+            else:
+                return_code = _run_cmd(["samtools", "view", "-b", "-o", args.assembly_alignments] + list(local_assemblies))
 
             if return_code == 0:
                 return_code = _run_cmd(["samtools", "index", args.assembly_alignments])
@@ -400,7 +403,7 @@ if __name__ == "__main__":
     parser_assembler.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
     parser_assembler.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
     parser_assembler.add_argument("alignments", help="text file with one absolute path to a BLASR raw reads alignments file (.bam) per line")
-    parser_assembler.add_argument("regions", help="BED file of regions to assemble from raw read alignments")
+    parser_assembler.add_argument("candidates", help="BED file of regions to assemble from raw read alignments")
     parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_assembler.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
     parser_assembler.set_defaults(func=assemble)
