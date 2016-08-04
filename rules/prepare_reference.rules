@@ -6,35 +6,29 @@ rule prepare_reference:
 rule combine_low_complexity_and_simple_repeats:
     input: "low_complexity_repeats.bed", "simple_repeats.bed"
     output: "strs_in_reference.bed"
-    params: sge_opts=""
     shell: "sort -k 1,1 -k 2,2n -m {input} > {output}"
 
 rule get_low_complexity_repeats:
     input: "repeats.bed"
     output: "low_complexity_repeats.bed"
-    params: sge_opts=""
     shell: """awk '$4 == "Low_complexity"' {input} > {output}"""
 
 rule prepare_repeatmasker_repeats_bed:
     input: "rmsk.txt.gz"
     output: "repeats.bed"
-    params: sge_opts=""
     shell: "zcat {input} | cut -f 6-8,12 | sort -k 1,1 -k 2,2n > {output}"
 
 rule get_repeatmasker_repeats:
     output: "rmsk.txt.gz"
-    params: sge_opts=""
     shell: "wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/{output} -O {output}"
 
 rule prepare_simple_repeats_bed:
     input: "simpleRepeat.txt.gz"
     output: "simple_repeats.bed"
-    params: sge_opts=""
     shell: "zcat {input} | cut -f 2-5 | sort -k 1,1 -k 2,2n > {output}"
 
 rule get_simple_repeats:
     output: "simpleRepeat.txt.gz"
-    params: sge_opts=""
     shell: "wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/{output} -O {output}"
 
 # rule identify_gaps_for_assembly:
@@ -73,18 +67,15 @@ rule get_simple_repeats:
 rule prepare_tuple_count_table_for_reference:
     input: REFERENCE
     output: "%s.ctab" % REFERENCE
-    params: sge_opts="-l mfree=8G -l h_rt=00:30:00"
     shell: "printTupleCountTable {input} > {output}"
 
 rule prepare_suffix_array_for_reference:
     input: REFERENCE
     output: "%s.sa" % REFERENCE
-    params: sge_opts="-l mfree=40G -l h_rt=08:00:00"
     shell: "sawriter {output} {input}"
 
 rule index_reference:
     input: REFERENCE
     output: "%s.fai" % REFERENCE
-    params: sge_opts="-l mfree=16G -l h_rt=08:00:00"
     shell: "samtools faidx {input}"
 
