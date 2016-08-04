@@ -5,18 +5,12 @@ installation.
 
 ## Get the code
 
-Check out the repository with a recursive clone to fetch submodules.
+Check out the repository with a recursive clone to fetch submodules and build SMRT-SV dependencies.
 
 ```bash
 mkdir -p ~/src/smrtsv
 cd ~/src/smrtsv
 git clone --recursive git@github.com:EichlerLab/pacbio_variant_caller.git .
-```
-
-## Build and install with make
-
-```bash
-cd ~/src/smrtsv
 make
 ```
 
