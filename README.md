@@ -14,27 +14,33 @@ distributions.
 
 ### Get the code
 
-Check out the repository with a recursive clone to fetch submodules and build SMRT-SV dependencies.
+Clone the repository into your desired installation directory and build SMRT-SV
+dependencies.
 
 ```bash
-mkdir -p ~/src/smrtsv
-cd ~/src/smrtsv
+mkdir /usr/local/smrtsv
+cd /usr/local/smrtsv
 git clone --recursive git@github.com:EichlerLab/pacbio_variant_caller.git .
 make
 ```
 
+Note that some dependencies (e.g., RepeatMasker) require hardcoded paths to this
+installation directory. If you need to move SMRT-SV to another directory, it is
+easier to change to that directory, clone the repository, and rebuild the
+dependencies there.
+
 ### Test installation
+
+Add the installation directory to your path.
+
+```bash
+export $PATH=/usr/local/smrtsv:$PATH
+```
 
 Print SMRT-SV help to confirm installation.
 
 ```bash
-./bin/smrtsv.py --help
-```
-
-Copy the entire repository to your desired installation directory (e.g., `/usr/local/smrtsv`) and add that directory to your path.
-
-```bash
-export $PATH=/usr/local/smrtsv:$PATH
+smrtsv.py --help
 ```
 
 Alternately, run `smrtsv.py` directly from the installation directory.
