@@ -5,7 +5,6 @@ import argparse
 from collections import defaultdict
 import logging
 import numpy as np
-import pybedtools
 import pysam
 from scipy.stats import sem
 from get_best_alignment import get_best_alignments, get_depth_by_reference_and_position
@@ -29,17 +28,14 @@ ch.setFormatter(formatter)
 # add ch to logger
 logger.addHandler(ch)
 
-
-# Input file looks like this with SV coordinates in local assembly at columns 6-8.
-# chr1    350793  350794  insertion       40      chr1-350756-362784|utg7180000000000|merged      37      77
 CHROMOSOME=0
 START=1
 END=2
 EVENT_TYPE=3
 EVENT_LENGTH=4
-CONTIG_NAME=8
-CONTIG_START=9
-CONTIG_END=10
+CONTIG_NAME=5
+CONTIG_START=6
+CONTIG_END=7
 
 
 def get_depth_for_regions(bam_fields, alt_breakpoints, ref_breakpoints, min_mapping_quality, min_base_quality):
@@ -122,7 +118,7 @@ def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, min_mapping_q
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("sv_calls", help="BED file of SV calls with reference coordinates in columns 1-3, SV type in 4, length in 5, and contig coordinates in 6-8")
+    parser.add_argument("sv_calls", help="VCF file of SV calls with the following INFO fields: SVTYPE, SVLEN, CONTIG, CONTIG_START, and CONTIG_END")
     parser.add_argument("bams", nargs="+", help="one or more BAMs per sample to genotype; read groups must be present in BAM")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--min_mapping_quality", type=int, default=20, help="minimum mapping quality of alignments to consider for genotyping")
@@ -154,6 +150,16 @@ if __name__ == "__main__":
     columns = ("sample", "chr", "start", "end", "sv_call", "contig", "contig_start", "contig_end", "concordant", "discordant")
     print("\t".join(columns))
 
-    sv_calls = pybedtools.BedTool(args.sv_calls)
-    for sv_call in sv_calls:
+    sv_calls = pysam.VariantFile(args.sv_calls)
+    for sv_record in sv_calls:
+        sv_call = (
+            sv_record.chrom,
+            sv_record.start,
+            sv_record.info["END"],
+            sv_record.info["SVTYPE"],
+            sv_record.info["SVLEN"],
+            sv_record.info["CONTIG"],
+            sv_record.info["CONTIG_START"],
+            sv_record.info["CONTIG_END"]
+        )
         get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, args.min_mapping_quality, args.min_base_quality, args.slop_for_breakpoints)
