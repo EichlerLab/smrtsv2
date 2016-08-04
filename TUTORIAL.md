@@ -1,12 +1,22 @@
 # Calling SVs in yeast
 
-## Configure DRMAA
+## Configure distributed environment
 
-SMRT SV uses DRMAA to submit jobs to a grid-engine-style cluster. To enable the `--distribute` option of SMRT SV, add the following line to your `.bash_profile` with the correct path to the DRMAA library for your cluster.
+SMRT-SV uses DRMAA to submit jobs to a grid-engine-style cluster. To enable the `--distribute` option of SMRT SV, add the following line to your `.bash_profile` with the correct path to the DRMAA library for your cluster.
 
 ```bash
 export DRMAA_LIBRARY_PATH=/opt/uge/lib/lx-amd64/libdrmaa.so.1.0
 ```
+
+Alternately, provide the path to your DRMAA library with the SMRT-SV
+`--drmaalib` option.
+
+Additionally, you may need to configure resource requirements depending on your
+cluster and PacBio data. Use the `--cluster_config` option when running SMRT-SV
+to pass a JSON file that specifies [Snakemake-style cluster
+parameters](https://bitbucket.org/snakemake/snakemake/wiki/Documentation#markdown-header-cluster-configuration). An
+example configuration used to run SMRT-SV with human genomes on the Eichler lab
+cluster is provided in this repository in the file `cluster.eichler.json`.
 
 ## Download PacBio reads
 
