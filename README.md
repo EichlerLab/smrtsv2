@@ -34,7 +34,7 @@ dependencies there.
 Add the installation directory to your path.
 
 ```bash
-export $PATH=/usr/local/smrtsv:$PATH
+export PATH=/usr/local/smrtsv:$PATH
 ```
 
 Print SMRT-SV help to confirm installation.
