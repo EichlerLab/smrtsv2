@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import pysam
 import tempfile
 
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
@@ -75,7 +76,7 @@ rule genotype_PacBio_SVs:
     shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py {input} {output}"
 
 rule calculate_depth_across_PacBio_SVs:
-    input: sv_calls="sv_calls_for_genotyping.bed", alignments="samples/{sample}/alignments.bam"
+    input: sv_calls="sv_calls.vcf.gz", alignments="samples/{sample}/alignments.bam"
     output: "samples/{sample}/concordant_support.tab"
     log: "samples/{sample}/concordant_support.log"
     benchmark: "benchmarks/concordant_support/{sample}.txt"
@@ -154,7 +155,7 @@ rule collect_sv_sequences:
     shell: "cat {input} > {output}"
 
 rule get_insertion_sv_sequences:
-    input: sv_calls="sv_calls_for_genotyping.bed"
+    input: sv_calls="sv_calls.bed"
     output: "sv_sequences/insertion.fasta"
     params: sge_opts="-l h_rt=00:10:00"
     shell: """awk '{{ if ($4 == "insertion") {{ print ">"$1"_"$2"_"$3"_insertion"; print $6 }} }}' {input.sv_calls} > {output}"""
@@ -172,13 +173,13 @@ rule collect_sv_sequence_positions:
     shell: "sort -k 1,1 -k 2,2n -m {input} | bedtools merge -i stdin -d 0 > {output}"
 
 rule get_insertion_sv_sequence_positions:
-    input: sv_calls="sv_calls_for_genotyping.bed", sv_reference_lengths=config["sv_reference_lengths"]
+    input: sv_calls="sv_calls.bed", sv_reference_lengths=config["sv_reference_lengths"]
     output: "sv_sequence_positions/insertion.bed"
     params: sge_opts="-l h_rt=00:10:00", slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
     shell: """awk '$4 == "insertion"' {input.sv_calls} | awk 'OFS="\\t" {{ print $1,$2,$2+1 }}' | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 > {output}"""
 
 rule get_deletion_sv_sequence_positions:
-    input: sv_calls="sv_calls_for_genotyping.bed", sv_reference_lengths=config["sv_reference_lengths"]
+    input: sv_calls="sv_calls.bed", sv_reference_lengths=config["sv_reference_lengths"]
     output: "sv_sequence_positions/deletion.bed"
     params: sge_opts="-l h_rt=00:10:00", slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
     shell: """awk '$4 == "deletion"' {input.sv_calls} | cut -f 1-3 | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | bedtools merge -i stdin -d 0 > {output}"""
@@ -215,13 +216,34 @@ rule get_bam_of_local_assemblies_for_genotyping:
     shell: "python {SNAKEMAKE_DIR}/scripts/filter_bam_by_query_name.py {input.local_assemblies} {input.calls} {output}; samtools index {output}"
 
 rule get_local_assembly_contigs_for_genotyping:
-    input: "sv_calls_for_genotyping.bed"
+    input: "sv_calls.vcf.gz"
     output: "local_assembly_contigs_for_genotyping.txt"
     params: sge_opts="-l h_rt=00:10:00"
-    shell: "cut -f 9 {input} | sort | uniq > {output}"
+    run:
+        with pysam.VariantFile(input[0]) as vcf:
+            with open(output[0], "w") as oh:
+                for contig in sorted(set([record.info["CONTIG"] for record in vcf])):
+                    oh.write("%s\n" % contig)
 
-rule get_simple_sv_calls_for_genotyping:
-    input: config["sv_calls"]
-    output: "sv_calls_for_genotyping.bed"
+rule get_svs_in_bed_format:
+    input: "sv_calls.vcf.gz"
+    output: "sv_calls.bed"
     params: sge_opts="-l h_rt=00:10:00"
-    shell: "sort -k 1,1 -k 2,2n {input} > {output}"
+    run:
+        with pysam.VariantFile(input[0]) as vcf:
+            with open(output[0], "w") as oh:
+                for record in vcf:
+                    oh.write("%s\n" % "\t".join(map(str, (
+                        record.chrom,
+                        record.start,
+                        record.info["END"],
+                        record.info["SVTYPE"],
+                        record.info["SVLEN"],
+                        record.info["SEQ"]
+                    ))))
+
+rule filter_variants_to_only_svs:
+    input: config["sv_calls"]
+    output: "sv_calls.vcf.gz"
+    params: sge_opts="-l h_rt=00:10:00"
+    shell: """bcftools filter -O z -i "SVLEN >= 50 & (SVTYPE='insertion' | SVTYPE='deletion')" {input} > {output}; tabix -p vcf {output}"""
