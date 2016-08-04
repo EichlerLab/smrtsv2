@@ -10,7 +10,7 @@ import re
 logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
 
 # Set cluster parameters
-CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {params.sge_opts} -w n -S /bin/bash'
+CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
 CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "60")
 
 # Setup environment for executing commands
@@ -93,12 +93,19 @@ def _run_snake_target(args, *cmd):
 
     :return: Return code from snakemake.
     """
+    # Use the user-defined cluster config path if one is given. Otherwise, use
+    # an empty config that comes with the SMRT-SV distribution.
+    if args.cluster_config is not None:
+        cluster_config_path = args.cluster_config
+    else:
+        cluster_config_path = os.path.join(os.path.dirname(_get_dist_dir()), "cluster.template.json")
 
     # Setup snakemake command
     prefix = [
         "snakemake",
         "-T",
         "--rerun-incomplete",
+        "--cluster-config", cluster_config_path,
         "--snakefile", os.path.join(os.path.dirname(_get_dist_dir()), "Snakefile"),
         "-j", str(args.jobs)
     ]
@@ -370,6 +377,7 @@ if __name__ == "__main__":
     parser.add_argument("--jobs", help="number of jobs to run simultaneously", type=int, default=1)
     parser.add_argument("--tmpdir", help="temporary directory to use for distributed jobs", default="/var/tmp")
     parser.add_argument("--verbose", "-v", help="print extra runtime information", action="store_true")
+    parser.add_argument("--cluster_config", help="JSON/YAML file specifying cluster configuration parameters to pass to Snakemake's --cluster-config option")
     parser.add_argument("--drmaalib", help="For jobs that are distributed, this is the location to the DRMAA library (libdrmaa.so) installed with Grid Engine. Use this to set DRMAA_LIBRARY_PATH in the environment for pipelined commands. If DRMAA_LIBRARY_PATH is already set in the environment when calling this program, this option is not required.")
     subparsers = parser.add_subparsers()
 

@@ -24,21 +24,18 @@ MEMORY_PER_CORE = math.ceil(TOTAL_MEMORY_REQUIRED / THREADS)
 rule align_reads:
     input: expand("%s/{batch_id}.bam" % ALIGNMENTS_DIR, batch_id=BATCHES)
     output: ALIGNMENTS
-    params: sge_opts=""
     shell: "for alignment in {input}; do echo `pwd`/$alignment; done > {output}"
 
 # Plot alignment lengths.
 rule plot_alignment_summaries:
     input: "alignment_lengths.tab"
     output: "alignment_lengths.pdf"
-    params: sge_opts="-l mfree=8G"
     shell: "Rscript plot_read_lengths_by_type.R {input} {output}"
 
 # Collect summary of aligned read lengths.
 rule collect_alignment_summaries:
     input: expand("alignment_lengths/{batch_id}.tab", batch_id=BATCHES)
     output: "alignment_lengths.tab"
-    params: sge_opts=""
     shell: """awk 'OFS="\\t" {{ if (NR == 1) {{ print "alignment_status","subread_length","aligned_length" }} print }}' {input} > {output}"""
 
 # Summarize alignments by length.
@@ -46,7 +43,7 @@ rule collect_alignment_summaries:
 rule get_subread_and_alignment_lengths:
     input: "%s/{batch_id}.bam" % ALIGNMENTS_DIR
     output: "alignment_lengths/{batch_id}.tab"
-    params: sge_opts="", mapping_quality_threshold="30"
+    params: mapping_quality_threshold="30"
     shell:
         "mkdir -p {TMP_DIR}; "
         """samtools view {input} | awk 'OFS="\\t" {{ if ($3 == "*" || $5 >= {params.mapping_quality_threshold}) {{ num_of_pieces = split($1, pieces, "/"); num_of_coords = split(pieces[3], coords, "_"); subread_length = coords[2] - coords[1]; if ($3 == "*") {{ print "unmapped",subread_length,length($10) }} else if ($5 >= 30) {{ print "mapped",subread_length,$9 }} }} }}' > {TMP_DIR}/lengths.`basename {output}`; """
@@ -54,11 +51,10 @@ rule get_subread_and_alignment_lengths:
 
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
-ALIGNMENT_SGE_OPTS = "-l h_rt=48:00:00 -l disk_free=%iG -l mfree=%iG -pe serial %i -N align_batch_{batch_id}" % (DISK_PER_CORE, MEMORY_PER_CORE, THREADS)
 rule align_batch:
     input: reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR, reference=config["reference"], suffix=config.get("suffix_array", "%s.sa" % config["reference"]), ctab=config.get("ctab", "%s.ctab" % config["reference"])
     output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
-    params: sge_opts=ALIGNMENT_SGE_OPTS, threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment"]["alignment_parameters"]
+    params: threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment"]["alignment_parameters"]
     shell:
         "export REFERENCE_PATH=`readlink -f {input.reference}`; "
         "export REFERENCE_SUFFIX_PATH=`readlink -f {input.suffix}`; "
@@ -76,7 +72,6 @@ rule align_batch:
 rule assign_batches:
     input: config.get("reads", "")
     output: "%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR
-    params: sge_opts=""
     run:
         output_dir = os.path.dirname(output[0])
 
