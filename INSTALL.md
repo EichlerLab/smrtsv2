@@ -25,7 +25,7 @@ Print SMRT-SV help to confirm installation.
 Copy the entire repository to your desired installation directory (e.g., `/usr/local/smrtsv`) and add that directory to your path.
 
 ```bash
-export $PATH=/usr/local/smrtsv:$PATH
+export PATH=/usr/local/smrtsv:$PATH
 ```
 
 Alternately, run `smrtsv.py` directly from the installation directory.
