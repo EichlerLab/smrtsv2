@@ -4,7 +4,7 @@
 
 PWD  = $(shell pwd)
 
-all: bin/bedtools bin/samtools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker
+all: bin/bedtools bin/samtools bin/bcftools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker
 
 #
 # Install core genomics tools.
@@ -30,11 +30,21 @@ bin/freebayes:
 	-@ln -s ../dist/freebayes/bin/freebayes bin/freebayes
 	-@ln -s ../dist/freebayes/bin/bamleftalign bin/bamleftalign
 
-bin/samtools:
+bin/bcftools: dist/htslib/libhts.a
+	git submodule update --init dist/bcftools
+	git submodule update --init dist/htslib
+	-cd dist/bcftools && $(MAKE)
+	-@ln -s ../dist/bcftools/bcftools bin/bcftools
+
+bin/samtools: dist/htslib/libhts.a
 	git submodule update --init dist/samtools
 	git submodule update --init dist/htslib
 	-cd dist/samtools && $(MAKE)
 	-@ln -s ../dist/samtools/samtools bin/samtools
+
+dist/htslib/libhts.a:
+	git submodule update --init dist/htslib
+	-cd dist/htslib && $(MAKE)
 
 #
 # Install Celera/PBcR and its dependencies.
