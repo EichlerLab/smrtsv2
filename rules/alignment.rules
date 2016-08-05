@@ -61,7 +61,6 @@ rule align_batch:
         "samtools index {wildcards.batch_id}.bam; "
         "rsync --bwlimit={params.bwlimit} --remove-source-files {wildcards.batch_id}.bam* {CWD}/`dirname {output}`/; "
         "rm -rf {TMP_DIR}/{wildcards.batch_id}; "
-        "touch {output}.bai"
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
