@@ -72,13 +72,16 @@ bin/blasr: dist/hdf5/lib/libhdf5_cpp.so dist/zlib/lib/libz.so
 dist/swig/bin/swig:
 	cd dist/swig && $(MAKE)
 
+dist/boost/lib/libboost_system.a:
+	cd dist/boost && $(MAKE)
+
 dist/miniconda/envs/python2/lib/python2.7/site-packages/pbcore-1.0.0-py2.7.egg: dist/miniconda/bin/activate
 	git submodule update --init dist/pbcore
 	-cd dist/pbcore && source $(PWD)/dist/miniconda/bin/activate python2 && sed -i 's/pysam == 0.8.1/pysam >= 0.8.1/' setup.py && python setup.py install && make clean
 
-dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.0-py2.7.egg: dist/swig dist/swig/bin/swig dist/miniconda/bin/activate
+dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.0-py2.7.egg: dist/swig dist/swig/bin/swig dist/miniconda/bin/activate dist/boost/lib/libboost_system.a
 	git submodule update --init dist/ConsensusCore
-	-cd dist/ConsensusCore && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8 && make clean
+	-cd dist/ConsensusCore && source $(PWD)/dist/miniconda/bin/activate python2 && python setup.py install --boost=$(PWD)/dist/boost/boost_1_61_0 --swig=$(PWD)/$</bin/swig --swig-lib=$(PWD)/$</share/swig/3.0.8 && make clean
 
 dist/miniconda/envs/python2/bin/quiver: dist/miniconda/envs/python2/lib/python2.7/site-packages/pbcore-1.0.0-py2.7.egg dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.0-py2.7.egg dist/miniconda/bin/activate
 	git submodule update --init dist/GenomicConsensus
