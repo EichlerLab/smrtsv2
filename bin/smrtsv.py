@@ -397,7 +397,7 @@ if __name__ == "__main__":
     parser_detector.add_argument("candidates", help="BED file of candidates detected in read alignments")
     parser_detector.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
     parser_detector.add_argument("--assembly_window_size", type=int, help="size of reference window for local assemblies", default=60000)
-    parser_detector.add_argument("--assembly_window_slide", type=int, help="size of reference window slide for local assemblies", default=30000)
+    parser_detector.add_argument("--assembly_window_slide", type=int, help="size of reference window slide for local assemblies", default=20000)
     parser_detector.set_defaults(func=detect)
 
     # Assemble candidate regions and align assemblies back to the reference.
