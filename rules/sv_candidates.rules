@@ -28,7 +28,7 @@ def _get_bam_path_for_batch(wildcards):
 rule get_regions:
     input: "assembly_candidates_with_coverage.bed"
     output: CANDIDATES
-    params: min_coverage=str(config["detection"]["min_coverage"]), max_coverage=str(config["detection"]["max_coverage"]), max_length=str(config["detection"]["max_candidate_length"])
+    params: min_coverage=str(config["min_coverage"]), max_coverage=str(config["max_coverage"]), max_length=str(config["max_candidate_length"])
     run:
         if REGIONS_TO_EXCLUDE is not None:
             shell("set -o pipefail; bedtools intersect -a {input} -b %s -wa -v | awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' > {output}" % REGIONS_TO_EXCLUDE)
@@ -92,7 +92,7 @@ rule collect_regions_to_exclude_as_inaccessible_regions:
 rule filter_and_merge_adjacent_hardstop_bins:
     input: hardstops="hardstops_per_bin.bed", gaps="gaps_in_reference_assembly.bed", small_svs="filtered_candidates.tab"
     output: "merged_hardstops_per_bin.bed"
-    params: min_support=str(config["detection"]["min_hardstop_support"])
+    params: min_support=str(config["min_hardstop_support"])
     shell:
         "awk '$4 > {params.min_support}' {input.hardstops} | "
             "bedtools window -w 1000 -a stdin -b {input.gaps} -v | "
@@ -173,11 +173,11 @@ rule filter_candidates:
     input: "coverage_and_merged_support_for_{event_type}.bed"
     output: "filtered_candidates_for_{event_type}.bed"
     params:
-        min_support=str(config["detection"]["min_support"]),
-        max_support=str(config["detection"]["max_support"]),
-        min_length=str(config["detection"]["min_length"]),
-        min_coverage=str(config["detection"]["min_coverage"]),
-        max_coverage=str(config["detection"]["max_coverage"])
+        min_support=str(config["min_support"]),
+        max_support=str(config["max_support"]),
+        min_length=str(config["min_length"]),
+        min_coverage=str(config["min_coverage"]),
+        max_coverage=str(config["max_coverage"])
     run:
         shell("awk '$4 >= {params.min_length} && $5 >= {params.min_support} && $5 <= {params.max_support} && $9 >= {params.min_coverage} && $9 <= {params.max_coverage}' {input} > {output}.tmp")
         if os.stat("%s.tmp" % output[0]).st_size > 0:

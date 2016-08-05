@@ -25,7 +25,7 @@ PATH = config.get("path")
 #
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 ASSEMBLY_DIR = "mhap_assembly"
-LOG_FILE = config.get("log", "{SNAKEMAKE_DIR}/assembly.log")
+LOG_FILE = config.get("assembly_log", "assembly.log")
 REFERENCE = config["reference"]
 
 # User-defined file of alignments with one absolute path to a BAM per line.
@@ -74,10 +74,11 @@ rule assemble_region:
         "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
         "export REFERENCE_PATH=`readlink -f {REFERENCE}`; "
         "export INPUT_READS_PATH=`readlink -f {INPUT_READS}`; "
+        "export LOG_FILE=`readlink -f {LOG_FILE}`;"
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         """if [[ -e "$ANALYSIS_DIR/config.json" ]]; then rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; fi; """
-        "snakemake -q -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log={LOG_FILE}; "
+        "snakemake -q -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log=$LOG_FILE; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "

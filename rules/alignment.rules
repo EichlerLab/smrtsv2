@@ -14,12 +14,6 @@ ALIGNMENTS = config.get("alignments", "alignments.fofn")
 ALIGNMENTS_DIR = config.get("alignments_dir", "alignments")
 THREADS = int(config.get("threads", "1"))
 
-# Calculate SGE requirements per core.
-TOTAL_DISK_REQUIRED = config["alignment"]["total_disk_required"]
-TOTAL_MEMORY_REQUIRED = config["alignment"]["total_memory_required"]
-DISK_PER_CORE = math.ceil(TOTAL_DISK_REQUIRED / THREADS)
-MEMORY_PER_CORE = math.ceil(TOTAL_MEMORY_REQUIRED / THREADS)
-
 # Create a list of BAM files for downstream analysis.
 rule align_reads:
     input: expand("%s/{batch_id}.bam" % ALIGNMENTS_DIR, batch_id=BATCHES)
@@ -43,7 +37,7 @@ rule collect_alignment_summaries:
 rule get_subread_and_alignment_lengths:
     input: "%s/{batch_id}.bam" % ALIGNMENTS_DIR
     output: "alignment_lengths/{batch_id}.tab"
-    params: mapping_quality_threshold="30"
+    params: mapping_quality_threshold=config["mapping_quality"]
     shell:
         "mkdir -p {TMP_DIR}; "
         """samtools view {input} | awk 'OFS="\\t" {{ if ($3 == "*" || $5 >= {params.mapping_quality_threshold}) {{ num_of_pieces = split($1, pieces, "/"); num_of_coords = split(pieces[3], coords, "_"); subread_length = coords[2] - coords[1]; if ($3 == "*") {{ print "unmapped",subread_length,length($10) }} else if ($5 >= 30) {{ print "mapped",subread_length,$9 }} }} }}' > {TMP_DIR}/lengths.`basename {output}`; """
@@ -54,7 +48,7 @@ rule get_subread_and_alignment_lengths:
 rule align_batch:
     input: reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR, reference=config["reference"], suffix=config.get("suffix_array", "%s.sa" % config["reference"]), ctab=config.get("ctab", "%s.ctab" % config["reference"])
     output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
-    params: threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment"]["alignment_parameters"]
+    params: threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config["alignment_parameters"]
     shell:
         "export REFERENCE_PATH=`readlink -f {input.reference}`; "
         "export REFERENCE_SUFFIX_PATH=`readlink -f {input.suffix}`; "
