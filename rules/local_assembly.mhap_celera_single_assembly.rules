@@ -38,9 +38,6 @@ STANDARD_REGION = REGION.replace("-", ":", 1)
 # the subtraction operator.
 REGION_SIZE = str(operator.sub(*map(int, reversed(REGION.split("-")[1:3]))))
 
-# Get reference slop to add prior to alignment of local assembly.
-REFERENCE_SLOP = config["assembly"].get("reference_slop", 0)
-
 #
 # Define rules.
 #
@@ -52,16 +49,10 @@ rule align_consensus_to_reference_region:
     shell: """blasr {input} -clipping subread -out /dev/stdout -sam {params.alignment_parameters} | samtools view -q {params.mapping_quality_threshold} - | awk 'OFS="\\t" {{ sub(/:/, "-", $3); num_of_pieces=split($3, pieces, "-"); $3 = pieces[1]; $4 = pieces[2] + $4; print }}' | sed 's/RG:Z:\w\+\\t//' > {output}"""
 
 rule extract_reference_sequence:
-    input: reference=config["reference"], region="reference_region.slop.bed"
+    input: reference=config["reference"], region="reference_region.bed"
     output: temp("reference_region.fasta")
     params: sge_opts=""
     shell: "bedtools getfasta -fi {input.reference} -bed {input.region} -fo {output}"
-
-rule extend_reference_region:
-    input: bed="reference_region.bed", chromosomes=CHROMOSOME_LENGTHS
-    output: "reference_region.slop.bed"
-    params: sge_opts="", slop=str(REFERENCE_SLOP)
-    shell: """bedtools slop -i {input.bed} -g {input.chromosomes} -b {params.slop} > {output}"""
 
 rule create_reference_region:
     output: "reference_region.bed"
