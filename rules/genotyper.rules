@@ -1,3 +1,4 @@
+import json
 import os
 import pandas as pd
 import pysam
@@ -11,48 +12,41 @@ if os.path.exists(SSD_TMP_DIR):
 else:
     TMPDIR = tempfile.gettempdir()
 
-configfile: "config.json"
+FINAL_GENOTYPES = config["genotyped_variants"]
+CONFIG_FILE = config["genotyper_config"]
+with open(CONFIG_FILE, "r") as CONFIG_FILE_FH:
+    GENOTYPER_CONFIG = json.load(CONFIG_FILE_FH)
 
-SAMPLES = sorted(config["samples"].keys())
+SAMPLES = sorted(GENOTYPER_CONFIG["samples"].keys())
 SLOP_FOR_SV_SEQUENCE_POSITIONS = 5000
 
 def _get_bam_for_sample(wildcards):
-    return config["samples"][wildcards.sample]
+    return GENOTYPER_CONFIG["samples"][wildcards.sample]
 
 def _get_sv_sequence_regions_for_sample(wildcards):
-    if "sample_bam_reference" in config and config["sample_bam_reference"].get(wildcards.sample):
-        reference = config["sample_bam_reference"].get(wildcards.sample)
+    if "sample_bam_reference" in config and GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample):
+        reference = GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample)
     else:
-        reference = config["default_bam_reference"]
+        reference = GENOTYPER_CONFIG["default_bam_reference"]
 
     return "sv_sequences_in_reference/%s.bed" % reference
 
 def _get_reference_path_by_sample(wildcards):
-    if "sample_bam_reference" in config and config["sample_bam_reference"].get(wildcards.sample):
-        reference = config["sample_bam_reference"].get(wildcards.sample)
+    if "sample_bam_reference" in config and GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample):
+        reference = GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample)
     else:
-        reference = config["default_bam_reference"]
+        reference = GENOTYPER_CONFIG["default_bam_reference"]
 
-    return config["bam_reference"][reference]
-
-rule all:
-    input: "genotypes.vcf.gz"
-    params: sge_opts="-l h_rt=00:05:00"
-
-rule compress_and_index_genotypes:
-    input: "genotypes.vcf"
-    output: "genotypes.vcf.gz", "genotypes.vcf.gz.tbi"
-    params: sge_opts="-l h_rt=00:30:00 -l mfree=4G"
-    shell: "vcffixup {input} | bgzip -c > {output[0]}; tabix -p vcf {output[0]}"
+    return GENOTYPER_CONFIG["bam_reference"][reference]
 
 rule convert_genotypes_to_vcf:
-    input: genotypes="genotypes_by_all_samples.tab", calls=config["sv_calls"], reference=config["sv_reference"]
-    output: temp("genotypes.vcf")
+    input: genotypes="genotypes_by_all_samples.tab", calls=GENOTYPER_CONFIG["sv_calls"], reference=GENOTYPER_CONFIG["sv_reference"]
+    output: FINAL_GENOTYPES
     params: sge_opts="-l h_rt=00:30:00 -l mfree=4G"
-    shell: "python {SNAKEMAKE_DIR}/scripts/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} /dev/stdout | vcffixup - | bgzip -c > {output}; tabix -p vcf {output}"
 
 rule genotype_across_all_samples:
-    input: "genotypes.tab", "samples.tab"
+    input: "genotypes.tab", GENOTYPER_CONFIG["sample_manifest"]
     output: "genotypes_by_all_samples.tab"
     params: sge_opts="-l h_rt=00:30:00 -l mfree=2G"
     shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py --homozygous_binomial_probability=0.95 --heterozygous_binomial_probability=0.4 {input} {output}"
@@ -70,7 +64,7 @@ rule plot_genotypes:
     shell: "Rscript plot_genotypes.R {input} {output} {wildcards.sample}"
 
 rule genotype_PacBio_SVs:
-    input: "samples/{sample}/concordant_support.tab", "samples.tab"
+    input: "samples/{sample}/concordant_support.tab", GENOTYPER_CONFIG["sample_manifest"]
     output: "samples/{sample}/genotypes.tab"
     params: sge_opts="-l h_rt=00:10:00"
     shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py {input} {output}"
@@ -111,7 +105,7 @@ rule bwa_index_combined_reference:
     shell: "bwa index {input}"
 
 rule merge_reference_and_local_assemblies:
-    input: config["sv_reference"], "local_assemblies_for_genotyping.fasta"
+    input: GENOTYPER_CONFIG["sv_reference"], "local_assemblies_for_genotyping.fasta"
     output: "sv_reference.fasta"
     params: sge_opts="-l h_rt=01:00:00"
     shell: "cat {input} > {output}"
@@ -121,7 +115,7 @@ rule merge_reference_and_local_assemblies:
 #
 
 def _get_reference_path_by_wildcards(wildcards):
-    return config["bam_reference"][wildcards.reference]
+    return GENOTYPER_CONFIG["bam_reference"][wildcards.reference]
 
 rule find_positions_of_sv_sequences_in_bam_reference:
     input: sv_sequence_alignments="sv_sequences_in_reference/{reference}.bam", reference=_get_reference_path_by_wildcards
@@ -161,7 +155,7 @@ rule get_insertion_sv_sequences:
     shell: """awk '{{ if ($4 == "insertion") {{ print ">"$1"_"$2"_"$3"_insertion"; print $6 }} }}' {input.sv_calls} > {output}"""
 
 rule get_sv_sequences:
-    input: positions="sv_sequence_positions.bed", sv_reference=config["sv_reference"]
+    input: positions="sv_sequence_positions.bed", sv_reference=GENOTYPER_CONFIG["sv_reference"]
     output: "sv_sequences/insertion_flanks_and_deletions.fasta"
     params: sge_opts="-l h_rt=00:10:00"
     shell: "bedtools getfasta -fi {input.sv_reference} -bed {input.positions} -fo {output}"
@@ -173,13 +167,13 @@ rule collect_sv_sequence_positions:
     shell: "sort -k 1,1 -k 2,2n -m {input} | bedtools merge -i stdin -d 0 > {output}"
 
 rule get_insertion_sv_sequence_positions:
-    input: sv_calls="sv_calls.bed", sv_reference_lengths=config["sv_reference_lengths"]
+    input: sv_calls="sv_calls.bed", sv_reference_lengths=GENOTYPER_CONFIG["sv_reference_lengths"]
     output: "sv_sequence_positions/insertion.bed"
     params: sge_opts="-l h_rt=00:10:00", slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
     shell: """awk '$4 == "insertion"' {input.sv_calls} | awk 'OFS="\\t" {{ print $1,$2,$2+1 }}' | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 > {output}"""
 
 rule get_deletion_sv_sequence_positions:
-    input: sv_calls="sv_calls.bed", sv_reference_lengths=config["sv_reference_lengths"]
+    input: sv_calls="sv_calls.bed", sv_reference_lengths=GENOTYPER_CONFIG["sv_reference_lengths"]
     output: "sv_sequence_positions/deletion.bed"
     params: sge_opts="-l h_rt=00:10:00", slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
     shell: """awk '$4 == "deletion"' {input.sv_calls} | cut -f 1-3 | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | bedtools merge -i stdin -d 0 > {output}"""
@@ -210,7 +204,7 @@ rule get_sam_of_local_assemblies_for_genotyping:
     shell: "samtools view -h {input} > {output}"
 
 rule get_bam_of_local_assemblies_for_genotyping:
-    input: local_assemblies=config["local_assembly_alignments"], calls="local_assembly_contigs_for_genotyping.txt"
+    input: local_assemblies=GENOTYPER_CONFIG["local_assembly_alignments"], calls="local_assembly_contigs_for_genotyping.txt"
     output: "local_assemblies_for_genotyping.bam"
     params: sge_opts="-l h_rt=00:15:00"
     shell: "python {SNAKEMAKE_DIR}/scripts/filter_bam_by_query_name.py {input.local_assemblies} {input.calls} {output}; samtools index {output}"
@@ -243,7 +237,7 @@ rule get_svs_in_bed_format:
                     ))))
 
 rule filter_variants_to_only_svs:
-    input: config["sv_calls"]
+    input: GENOTYPER_CONFIG["sv_calls"]
     output: "sv_calls.vcf.gz"
     params: sge_opts="-l h_rt=00:10:00"
     shell: """bcftools filter -O z -i "SVLEN >= 50 & (SVTYPE='insertion' | SVTYPE='deletion')" {input} > {output}; tabix -p vcf {output}"""

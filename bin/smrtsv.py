@@ -371,7 +371,21 @@ def run(args):
     return 0
 
 def genotype(args):
-    print("Genotype")
+    # Genotype SVs.
+    sys.stdout.write("Genotyping SVs\n")
+
+    return_code = _run_snake_target(
+        args,
+        "convert_genotypes_to_vcf",
+        "--config",
+        "genotyper_config=%s" % args.genotyper_config,
+        "genotyped_variants=%s" % args.genotyped_variants
+    )
+
+    if return_code != 0:
+        sys.stderr.write("Failed to genotype SVs\n")
+
+    return return_code
 
 
 # Main
@@ -467,9 +481,8 @@ if __name__ == "__main__":
 
     # Genotype SVs with Illumina reads.
     parser_genotyper = subparsers.add_parser("genotype", help="Genotype SVs with Illumina reads")
-    parser_genotyper.add_argument("variants", help="VCF of SMRT SV variants to genotype")
+    parser_genotyper.add_argument("genotyper_config", help="JSON configuration file with SV reference paths, samples to genotype as BAMs, and their corresponding references")
     parser_genotyper.add_argument("genotyped_variants", help="VCF of SMRT SV variant genotypes for the given sample-level BAMs")
-    parser_genotyper.add_argument("samples", nargs="+", help="one or more sample-level BAMs to genotype for the given variants")
     parser_genotyper.set_defaults(func=genotype)
 
     args = parser.parse_args()
