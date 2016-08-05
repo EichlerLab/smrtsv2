@@ -103,7 +103,7 @@ rule filter_and_merge_adjacent_hardstop_bins:
 rule identify_gaps_in_reference_assembly:
     input: config["reference"]
     output: "gaps_in_reference_assembly.bed"
-    shell: "python {SNAKEMAKE_DIR}/scripts/find_fasta_gaps.py {input} | bedtools merge -i stdin -d 0 > {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/find_fasta_gaps.py {input} > {output}"
 
 # Count hardstops per genomic bin.
 rule count_hardstops_per_genomic_bin:
