@@ -63,7 +63,7 @@ dist/zlib/lib/libz.so:
 
 bin/blasr: dist/hdf5/lib/libhdf5_cpp.so dist/zlib/lib/libz.so
 	git submodule update --init dist/blasr
-	-cd dist/blasr && make HDF5INCLUDEDIR=$(PWD)/dist/hdf5/include HDF5LIBDIR=$(PWD)/dist/hdf5/lib LIBRARY_PATH=$(PWD)/dist/zlib/lib:$(LIBRARY_PATH) && make install PREFIX=$(PWD) && make clean
+	-cd dist/blasr && $(MAKE) HDF5INCLUDEDIR=$(PWD)/dist/hdf5/include HDF5LIBDIR=$(PWD)/dist/hdf5/lib LIBRARY_PATH=$(PWD)/dist/zlib/lib:$(LIBRARY_PATH) STATIC= && $(MAKE) install PREFIX=$(PWD) && $(MAKE) clean
 
 #
 # Install Quiver and its dependencies.
