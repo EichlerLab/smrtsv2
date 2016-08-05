@@ -67,7 +67,7 @@ parameters](https://bitbucket.org/snakemake/snakemake/wiki/Documentation#markdow
 example configuration used to run SMRT-SV with human genomes on the Eichler lab
 cluster is provided in this repository in the file `cluster.eichler.json`.
 
-## Tutorial
+## Tutorial for variant calling
 
 The following tutorial shows how to call structural variants and indels in
 yeast.
@@ -153,4 +153,60 @@ variants.
 
 ```bash
 smrtsv.py call reference/sacCer3.fasta alignments.fofn local_assembly_alignments.bam variants.vcf --sample UCSF_Yeast9464 --species yeast
+```
+
+## Genotyping
+
+After discovery of SVs with SMRT-SV, use SMRT Genotyper to determine whether
+those SVs are present in one or more Illumina-sequenced samples. The genotyper
+provides homozygous reference, heterozygous, and homozygous alternate genotypes
+for each SV when 5 or more reads are present at any of the SV breakpoints.
+
+To run the genotyper, first prepare a configuration file that looks like the
+following example.
+
+```json
+{
+    "homozygous_binomial_probability": 0.95,
+    "heterozygous_binomial_probability": 0.5,
+    "sample_manifest": "/home/jlhudd/samples.tab",
+    "local_assembly_alignments": "/home/jlhudd/CHM1_local_assembly_alignments.bam",
+    "sv_calls": "/home/jlhudd/CHM1_variants.vcf.gz",
+    "sv_reference": "/home/jlhudd/ucsc.hg38.no_alts.fasta",
+    "sv_reference_lengths": "/home/jlhudd/ucsc.hg38.no_alts.fasta.fai",
+    "bam_reference": {
+        "human_1kg_v37": "/home/jlhudd/human_1kg_v37.fasta",
+        "hg38": "/home/jlhudd/ucsc.hg38.no_alts.fasta",
+    },
+    "default_bam_reference": "human_1kg_v37",
+    "sample_bam_reference": {
+    },
+    "samples": {
+        "CHM1": "/home/jlhudd/CHM1_illumina_reads.bam",
+        "CHM13": "/home/jlhudd/CHM13_illumina_reads.bam"
+    }
+}
+```
+
+The parameters in this JSON file are described in the table below.
+
+Parameter | Description
+--------- | -----------
+homozygous_binomial_probability | the probability to use in the binomial probability calculation for the heterozygous genotype state
+heterozygous_binomial_probability | the probability to use in the binomial probability calculation for the heterozygous genotype state
+sample_manifest | a headered tab-delimited manifest with "sample" and "sex" columns for each sample being genotyped
+local_assembly_alignments | the absolute path to a BAM file containing BLASR alignments of local assemblies to the SV reference
+sv_calls | a VCF of variants including SVs (insertions and deletions >=50 bp)
+sv_reference | the absolute path to the FASTA for the reference used to call SVs
+sv_reference_lengths | the absolute path to the FASTA index (.fai) for the reference used to call SVs or chromInfo.txt file
+bam_reference | a dictionary of reference names and absolute paths to their corresponding FASTA sequence and BWA index
+default_bam_reference | the name of the reference to use by default when one isn't specified for a sample
+sample_bam_reference | a dictionary of sample names and their corresponding reference names if they differ from the default reference
+samples | a dictionary of sample names and absolute paths to BAMs containing paired-end Illumina sequences for each sample
+
+Finally, genotype SVs using the configuration file and specifying the name of
+the final compressed VCF with genotypes.
+
+```bash
+smrtsv.py genotype genotyper.config.json genotypes.vcf.gz
 ```
