@@ -19,6 +19,8 @@ with open(CONFIG_FILE, "r") as CONFIG_FILE_FH:
 
 SAMPLES = sorted(GENOTYPER_CONFIG["samples"].keys())
 SLOP_FOR_SV_SEQUENCE_POSITIONS = 5000
+HOMOZYGOUS_BINOMIAL_PROBABILITY = GENOTYPER_CONFIG.get("homozygous_binomial_probability", 0.95)
+HETEROZYGOUS_BINOMIAL_PROBABILITY = GENOTYPER_CONFIG.get("heterozygous_binomial_probability", 0.5)
 
 def _get_bam_for_sample(wildcards):
     return GENOTYPER_CONFIG["samples"][wildcards.sample]
@@ -49,7 +51,7 @@ rule genotype_across_all_samples:
     input: "genotypes.tab", GENOTYPER_CONFIG["sample_manifest"]
     output: "genotypes_by_all_samples.tab"
     params: sge_opts="-l h_rt=00:30:00 -l mfree=2G"
-    shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py --homozygous_binomial_probability=0.95 --heterozygous_binomial_probability=0.4 {input} {output}"
+    shell: "python {SNAKEMAKE_DIR}/scripts/regenotype.py --homozygous_binomial_probability={HOMOZYGOUS_BINOMIAL_PROBABILITY} --heterozygous_binomial_probability={HETEROZYGOUS_BINOMIAL_PROBABILITY} {input} {output}"
 
 rule merge_per_sample_genotypes:
     input: expand("samples/{sample}/genotypes.tab", sample=SAMPLES)

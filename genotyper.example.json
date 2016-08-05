@@ -1,4 +1,6 @@
 {
+    "homozygous_binomial_probability": 0.95,
+    "heterozygous_binomial_probability": 0.5,
     "sample_manifest": "/net/eichler/vol24/projects/structural_variation/nobackups/projects/SMRT_SV/CHM1_P6C4_genotype_with_SMRTSV/samples.tab",
     "local_assembly_alignments": "/net/eichler/vol4/home/jlhudd/projects/SMRT_SV/CHM1_P6C4/CHM1_realignments.leftaligned.bam",
     "sv_calls": "/net/eichler/vol4/home/jlhudd/src/pacbio_variant_caller/variants.vcf.gz",
