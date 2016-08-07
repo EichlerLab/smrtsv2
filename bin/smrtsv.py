@@ -443,9 +443,9 @@ if __name__ == "__main__":
     parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_assembler.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
     parser_assembler.add_argument("--alignment_parameters", help="BLASR parameters to use to align local assemblies", default="-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13")
-    parser_detector.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
-    parser_detector.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
-    parser_detector.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
+    parser_assembler.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
+    parser_assembler.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
+    parser_assembler.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
     parser_assembler.set_defaults(func=assemble)
 
     # Call SVs and indels from BLASR alignments of local assemblies.
