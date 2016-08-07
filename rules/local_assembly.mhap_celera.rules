@@ -17,6 +17,8 @@ import os
 INPUT_READS = config.get("reads", "input.fofn")
 REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candidates_with_coverage.bed")
 LOCAL_ASSEMBLY_ALIGNMENTS = config.get("assembly_alignments", "local_assembly_alignments.bam")
+MAPPING_QUALITY = config.get("mapping_quality")
+ALIGNMENT_PARAMETERS = config.get("alignment_parameters")
 LD_LIBRARY_PATH = config.get("ld_path", "")
 PATH = config.get("path")
 
@@ -78,7 +80,7 @@ rule assemble_region:
         "mkdir -p {TMP_DIR}/{wildcards.region}; "
         "pushd {TMP_DIR}/{wildcards.region}; "
         """if [[ -e "$ANALYSIS_DIR/config.json" ]]; then rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; fi; """
-        "snakemake -q -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log=$LOG_FILE; "
+        "snakemake -q -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log=$LOG_FILE mapping_quality={MAPPING_QUALITY} alignment_parameters={ALIGNMENT_PARAMETERS}; "
         "popd; "
         "mkdir -p `dirname {output[0]}`; "
         "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
