@@ -209,10 +209,11 @@ rule classify_gaps_in_aligned_reads:
 rule find_gaps_in_aligned_reads:
     input: alignments=_get_bam_path_for_batch, reference=config["reference"]
     output: "gaps_in_aligned_reads/{alignment_name}.bed"
+    log: "gaps_in_aligned_reads/{alignment_name}.log"
     params: mapping_quality_threshold=str(config.get("mapping_quality"))
     shell:
         "samtools view -F 0x4 -q {params.mapping_quality_threshold} {input.alignments} "
-            "| python {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {output}"
+            "| python {SNAKEMAKE_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --tsd 0 --condense 20 > {output} 2> {log}"
 
 # Collect coverages from all alignments.
 rule merge_coverage_per_batch:
