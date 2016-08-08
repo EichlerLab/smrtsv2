@@ -1,0 +1,21 @@
+{
+    "homozygous_binomial_probability": 0.95,
+    "heterozygous_binomial_probability": 0.5,
+    "sample_manifest": "/net/eichler/vol24/projects/structural_variation/nobackups/projects/SMRT_SV/CHM1_P6C4_genotype_with_SMRTSV/samples.tab",
+    "local_assembly_alignments": "/net/eichler/vol4/home/jlhudd/projects/SMRT_SV/CHM1_P6C4/CHM1_realignments.leftaligned.bam",
+    "sv_calls": "/net/eichler/vol4/home/jlhudd/src/pacbio_variant_caller/variants.vcf.gz",
+    "sv_reference": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
+    "sv_reference_lengths": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta.fai",
+    "bam_reference": {
+        "human_1kg_v37": "/net/eichler/vol2/eee_shared/assemblies/human_1kg_v37/human_1kg_v37.fasta",
+        "hg38": "/net/eichler/vol2/eee_shared/assemblies/hg38/indexes/bwa_0.7.3/hg38.fasta",
+        "hg19": "/net/eichler/vol4/home/jlhudd/assemblies/hg19/indexes/bwa_0.7.5a-r405/ucsc.hg19.fasta"
+    },
+    "default_bam_reference": "human_1kg_v37",
+    "sample_bam_reference": {
+    },
+    "samples": {
+        "CHM1": "/net/eichler/vol18/genomes/chm1-chm13-broad/CHM1_1.bam",
+        "CHM13": "/net/eichler/vol18/genomes/chm1-chm13-broad/CHM13_1.bam"
+    }
+}

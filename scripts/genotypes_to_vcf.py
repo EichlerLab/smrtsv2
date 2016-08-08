@@ -56,7 +56,7 @@ def convert_table_to_vcf(genotypes_filename, calls_filename, reference_filename,
         vcf.write('##INFO=<ID=DP,Number=1,Type=Integer,Description="Total depth of local assemblies">' + "\n")
         vcf.write('##INFO=<ID=DPA,Number=1,Type=Integer,Description="Depth of local assemblies supporting variant">' + "\n")
         vcf.write('##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">' + "\n")
-        vcf.write('##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">' + "\n")
+        vcf.write('##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">' + "\n")
         vcf.write('##INFO=<ID=END,Number=1,Type=Integer,Description="End coordinate of this variant">' + "\n")
         vcf.write('##INFO=<ID=CONTIG,Number=1,Type=String,Description="Name of alternate assembly contig">' + "\n")
         vcf.write('##INFO=<ID=CONTIG_START,Number=1,Type=Integer,Description="Start coordinate of this variant in the alternate assembly contig">' + "\n")

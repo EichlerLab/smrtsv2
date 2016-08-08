@@ -145,7 +145,8 @@ def align(args):
         "alignments_dir=%s" % args.alignments_dir,
         "batches=%s" % args.batches,
         "threads=%s" % args.threads,
-        "tmp_dir=%s" % args.tmpdir
+        "tmp_dir=%s" % args.tmpdir,
+        "alignment_parameters=%s" % args.alignment_parameters
     )
 
 def detect(args):
@@ -161,7 +162,14 @@ def detect(args):
         "reference=%s" % args.reference,
         "alignments=%s" % args.alignments,
         "assembly_window_size=%s" % args.assembly_window_size,
-        "assembly_window_slide=%s" % args.assembly_window_slide
+        "assembly_window_slide=%s" % args.assembly_window_slide,
+        "min_length=%s" % args.min_length,
+        "min_support=%s" % args.min_support,
+        "max_support=%s" % args.max_support,
+        "min_coverage=%s" % args.min_coverage,
+        "max_coverage=%s" % args.max_coverage,
+        "min_hardstop_support=%s" % args.min_hardstop_support,
+        "max_candidate_length=%s" % args.max_candidate_length
     )
 
     if args.exclude:
@@ -186,6 +194,10 @@ def assemble(args):
         "alignments=%s" % args.alignments,
         "reads=%s" % args.reads,
         "tmp_dir=%s" % args.tmpdir,
+        "alignment_parameters=\"%s\"" % args.alignment_parameters,
+        "mapping_quality=\"%s\"" % args.mapping_quality,
+        "minutes_to_delay_jobs=\"%s\"" % args.minutes_to_delay_jobs,
+        "assembly_log=\"%s\"" % args.assembly_log,
         "ld_path=%s" % PROCESS_ENV["LD_LIBRARY_PATH"],
         "path=%s" % PROCESS_ENV["PATH"]
     )
@@ -365,7 +377,21 @@ def run(args):
     return 0
 
 def genotype(args):
-    print("Genotype")
+    # Genotype SVs.
+    sys.stdout.write("Genotyping SVs\n")
+
+    return_code = _run_snake_target(
+        args,
+        "convert_genotypes_to_vcf",
+        "--config",
+        "genotyper_config=%s" % args.genotyper_config,
+        "genotyped_variants=%s" % args.genotyped_variants
+    )
+
+    if return_code != 0:
+        sys.stderr.write("Failed to genotype SVs\n")
+
+    return return_code
 
 
 # Main
@@ -394,6 +420,7 @@ if __name__ == "__main__":
     parser_align.add_argument("--alignments_dir", help="absolute path of directory for BLASR alignment files", default="alignments")
     parser_align.add_argument("--batches", help="number of batches to split input reads into such that there will be one BAM output file per batch", type=int, default=1)
     parser_align.add_argument("--threads", help="number of threads to use for each BLASR alignment job", type=int, default=1)
+    parser_align.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50")
     parser_align.set_defaults(func=align)
 
     # Detect SV signatures in BLASR alignments and build sliding windows to assemble.
@@ -403,7 +430,14 @@ if __name__ == "__main__":
     parser_detector.add_argument("candidates", help="BED file of candidates detected in read alignments")
     parser_detector.add_argument("--exclude", help="BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.)")
     parser_detector.add_argument("--assembly_window_size", type=int, help="size of reference window for local assemblies", default=60000)
-    parser_detector.add_argument("--assembly_window_slide", type=int, help="size of reference window slide for local assemblies", default=30000)
+    parser_detector.add_argument("--assembly_window_slide", type=int, help="size of reference window slide for local assemblies", default=20000)
+    parser_detector.add_argument("--min_length", type=int, help="minimum length required for SV candidates", default=50)
+    parser_detector.add_argument("--min_support", type=int, help="minimum number of supporting reads required to flag a region as an SV candidate", default=5)
+    parser_detector.add_argument("--max_support", type=int, help="maximum number of supporting reads allowed to flag a region as an SV candidate", default=100)
+    parser_detector.add_argument("--min_coverage", type=int, help="minimum number of total reads required to flag a region as an SV candidate", default=5)
+    parser_detector.add_argument("--max_coverage", type=int, help="maximum number of total reads allowed to flag a region as an SV candidate", default=100),
+    parser_detector.add_argument("--min_hardstop_support", type=int, help="minimum number of reads with hardstops required to flag a region as an SV candidate", default=11)
+    parser_detector.add_argument("--max_candidate_length", type=int, help="maximum length allowed for an SV candidate region", default=60000)
     parser_detector.set_defaults(func=detect)
 
     # Assemble candidate regions and align assemblies back to the reference.
@@ -414,6 +448,10 @@ if __name__ == "__main__":
     parser_assembler.add_argument("candidates", help="BED file of regions to assemble from raw read alignments")
     parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_assembler.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
+    parser_assembler.add_argument("--alignment_parameters", help="BLASR parameters to use to align local assemblies", default="-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13")
+    parser_assembler.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
+    parser_assembler.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
+    parser_assembler.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
     parser_assembler.set_defaults(func=assemble)
 
     # Call SVs and indels from BLASR alignments of local assemblies.
@@ -449,9 +487,8 @@ if __name__ == "__main__":
 
     # Genotype SVs with Illumina reads.
     parser_genotyper = subparsers.add_parser("genotype", help="Genotype SVs with Illumina reads")
-    parser_genotyper.add_argument("variants", help="VCF of SMRT SV variants to genotype")
+    parser_genotyper.add_argument("genotyper_config", help="JSON configuration file with SV reference paths, samples to genotype as BAMs, and their corresponding references")
     parser_genotyper.add_argument("genotyped_variants", help="VCF of SMRT SV variant genotypes for the given sample-level BAMs")
-    parser_genotyper.add_argument("samples", nargs="+", help="one or more sample-level BAMs to genotype for the given variants")
     parser_genotyper.set_defaults(func=genotype)
 
     args = parser.parse_args()

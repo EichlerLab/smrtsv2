@@ -1,29 +1,2 @@
 {
-    "log": "assembly.log",
-    "assembly_window_size": 60000,
-    "assembly_window_slide": 30000,
-    "alignment": {
-        "mapping_quality": 30,
-        "alignment_parameters": "-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50",
-        "total_disk_required": 80,
-        "total_memory_required": 66
-    },
-    "detection": {
-        "min_length": 50,
-        "min_support": 5,
-        "max_support": 100,
-        "min_coverage": 5,
-        "max_coverage": 100,
-        "min_hardstop_support": 11,
-        "max_inaccessible_support": 5,
-        "max_candidate_length": 60000
-    },
-    "assembly": {
-        "assembler": "mhap_celera",
-        "mapping_quality": 30,
-        "log": "/path/to/working/directory/assembly.log",
-        "alignment_parameters": "-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13"
-    },
-    "mhap_celera": {
-    }
 }

@@ -291,12 +291,12 @@ for samFileName in args.sam:
                         tsdSuffix = tsdSuffix.upper()
                         tsdPrefix = gapSeq[0:args.tsd]
                         tsdPrefix = tsdPrefix.upper()
-                        targetPrefix = Tools.ExtractSeq((chrName, tPos-args.tsd,tPos), genomeFile, fai)
+                        targetPrefix = Tools.ExtractSeq((chrName, max(0, tPos - args.tsd), tPos), genomeFile, fai)
 #                        targetPrefix = genomeDict[chrName].seq[tPos-args.tsd:tPos]
 
                         targetPrefix = targetPrefix.upper()
                         #targetSuffix = genomeDict[chrName].seq[tPos:tPos+args.tsd]
-                        targetSuffix = Tools.ExtractSeq((chrName, tPos,tPos+args.tsd), genomeFile, fai)
+                        targetSuffix = Tools.ExtractSeq((chrName, tPos, min(tPos + args.tsd, fai[chrName][0])), genomeFile, fai)
                         targetSuffix = targetSuffix.upper()
                         (sp, ss, sScore) = Align.TSDAlign(tsdSuffix, targetPrefix, 'suffix')
                         (pp, ps, pScore) = Align.TSDAlign(tsdPrefix, targetSuffix, 'prefix')
