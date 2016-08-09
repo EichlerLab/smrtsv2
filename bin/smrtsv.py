@@ -508,6 +508,9 @@ if __name__ == "__main__":
     # Report paths if verbose
     if args.verbose:
 
+        # Print python version
+        print('Python version: {0}'.format(re.sub('\s*\n\s*', ' - ', sys.version)))
+
         # Print environment
         print("PATH:")
         for PATH_ELEMENT in PROCESS_ENV["PATH"].split(":"):
@@ -525,7 +528,7 @@ if __name__ == "__main__":
         # Print arguments
         print("Arguments:")
         for key in sorted(vars(args).keys()):
-            print('\t* {} = {}'.format(key, getattr(args, key)))
+            print('\t* {0} = {1}'.format(key, getattr(args, key)))
 
         # Flush output
         sys.stdout.flush()
