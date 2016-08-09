@@ -119,6 +119,12 @@ def _run_snake_target(args, *cmd):
     # Append command
     prefix.extend(cmd)
 
+    # Append path and ld_path
+    prefix.extend([
+        "ld_path=%s" % PROCESS_ENV["LD_LIBRARY_PATH"],
+        "path=%s" % PROCESS_ENV["PATH"]
+    ])
+
     # Report (verbose)
     if args.verbose:
         print("Running snakemake command: %s" % " ".join(prefix))
@@ -197,9 +203,7 @@ def assemble(args):
         "alignment_parameters=\"%s\"" % args.alignment_parameters,
         "mapping_quality=\"%s\"" % args.mapping_quality,
         "minutes_to_delay_jobs=\"%s\"" % args.minutes_to_delay_jobs,
-        "assembly_log=\"%s\"" % args.assembly_log,
-        "ld_path=%s" % PROCESS_ENV["LD_LIBRARY_PATH"],
-        "path=%s" % PROCESS_ENV["PATH"]
+        "assembly_log=\"%s\"" % args.assembly_log
     )
 
     if args.candidates:

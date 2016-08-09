@@ -7,9 +7,14 @@ import math
 import os
 import tempfile
 
-# Always source config file.
+# Set snakemake directory
 SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
-#shell.prefix(". {SNAKEMAKE_DIR}/config.sh; ")
+
+# Always set the environment
+LD_LIBRARY_PATH = config.get("ld_path")
+PATH = config.get("path")
+
+shell.prefix("export PATH=\"%s\"; export LD_LIBRARY_PATH=\"%s\"; " % (PATH, LD_LIBRARY_PATH))
 
 #
 # Define internal constants.
