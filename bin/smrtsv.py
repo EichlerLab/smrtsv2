@@ -483,6 +483,12 @@ if __name__ == "__main__":
     parser_runner.add_argument("--sample", help="Sample name to use in final variant calls", default="UnnamedSample")
     parser_runner.add_argument("--species", help="Common or scientific species name to pass to RepeatMasker", default="human")
     parser_runner.add_argument("--runjobs", help="A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing number uses the value set by --jobs (or 1 if --jobs was not set).", default="")
+    parser_runner.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50")
+    parser_runner.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
+    parser_runner.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
+    parser_runner.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
+    parser_runner.add_argument("--min_hardstop_support", type=int, help="minimum number of reads with hardstops required to flag a region as an SV candidate", default=11)
+    parser_runner.add_argument("--max_candidate_length", type=int, help="maximum length allowed for an SV candidate region", default=60000)
     parser_runner.set_defaults(func=run)
 
     # Genotype SVs with Illumina reads.
