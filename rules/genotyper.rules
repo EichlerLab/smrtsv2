@@ -42,7 +42,7 @@ def _get_reference_path_by_sample(wildcards):
     return GENOTYPER_CONFIG["bam_reference"][reference]
 
 rule convert_genotypes_to_vcf:
-    input: genotypes="genotypes_by_all_samples.tab", calls=GENOTYPER_CONFIG["sv_calls"], reference=GENOTYPER_CONFIG["sv_reference"]
+    input: genotypes="genotypes_by_all_samples.tab", calls="sv_calls.vcf.gz", reference=GENOTYPER_CONFIG["sv_reference"]
     output: FINAL_GENOTYPES
     params: sge_opts="-l h_rt=00:30:00 -l mfree=4G"
     shell: "python {SNAKEMAKE_DIR}/scripts/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} /dev/stdout | vcffixup - | bgzip -c > {output}; tabix -p vcf {output}"
