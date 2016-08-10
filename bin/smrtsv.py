@@ -385,7 +385,8 @@ def genotype(args):
         "convert_genotypes_to_vcf",
         "--config",
         "genotyper_config=%s" % args.genotyper_config,
-        "genotyped_variants=%s" % args.genotyped_variants
+        "genotyped_variants=%s" % args.genotyped_variants,
+        "threads=%s" % args.threads
     )
 
     if return_code != 0:
@@ -489,6 +490,7 @@ if __name__ == "__main__":
     parser_genotyper = subparsers.add_parser("genotype", help="Genotype SVs with Illumina reads")
     parser_genotyper.add_argument("genotyper_config", help="JSON configuration file with SV reference paths, samples to genotype as BAMs, and their corresponding references")
     parser_genotyper.add_argument("genotyped_variants", help="VCF of SMRT SV variant genotypes for the given sample-level BAMs")
+    parser_genotyper.add_argument("--threads", help="number of threads to use for each BWA MEM alignment job", type=int, default=1)
     parser_genotyper.set_defaults(func=genotype)
 
     args = parser.parse_args()
