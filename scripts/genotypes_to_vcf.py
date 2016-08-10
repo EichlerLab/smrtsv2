@@ -10,8 +10,30 @@ def convert_table_to_vcf(genotypes_filename, calls_filename, reference_filename,
     genotypes = pd.read_table(genotypes_filename)
 
     # Get all SVs.
-    calls = pd.read_table(calls_filename, header=None, usecols=(0, 1, 2, 3, 4, 5, 8, 11, 12, 15, 16, 20), names=("chr", "start", "end", "sv_call", "event_size", "sv_sequence", "contig", "contig_start", "contig_end", "support", "depth", "repeat_type"))
-    #calls = calls.ix[calls["support"] > 1,]
+    vcf = pysam.VariantFile(calls_filename)
+    calls = []
+    for record in vcf:
+        if isinstance(record.info["SVLEN"], tuple):
+            sv_length = record.info["SVLEN"][0]
+        else:
+            sv_length = record.info["SVLEN"]
+
+        calls.append([
+            record.chrom,
+            record.start,
+            record.info["END"],
+            record.info["SVTYPE"],
+            sv_length,
+            record.info["SEQ"],
+            record.info["CONTIG"],
+            record.info["CONTIG_START"],
+            record.info["CONTIG_END"],
+            record.info["CONTIG_SUPPORT"],
+            record.info["CONTIG_DEPTH"],
+            record.info["REPEAT_TYPE"]
+        ])
+
+    calls = pd.DataFrame(calls, columns=("chr", "start", "end", "sv_call", "event_size", "sv_sequence", "contig", "contig_start", "contig_end", "support", "depth", "repeat_type"))
     calls["call_id"] = calls.apply(lambda row: "-".join(map(str, (row.chr, row.start, row.end, row.sv_call))), axis=1)
     calls["quality"] = calls.apply(lambda row: int(min(100, round(-10 * np.log10(1 - (row.support / float(row.depth))) * np.log(row.depth), 0))), axis=1)
 
@@ -74,7 +96,7 @@ def convert_table_to_vcf(genotypes_filename, calls_filename, reference_filename,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("genotypes", help="tab-delimited file of sample, call coordinates in query sequence, call type, and genotypes in standard format (e.g., 0/0)")
-    parser.add_argument("calls", help="tab-delimited file of original SV calls with repeat type from SMRT SV")
+    parser.add_argument("calls", help="VCF of original SV calls with repeat type from SMRT SV")
     parser.add_argument("reference", help="FASTA file for reference used with SMRT SV")
     parser.add_argument("output", help="genotypes in VCF format")
     args = parser.parse_args()
