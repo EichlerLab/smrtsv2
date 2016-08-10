@@ -341,7 +341,7 @@ def run(args):
     if return_code != 0:
         sys.stderr.write("Failed to index reference\n")
         return return_code
-    
+
     # Align
     args.jobs = job_step[0]
 
