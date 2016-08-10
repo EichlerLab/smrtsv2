@@ -229,12 +229,17 @@ rule get_svs_in_bed_format:
         with pysam.VariantFile(input[0]) as vcf:
             with open(output[0], "w") as oh:
                 for record in vcf:
+                    if isinstance(record.info["SVLEN"], tuple):
+                        sv_length = record.info["SVLEN"][0]
+                    else:
+                        sv_length = record.info["SVLEN"]
+
                     oh.write("%s\n" % "\t".join(map(str, (
                         record.chrom,
                         record.start,
                         record.info["END"],
                         record.info["SVTYPE"],
-                        record.info["SVLEN"],
+                        sv_length,
                         record.info["SEQ"]
                     ))))
 
