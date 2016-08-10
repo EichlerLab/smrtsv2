@@ -519,7 +519,7 @@ if __name__ == "__main__":
         # Print arguments
         print("Arguments:")
         for key in sorted(vars(args).keys()):
-            print('\t* {} = {}'.format(key, getattr(args, key)))
+            print('\t* %s = %s' % (key, getattr(args, key)))
 
         # Flush output
         sys.stdout.flush()
