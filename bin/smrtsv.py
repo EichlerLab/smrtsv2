@@ -487,12 +487,7 @@ if __name__ == "__main__":
     parser_runner.add_argument("--max_support", type=int, help="maximum number of supporting reads allowed to flag a region as an SV candidate", default=100)
     parser_runner.add_argument("--min_coverage", type=int, help="minimum number of total reads required to flag a region as an SV candidate", default=5)
     parser_runner.add_argument("--max_coverage", type=int, help="maximum number of total reads allowed to flag a region as an SV candidate", default=100),
-    parser_runner.add_argument("--min_hardstop_support", type=int, help="minimum number of reads with hardstops required to flag a region as an SV candidate", default=11)
-    parser_runner.add_argument("--max_candidate_length", type=int, help="maximum length allowed for an SV candidate region", default=60000)
     parser_runner.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
-    parser_runner.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
-    parser_runner.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
-    parser_runner.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
     parser_runner.add_argument("--refindex", action="store_true", help="Generate a BLASR index on the reference sequence.")
     parser_runner.add_argument("--sample", help="Sample name to use in final variant calls", default="UnnamedSample")
     parser_runner.add_argument("--species", help="Common or scientific species name to pass to RepeatMasker", default="human")
