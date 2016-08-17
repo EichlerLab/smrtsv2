@@ -35,13 +35,13 @@ else:
 TMP_DIR = config.get("tmp_dir", tempfile.gettempdir())
 EVENT_TYPES = ("insertion", "deletion")
 
-CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
-
 #
 # Include rules.
 #
 
 if not "genotyper_config" in config:
+    CHROMOSOME_LENGTHS = config.get("reference_index", "%s.fai" % config["reference"])
+
     # TODO: fix bug caused by Snakemake not understanding more than one dynamic
     # output type per file.
     include: "rules/prepare_reference.rules"
