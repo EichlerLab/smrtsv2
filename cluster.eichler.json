@@ -21,7 +21,7 @@
     "tile_contigs_from_alignments": {"params": "-l h_rt=01:00:00"},
     "find_calls_by_gaps_in_alignments": {"params": "-l h_rt=02:00:00"},
     "identify_calls_by_type": {"params": "-l h_rt=00:30:00 -l mfree=8G"},
-    "repeatmask_sv_fasta": {"params": "-l h_rt=01:00:00 -pe serial 8 -l mfree=1G"},
+    "repeatmask_sv_fasta": {"params": "-l h_rt=06:00:00 -pe serial 8 -l mfree=5G"},
     "trf_mask_sv_fasta": {"params": "-l h_rt=01:00:00 -l mfree=2G"},
     "find_indel_gaps_in_alignments": {"params": "-l h_rt=02:00:00"},
     "filter_indel_gaps_by_tiling_path": {"params": "-l mfree=4G -l h_rt=00:30:00"},

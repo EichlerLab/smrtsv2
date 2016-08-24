@@ -19,8 +19,6 @@ REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candi
 LOCAL_ASSEMBLY_ALIGNMENTS = config.get("assembly_alignments", "local_assembly_alignments.bam")
 MAPPING_QUALITY = config.get("mapping_quality")
 ALIGNMENT_PARAMETERS = config.get("alignment_parameters")
-LD_LIBRARY_PATH = config.get("ld_path", "")
-PATH = config.get("path")
 
 #
 # Define internal constants.
@@ -70,8 +68,6 @@ rule assemble_region:
     output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
     params: threads="4"
     shell:
-        "export PATH={PATH}; "
-        "export LD_LIBRARY_PATH={LD_LIBRARY_PATH}; "
         "export ANALYSIS_DIR=`pwd`; "
         "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
         "export REFERENCE_PATH=`readlink -f {REFERENCE}`; "
