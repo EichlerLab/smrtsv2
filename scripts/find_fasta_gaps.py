@@ -22,12 +22,11 @@ def find_gaps(input_filename):
     fasta = SeqIO.parse(input_filename, "fasta")
 
     for record in fasta:
-        sequence = str(record.seq)
         gap_start = None  # Not in a gap
 
         for i in _range(len(record)):
 
-            if sequence[i].upper() == "N":
+            if record.seq[i].upper() == "N":
                 if gap_start is None:
                     gap_start = i
             else:
