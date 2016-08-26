@@ -8,7 +8,7 @@
     "plot_alignment_summaries": {"params": "-l mfree=8G -l h_rt=00:15:00"},
     "align_batch": {"params": "-l h_rt=48:00:00 -l disk_free=10G -l mfree=8.25G -pe serial 8 -N align_batch"},
     "annotate_coverage_for_candidates": {"params": "-l mfree=10G -l h_rt=01:00:00"},
-    "identify_gaps_in_reference_assembly": {"params": "-l h_rt=01:00:00"},
+    "identify_gaps_in_reference_assembly": {"params": "-l h_rt=01:00:00 -l mfree=2G"},
     "collect_hardstops": {"params": "-l mfree=4G -l h_rt=01:00:00"},
     "find_hardstops_in_aligned_reads": {"params": "-l mfree=4G -l h_rt=04:00:00"},
     "annotate_coverage_of_merged_gap_support": {"params": "-l mfree=5G -l h_rt=01:00:00"},
