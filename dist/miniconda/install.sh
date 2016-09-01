@@ -2,12 +2,13 @@
 
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh -f -b -p `pwd`
-./bin/conda create --yes --name python3 python=3 pandas pysam
+./bin/conda create --yes --name python3 python=3 pandas
 #./bin/conda install -n python3 pip
 . ./bin/activate python3
 pip install --upgrade pip
 pip install git+https://bitbucket.org/snakemake/snakemake.git
 pip install drmaa
+pip install pysam
 rm -f ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
 ln -s `pwd`/../snakemake/cluster/UGE/jobscript.sh ./envs/python3/lib/python3.5/site-packages/snakemake/jobscript.sh
 . bin/deactivate
