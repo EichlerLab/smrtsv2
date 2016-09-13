@@ -50,6 +50,20 @@ else:
 
 os.environ["LD_LIBRARY_PATH"] = PROCESS_ENV["LD_LIBRARY_PATH"]
 
+# Prepend to PERL5LIB
+INSTALL_PERL5LIB = [
+    "dist/pm"
+]
+
+PROCESS_PERL5LIB = ":".join([os.path.join(INSTALL_DIR, THIS_PATH) for THIS_PATH in INSTALL_PERL5LIB])
+
+if "PERL5LIB" in PROCESS_ENV:
+    PROCESS_ENV["PERL5LIB"] = PROCESS_PERL5LIB + ":" + PROCESS_ENV["PERL5LIB"]
+else:
+    PROCESS_ENV["PERL5LIB"] = PROCESS_PERL5LIB
+
+os.environ["PERL5LIB"] = PROCESS_ENV["PERL5LIB"]
+
 
 # Function definitions
 def _get_dist_dir():
@@ -122,7 +136,8 @@ def _run_snake_target(args, *cmd):
     # Append path and ld_path
     prefix.extend([
         "ld_path=%s" % PROCESS_ENV["LD_LIBRARY_PATH"],
-        "path=%s" % PROCESS_ENV["PATH"]
+        "path=%s" % PROCESS_ENV["PATH"],
+        "perl5lib=%s" % PROCESS_ENV["PERL5LIB"]
     ])
 
     # Report (verbose)
@@ -528,6 +543,10 @@ if __name__ == "__main__":
 
         print("LD_LIBRARY_PATH:")
         for PATH_ELEMENT in PROCESS_ENV["LD_LIBRARY_PATH"].split(":"):
+            print("\t* %s" % PATH_ELEMENT)
+
+        print("PERL5LIB:")
+        for PATH_ELEMENT in PROCESS_ENV["PERL5LIB"].split(":"):
             print("\t* %s" % PATH_ELEMENT)
 
         if "DRMAA_LIBRARY_PATH" in PROCESS_ENV:

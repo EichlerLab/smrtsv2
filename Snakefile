@@ -13,8 +13,9 @@ SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
 # Always set the environment
 LD_LIBRARY_PATH = config.get("ld_path")
 PATH = config.get("path")
+PERL5LIB = config.get("perl5lib")
 
-shell.prefix("export PATH=\"%s\"; export LD_LIBRARY_PATH=\"%s\"; " % (PATH, LD_LIBRARY_PATH))
+shell.prefix("export PATH=\"%s\"; export LD_LIBRARY_PATH=\"%s\"; export PERL5LIB=\"%s\"; " % (PATH, LD_LIBRARY_PATH, PERL5LIB))
 
 #
 # Define internal constants.

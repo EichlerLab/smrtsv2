@@ -4,7 +4,7 @@
 
 PWD  = $(shell pwd)
 
-all: bin/bedtools bin/samtools bin/bcftools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker bin/bwa bin/vcffixup
+all: bin/bedtools bin/samtools bin/bcftools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker bin/bwa bin/vcffixup perlmod
 
 #
 # Install core genomics tools.
@@ -129,3 +129,12 @@ dist/miniconda/envs/python2/bin/cmph5tools.py: dist/miniconda/bin/activate
 
 dist/miniconda/bin/activate:
 	cd dist/miniconda && sh install.sh
+
+#
+# Install Perl modules
+#
+
+.PHONY: perlmod
+perlmod:
+	cd dist/pm && make
+
