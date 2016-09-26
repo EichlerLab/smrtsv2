@@ -215,7 +215,7 @@ def assemble(args):
         "alignments=%s" % args.alignments,
         "reads=%s" % args.reads,
         "tmp_dir=%s" % args.tmpdir,
-        "alignment_parameters=\"%s\"" % args.alignment_parameters,
+        "asm_alignment_parameters=\"%s\"" % args.asm_alignment_parameters,
         "mapping_quality=\"%s\"" % args.mapping_quality,
         "minutes_to_delay_jobs=\"%s\"" % args.minutes_to_delay_jobs,
         "assembly_log=\"%s\"" % args.assembly_log
@@ -265,6 +265,8 @@ def assemble(args):
 
         return_code = 0
 
+        contig_count = 0  # Number of contigs assemblies were generated for
+
         for contig in contigs:
             contig_local_assemblies = os.path.join("local_assemblies", local_assembly_basename.replace(".bam", ".%s.bam" % contig))
             local_assemblies.add(contig_local_assemblies)
@@ -280,12 +282,15 @@ def assemble(args):
 
             return_code = _run_snake_target(args, *command)
 
+            contig_count += 1
+
             if return_code != 0:
                 break
 
         # If the last command executed successfully, try to merge all local
-        # assemblies per contig into a single file.
-        if not args.dryrun and return_code == 0:
+        # assemblies per contig into a single file. Only build if at least one set of local assemblies was performed
+        # or the local assemblies file does not exist.
+        if not args.dryrun and return_code == 0 and (contig_count > 0 or not os.path.exists(args.assembly_alignments)):
             if len(local_assemblies) > 1:
                 return_code = _run_cmd(["samtools", "merge", args.assembly_alignments] + list(local_assemblies))
             else:
@@ -468,7 +473,7 @@ if __name__ == "__main__":
     parser_assembler.add_argument("candidates", help="BED file of regions to assemble from raw read alignments")
     parser_assembler.add_argument("assembly_alignments", help="BAM file with BLASR alignments of local assemblies against the reference")
     parser_assembler.add_argument("--rebuild_regions", action="store_true", help="rebuild subset of regions to assemble")
-    parser_assembler.add_argument("--alignment_parameters", help="BLASR parameters to use to align local assemblies", default="-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13")
+    parser_assembler.add_argument("--asm_alignment_parameters", help="BLASR parameters to use to align local assemblies", default="-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13")
     parser_assembler.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
     parser_assembler.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
     parser_assembler.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
@@ -508,6 +513,7 @@ if __name__ == "__main__":
     parser_runner.add_argument("--species", help="Common or scientific species name to pass to RepeatMasker", default="human")
     parser_runner.add_argument("--runjobs", help="A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing number uses the value set by --jobs (or 1 if --jobs was not set).", default="")
     parser_runner.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50")
+    parser_runner.add_argument("--asm_alignment_parameters", help="BLASR parameters to use to align local assemblies", default="-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13")
     parser_runner.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
     parser_runner.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)
     parser_runner.add_argument("--assembly_log", help="name of log file for local assemblies", default="assembly.log")
