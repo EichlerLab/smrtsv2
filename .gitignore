@@ -62,3 +62,26 @@ target/
 
 *.tar.gz
 *.tar.bz2
+
+
+# Files in bin
+bin/*
+!bin/smrtsv.py
+!bin/trf
+
+# Files in dist
+dist/**/*
+!dist/RepeatMasker/Makefile
+!dist/boost/Makefile
+!dist/bwa/Makefile
+!dist/bz2/Makefile
+!dist/celera/Makefile
+!dist/hdf5/Makefile
+!dist/hmmer/Makefile
+!dist/java/Makefile
+!dist/miniconda/install.sh
+!dist/pm/Makefile
+!dist/snakemake/cluster
+!dist/swig/Makefile
+!dist/zlib/Makefile
+
