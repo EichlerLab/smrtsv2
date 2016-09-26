@@ -4,7 +4,8 @@
 
 PWD  = $(shell pwd)
 
-all: bin/bedtools bin/samtools bin/bcftools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker bin/bwa bin/vcffixup perlmod
+all: bin/bedtools bin/samtools bin/bcftools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/bwa bin/vcffixup perlmod
+#all: bin/bedtools bin/samtools bin/bcftools bin/freebayes bin/blasr bin/PBcR bin/java dist/miniconda/envs/python2/bin/quiver dist/miniconda/envs/python2/bin/cmph5tools.py bin/RepeatMasker bin/bwa bin/vcffixup perlmod  # PRIV Removed RepeatMasker for the private version
 
 #
 # Install core genomics tools.
@@ -19,13 +20,14 @@ bin/bwa :
 	-@ln -s ../dist/bwa/bwa.kit/samblaster bin/samblaster
 	-@ln -s ../dist/bwa/bwa.kit/seqtk bin/seqtk
 
-bin/RepeatMasker: bin/phmmer
-	-cd dist/RepeatMasker && make
-	-@ln -s ../dist/RepeatMasker/RepeatMasker/RepeatMasker bin/RepeatMasker
+# PRIV: Removed RepeatMasker for the private version (using module RepeatMasker/3.3.0)
+#bin/RepeatMasker: bin/phmmer
+#	-cd dist/RepeatMasker && make
+#	-@ln -s ../dist/RepeatMasker/RepeatMasker/RepeatMasker bin/RepeatMasker
 
-bin/phmmer:
-	-cd dist/hmmer && make
-	-@cp -f dist/hmmer/bin/* bin/
+#bin/phmmer:
+#	-cd dist/hmmer && make
+#	-@cp -f dist/hmmer/bin/* bin/
 
 bin/vcffixup:
 	git submodule update --init --recursive dist/vcflib
