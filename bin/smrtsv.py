@@ -11,7 +11,7 @@ logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
 
 # Set cluster parameters
 CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
-CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "60")
+CLUSTER_FLAG = ("--drmaa", CLUSTER_SETTINGS, "-w", "120")
 
 # Setup environment for executing commands
 PROCESS_ENV = os.environ.copy()
