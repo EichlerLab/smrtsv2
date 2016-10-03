@@ -17,7 +17,7 @@
     "calculate_coverage_per_batch": {"params": "-l mfree=4G -l h_rt=04:00:00"},
     "assemble_region": {"params": "-l mfree=12G -pe serial 1 -l disk_free=10G -l h_rt=01:00:00"},
     "collect_assembly_alignments": {"params": "-l mfree=30G -l disk_free=10G -l h_rt=01:00:00"},
-    "find_inversions": {"params": "-pe serial 8 -l mfree=2G -l h_rt=03:00:00"},
+    "find_inversions": {"params": "-pe serial 8 -l mfree=4G -l h_rt=03:00:00"},
     "tile_contigs_from_alignments": {"params": "-l h_rt=01:00:00"},
     "find_calls_by_gaps_in_alignments": {"params": "-l h_rt=02:00:00"},
     "identify_calls_by_type": {"params": "-l h_rt=02:00:00 -l mfree=8G"},
