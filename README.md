@@ -11,7 +11,7 @@ al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.ht
 
   * Unified variant calling user interface with built-in cluster compute support
   * Small indel calling (2-49 bp)
-  * Improved inversion calling
+  * Improved inversion calling (`screenInversions`)
   * Quality metric for SV calls based on number of local assemblies supporting each call
   * Higher sensitivity for SV calls using tiled local assemblies across the entire genome instead of "signature" regions
   * Genotyping of SVs with Illumina paired-end reads from WGS samples
