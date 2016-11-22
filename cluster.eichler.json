@@ -33,7 +33,7 @@
     "find_positions_of_sv_sequences_in_bam_reference": {"params": "-l h_rt=01:00:00"},
     "merge_reference_and_local_assemblies": {"params": "-l h_rt=01:00:00"},
     "bwa_index_combined_reference": {"params": "-l mfree=10G -l h_rt=06:00:00"},
-    "map_sample_reads": {"params": "-l mfree=4G -pe serial 12 -l disk_free=17G -l h_rt=24:00:00 -R y -l ssd=FALSE"},
+    "map_sample_reads": {"params": "-l mfree=5G -pe serial 12 -l disk_free=17G -l h_rt=24:00:00 -R y -l ssd=FALSE"},
     "calculate_depth_across_PacBio_SVs": {"params": "-l h_rt=06:00:00 -l mfree=4G"},
     "genotype_across_all_samples": {"params": "-l h_rt=00:30:00 -l mfree=2G"},
     "convert_genotypes_to_vcf": {"params": "-l h_rt=00:30:00 -l mfree=4G"}

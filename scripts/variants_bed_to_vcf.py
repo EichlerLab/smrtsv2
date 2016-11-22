@@ -39,7 +39,7 @@ def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, v
     calls["reference"] = calls.apply(lambda row: reference.fetch(row.chr, row.start, row.start + 1).upper(), axis=1)
 
     # Update start position to be 1-based.
-    calls["start"] = calls["start"] + 1
+    #calls["start"] = calls["start"] + 1  # Start position is the base before the variant
 
     # Build an INFO field for each call.
     if variant_type == "sv":
@@ -49,7 +49,7 @@ def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, v
                 ["=".join(map(str, item))
                  for item in (
                         ("END", row.end),
-                        ("SVTYPE", row.sv_call),
+                        ("SVTYPE", row.sv_call[:3].upper()),
                         ("SVLEN", row.event_size),
                         ("CONTIG", row.contig),
                         ("CONTIG_START", row.contig_start),
@@ -70,7 +70,7 @@ def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, v
                 ["=".join(map(str, item))
                  for item in (
                         ("END", row.end),
-                        ("SVTYPE", row.sv_call),
+                        ("SVTYPE", row.sv_call[:3].upper()),
                         ("SVLEN", row.event_size),
                         ("CONTIG_SUPPORT", row.contig_support),
                         ("CONTIG_DEPTH", row.contig_depth),
@@ -88,7 +88,7 @@ def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, v
                 ["=".join(map(str, item))
                  for item in (
                         ("END", row.end),
-                        ("SVTYPE", row.sv_call),
+                        ("SVTYPE", row.sv_call[:3].upper()),
                         ("SVLEN", row.end - row.start),
                         ("CONTIG_SUPPORT", row.contig_support),
                         ("CONTIG_DEPTH", row.contig_depth),
