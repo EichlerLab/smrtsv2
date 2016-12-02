@@ -32,7 +32,7 @@ dependencies.
 ```bash
 mkdir /usr/local/smrtsv
 cd /usr/local/smrtsv
-git clone --recursive git@github.com:EichlerLab/pacbio_variant_caller.git .
+git clone --recursive https://github.com/EichlerLab/pacbio_variant_caller.git .
 make
 ```
 
