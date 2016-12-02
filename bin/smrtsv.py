@@ -152,7 +152,7 @@ def align(args):
         "batches=%s" % args.batches,
         "threads=%s" % args.threads,
         "tmp_dir=%s" % args.tmpdir,
-        "alignment_parameters=%s" % args.alignment_parameters
+        "alignment_parameters=\"%s\"" % args.alignment_parameters
     )
 
 def detect(args):
