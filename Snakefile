@@ -33,7 +33,11 @@ if os.path.exists("config.json"):
 else:
     configfile: "%s/config.template.json" % SNAKEMAKE_DIR
 
-TMP_DIR = config.get("tmp_dir", tempfile.gettempdir())
+TMP_DIR = config.get("tmp_dir", "default")
+
+if TMP_DIR == "default":
+    TMP_DIR = tempfile.gettempdir()
+
 EVENT_TYPES = ("insertion", "deletion")
 
 #

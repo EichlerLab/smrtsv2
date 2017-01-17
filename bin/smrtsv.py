@@ -426,7 +426,7 @@ if __name__ == "__main__":
     parser.add_argument("--dryrun", "-n", action="store_true", help="Print commands that will run without running them")
     parser.add_argument("--distribute", action="store_true", help="Distribute analysis to Grid Engine-style cluster")
     parser.add_argument("--jobs", help="number of jobs to run simultaneously", type=int, default=1)
-    parser.add_argument("--tmpdir", help="temporary directory to use for distributed jobs", default="/var/tmp")
+    parser.add_argument("--tmpdir", help="temporary directory to use for distributed jobs. Keyword \"default\" tells Python to pick a directory.", default="default")
     parser.add_argument("--verbose", "-v", help="print extra runtime information", action="store_true")
     parser.add_argument("--cluster_config", help="JSON/YAML file specifying cluster configuration parameters to pass to Snakemake's --cluster-config option")
     parser.add_argument("--drmaalib", help="For jobs that are distributed, this is the location to the DRMAA library (libdrmaa.so) installed with Grid Engine. Use this to set DRMAA_LIBRARY_PATH in the environment for pipelined commands. If DRMAA_LIBRARY_PATH is already set in the environment when calling this program, this option is not required.")

@@ -80,10 +80,19 @@ rule calculate_depth_across_PacBio_SVs:
 
 # Map paired-end reads with BWA MEM
 rule map_sample_reads:
-    input: regions=_get_sv_sequence_regions_for_sample, bam=_get_bam_for_sample, bam_reference=_get_reference_path_by_sample, sv_reference="sv_reference.fasta", sv_index="sv_reference.fasta.bwt", alts="local_assemblies_for_genotyping.sam"
-    output: alignments="samples/{sample}/alignments.bam"
-    benchmark: "benchmarks/map_sample_reads/{sample}.txt"
-    log: "samples/{sample}/alignments.log"
+    input:
+        regions=_get_sv_sequence_regions_for_sample,
+        bam=_get_bam_for_sample,
+        bam_reference=_get_reference_path_by_sample,
+        sv_reference="sv_reference.fasta",
+        sv_index="sv_reference.fasta.bwt",
+        alts="local_assemblies_for_genotyping.sam"
+    output:
+        alignments="samples/{sample}/alignments.bam"
+    benchmark:
+        "benchmarks/map_sample_reads/{sample}.txt"
+    log:
+        "samples/{sample}/alignments.log"
     shell:
         """{{
     while read line; do set -- $line; samtools view {input.bam} $1:$2-$3; done < {input.regions} | samtools view -S -t {input.bam_reference}.fai -u -b - | samtools bamshuf -n 32 -O - {TMPDIR}/shuffled_reads.{wildcards.sample} | samtools bam2fq - | seqtk dropse -;
@@ -159,13 +168,13 @@ rule get_insertion_sv_sequence_positions:
     input: sv_calls="sv_calls.bed", sv_reference_lengths=GENOTYPER_CONFIG["sv_reference_lengths"]
     output: "sv_sequence_positions/insertion.bed"
     params: slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
-    shell: """awk '$4 == "insertion"' {input.sv_calls} | awk 'OFS="\\t" {{ print $1,$2,$2+1 }}' | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 > {output}"""
+    shell: """awk '$4 == "INS"' {input.sv_calls} | awk 'OFS="\\t" {{ print $1,$2,$2+1 }}' | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | sort -k 1,1 -k 2,2n | bedtools merge -i stdin -d 0 > {output}"""
 
 rule get_deletion_sv_sequence_positions:
     input: sv_calls="sv_calls.bed", sv_reference_lengths=GENOTYPER_CONFIG["sv_reference_lengths"]
     output: "sv_sequence_positions/deletion.bed"
     params: slop=SLOP_FOR_SV_SEQUENCE_POSITIONS
-    shell: """awk '$4 == "deletion"' {input.sv_calls} | cut -f 1-3 | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | bedtools merge -i stdin -d 0 > {output}"""
+    shell: """awk '$4 == "DEL"' {input.sv_calls} | cut -f 1-3 | bedtools slop -i stdin -g {input.sv_reference_lengths} -b {params.slop} | bedtools merge -i stdin -d 0 > {output}"""
 
 #
 # Prepare SV calls from local assemblies.
@@ -207,13 +216,22 @@ rule get_svs_in_bed_format:
     input: "sv_calls.vcf.gz"
     output: "sv_calls.bed"
     run:
+        record_count = 0
+
         with pysam.VariantFile(input[0]) as vcf:
             with open(output[0], "w") as oh:
                 for record in vcf:
+                    record_count += 1
+
                     if isinstance(record.info["SVLEN"], tuple):
-                        sv_length = record.info["SVLEN"][0]
+
+                        # Work around pysam bug when SVLEN == -127 (https://github.com/pysam-developers/pysam/issues/371)
+                        if len(record.info["SVLEN"]) == 0:
+                            sv_length = record.info['END'] - record.pos + 1
+                        else:
+                            sv_length = abs(record.info["SVLEN"][0])
                     else:
-                        sv_length = record.info["SVLEN"]
+                        sv_length = abs(record.info["SVLEN"])
 
                     oh.write("%s\n" % "\t".join(map(str, (
                         record.chrom,
@@ -227,4 +245,4 @@ rule get_svs_in_bed_format:
 rule filter_variants_to_only_svs:
     input: GENOTYPER_CONFIG["sv_calls"]
     output: "sv_calls.vcf.gz"
-    shell: """bcftools filter -O z -i "SVLEN >= 50 & (SVTYPE='insertion' | SVTYPE='deletion')" {input} > {output}; tabix -p vcf {output}"""
+    shell: """bcftools filter -O z -i "(SVTYPE='INS' & SVLEN >= 50) | (SVTYPE='DEL' & SVLEN <= -50)" {input} > {output}; tabix -p vcf {output}"""
