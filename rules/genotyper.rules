@@ -80,10 +80,19 @@ rule calculate_depth_across_PacBio_SVs:
 
 # Map paired-end reads with BWA MEM
 rule map_sample_reads:
-    input: regions=_get_sv_sequence_regions_for_sample, bam=_get_bam_for_sample, bam_reference=_get_reference_path_by_sample, sv_reference="sv_reference.fasta", sv_index="sv_reference.fasta.bwt", alts="local_assemblies_for_genotyping.sam"
-    output: alignments="samples/{sample}/alignments.bam"
-    benchmark: "benchmarks/map_sample_reads/{sample}.txt"
-    log: "samples/{sample}/alignments.log"
+    input:
+        regions=_get_sv_sequence_regions_for_sample,
+        bam=_get_bam_for_sample,
+        bam_reference=_get_reference_path_by_sample,
+        sv_reference="sv_reference.fasta",
+        sv_index="sv_reference.fasta.bwt",
+        alts="local_assemblies_for_genotyping.sam"
+    output:
+        alignments="samples/{sample}/alignments.bam"
+    benchmark:
+        "benchmarks/map_sample_reads/{sample}.txt"
+    log:
+        "samples/{sample}/alignments.log"
     shell:
         """{{
     while read line; do set -- $line; samtools view {input.bam} $1:$2-$3; done < {input.regions} | samtools view -S -t {input.bam_reference}.fai -u -b - | samtools bamshuf -n 32 -O - {TMPDIR}/shuffled_reads.{wildcards.sample} | samtools bam2fq - | seqtk dropse -;
