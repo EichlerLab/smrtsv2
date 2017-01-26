@@ -121,7 +121,7 @@ def get_best_alignments(bam, regions, quality):
     # unpleasant local assembly contig names to be parsed correctly.
     alignments_from_regions = [read
                                for region in regions
-                               for read in bam.fetch(*([region.split(":")[0]] + map(int, region.split(":")[1].split("-"))))
+                               for read in bam.fetch(*([region.rsplit(":", 1)[0]] + map(int, region.rsplit(":", 1)[1].split("-"))))
                                if read.mapping_quality >= quality]
     logger.debug("Loaded %i reads from BAM from %i regions", len(alignments_from_regions), len(regions))
 
