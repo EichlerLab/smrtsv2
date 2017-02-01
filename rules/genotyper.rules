@@ -35,7 +35,7 @@ def _get_sv_sequence_regions_for_sample(wildcards):
     return "sv_sequences_in_reference/%s.bed" % reference
 
 def _get_reference_path_by_sample(wildcards):
-    if "sample_bam_reference" in config and GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample):
+    if "sample_bam_reference" in GENOTYPER_CONFIG and GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample):
         reference = GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample)
     else:
         reference = GENOTYPER_CONFIG["default_bam_reference"]
@@ -152,7 +152,7 @@ rule collect_sv_sequences:
 rule get_insertion_sv_sequences:
     input: sv_calls="sv_calls.bed"
     output: "sv_sequences/insertion.fasta"
-    shell: """awk '{{ if ($4 == "insertion") {{ print ">"$1"_"$2"_"$3"_insertion"; print $6 }} }}' {input.sv_calls} > {output}"""
+    shell: """awk '{{ if ($4 == "INS") {{ print ">"$1"_"$2"_"$3"_insertion"; print $6 }} }}' {input.sv_calls} > {output}"""
 
 rule get_sv_sequences:
     input: positions="sv_sequence_positions.bed", sv_reference=GENOTYPER_CONFIG["sv_reference"]
@@ -245,4 +245,4 @@ rule get_svs_in_bed_format:
 rule filter_variants_to_only_svs:
     input: GENOTYPER_CONFIG["sv_calls"]
     output: "sv_calls.vcf.gz"
-    shell: """bcftools filter -O z -i "(SVTYPE='INS' & SVLEN >= 50) | (SVTYPE='DEL' & SVLEN <= -50)" {input} > {output}; tabix -p vcf {output}"""
+    shell: """bcftools filter -O z -i "(SVTYPE='INS' | SVTYPE='DEL') & (SVLEN >= 50 | (SVTYPE='DEL' & SVLEN <= -50))" {input} > {output}; tabix -p vcf {output}"""
