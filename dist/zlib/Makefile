@@ -10,3 +10,8 @@ zlib-1.2.8: zlib-1.2.8.tar.gz
 
 zlib-1.2.8.tar.gz:
 	wget "https://github.com/madler/zlib/archive/v1.2.8.tar.gz" -O $@
+
+.PHONY: clean
+
+clean:
+	rm -rf zlib-1.2.8*; rm -rf include lib share;
