@@ -414,7 +414,7 @@ if __name__ == "__main__":
             logger.debug("Breakpoint regions size: %s", breakpoint_regions_size)
             logger.debug("Reference regions size: %s", reference_regions_size)
 
-            if sv_call.name == "insertion":
+            if sv_call.name == "insertion" or sv_call.name == "INS":
                 breakpoint_concordant_depth = breakpoint_concordant_depth / (breakpoint_regions_size / float(reference_regions_size))
             else:
                 breakpoint_discordant_depth = breakpoint_discordant_depth / (reference_regions_size / float(breakpoint_regions_size))

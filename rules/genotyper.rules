@@ -27,7 +27,7 @@ def _get_bam_for_sample(wildcards):
     return GENOTYPER_CONFIG["samples"][wildcards.sample]
 
 def _get_sv_sequence_regions_for_sample(wildcards):
-    if "sample_bam_reference" in config and GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample):
+    if "sample_bam_reference" in GENOTYPER_CONFIG and GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample):
         reference = GENOTYPER_CONFIG["sample_bam_reference"].get(wildcards.sample)
     else:
         reference = GENOTYPER_CONFIG["default_bam_reference"]

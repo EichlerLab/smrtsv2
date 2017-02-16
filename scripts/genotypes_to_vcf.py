@@ -61,7 +61,7 @@ def convert_table_to_vcf(genotypes_filename, calls_filename, reference_filename,
     # Build an INFO field for each call.
     calls["info"] = calls.apply(lambda row: ";".join(["=".join(map(str, item)) for item in (("END", row.end), ("SVTYPE", row.sv_call), ("SVLEN", row.event_size), ("CONTIG", row.contig), ("CONTIG_START", row.contig_start), ("CONTIG_END", row.contig_end), ("REPEAT_TYPE", row.repeat_type), ("DPA", row.support), ("DP", row.depth), ("SEQ", row.sv_sequence))]), axis=1)
 
-    calls["sv_sequence"] = calls.apply(lambda row: "<DEL>" if row["sv_call"] == "deletion" else "<INS>", axis=1)
+    calls["sv_sequence"] = calls.apply(lambda row: "<DEL>" if row["sv_call"] in ("DEL", "deletion") else "<INS>", axis=1)
     simple_calls = calls[["chr", "start", "call_id", "reference", "sv_sequence", "quality", "info"]].rename_axis({"chr": "#CHROM", "start": "POS", "reference": "REF", "call_id": "ID", "quality": "QUAL", "info": "INFO", "sv_sequence": "ALT"}, axis=1)
 
     # Annotate distinct calls with wide genotypes.

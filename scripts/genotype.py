@@ -80,7 +80,7 @@ def add_slop_to_breakpoint(breakpoint, slop):
 def get_depth_for_sv_call(sv_call, bams_by_name, chromosome_sizes, min_mapping_quality, min_base_quality, slop_for_breakpoints):
     # Deletions are single-base events in the alternate haplotype and multiple-base events in the reference.
     # Insertions are multiple-base events in the alternate haplotype and single-base events in the reference.
-    if sv_call[EVENT_TYPE] == "deletion":
+    if sv_call[EVENT_TYPE] == "deletion" or sv_call[EVENT_TYPE] == "DEL":
         breakpoint_intervals = ((sv_call[CONTIG_NAME], int(sv_call[CONTIG_START]), int(sv_call[CONTIG_START])),)
         reference_intervals = ((sv_call[CHROMOSOME], int(sv_call[START]), int(sv_call[START])),
                                (sv_call[CHROMOSOME], int(sv_call[END]), int(sv_call[END])))
