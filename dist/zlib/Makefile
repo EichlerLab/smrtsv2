@@ -9,4 +9,4 @@ zlib-1.2.8: zlib-1.2.8.tar.gz
 	tar zxvf $<
 
 zlib-1.2.8.tar.gz:
-	wget http://zlib.net/$@
+	wget http://zlib.net/fossils/$@
