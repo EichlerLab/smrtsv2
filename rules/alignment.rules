@@ -50,7 +50,7 @@ rule get_subread_and_alignment_lengths:
 rule align_batch:
     input: reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR, reference=config["reference"], suffix=config.get("suffix_array", "%s.sa" % config["reference"]), ctab=config.get("ctab", "%s.ctab" % config["reference"])
     output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
-    params: threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config.get("alignment_parameters")
+    params: threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config.get("alignment_parameters", "").strip('"')
     run:
 
         if os.path.getsize(input.reads) > 0:

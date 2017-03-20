@@ -30,7 +30,7 @@
 	url = https://github.com/PacificBiosciences/pbh5tools.git
 [submodule "dist/bcftools"]
 	path = dist/bcftools
-	url = git://github.com/samtools/bcftools.git
+	url = https://github.com/samtools/bcftools.git
 [submodule "dist/vcflib"]
 	path = dist/vcflib
-	url = git@github.com:vcflib/vcflib.git
+	url = https://github.com/vcflib/vcflib.git
