@@ -11,7 +11,7 @@
     "identify_gaps_in_reference_assembly": {"params": "-l h_rt=04:00:00 -l mfree=2G"},
     "collect_hardstops": {"params": "-l mfree=4G -l h_rt=01:00:00"},
     "find_hardstops_in_aligned_reads": {"params": "-l mfree=4G -l h_rt=04:00:00"},
-    "annotate_coverage_of_merged_gap_support": {"params": "-l mfree=5G -l h_rt=01:00:00"},
+    "annotate_coverage_of_merged_gap_support": {"params": "-l mfree=24G -l h_rt=01:00:00"},
     "find_gaps_in_aligned_reads": {"params": "-l mfree=8G -l disk_free=2G -l h_rt=08:00:00"},
     "merge_coverage_per_batch": {"params": "-l mfree=4G -l h_rt=10:00:00"},
     "calculate_coverage_per_batch": {"params": "-l mfree=4G -l h_rt=04:00:00"},

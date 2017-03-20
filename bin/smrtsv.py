@@ -238,6 +238,8 @@ def assemble(args):
                 pass
 
         previous_contig = None
+        contig_file = None
+
         with open(args.candidates, "r") as fh:
             contigs = set()
             for line in fh:
@@ -246,6 +248,7 @@ def assemble(args):
                 if previous_contig != contig:
                     if previous_contig is not None and rebuild_regions_by_contig:
                         contig_file.close()
+                        contig_file = None
 
                     previous_contig = contig
                     contigs.add(contig)
@@ -257,7 +260,8 @@ def assemble(args):
                     contig_file.write(line)
 
         if rebuild_regions_by_contig:
-            contig_file.close()
+            if contig_file is not None:
+                contig_file.close()
 
         # Assemble regions per contig creating a single merged BAM for each contig.
         local_assembly_basename = os.path.basename(args.assembly_alignments)
