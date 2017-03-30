@@ -449,7 +449,7 @@ if __name__ == "__main__":
     parser_align.add_argument("--alignments_dir", help="absolute path of directory for BLASR alignment files", default="alignments")
     parser_align.add_argument("--batches", help="number of batches to split input reads into such that there will be one BAM output file per batch", type=int, default=1)
     parser_align.add_argument("--threads", help="number of threads to use for each BLASR alignment job", type=int, default=1)
-    parser_align.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50")
+    parser_align.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="--bestn 2 --maxAnchorsPerPosition 100 --advanceExactMatches 10 --affineAlign --affineOpen 100 --affineExtend 0 --insertion 5 --deletion 5 --extend --maxExtendDropoff 50")
     parser_align.set_defaults(func=align)
 
     # Detect SV signatures in BLASR alignments and build sliding windows to assemble.
@@ -516,7 +516,7 @@ if __name__ == "__main__":
     parser_runner.add_argument("--sample", help="Sample name to use in final variant calls", default="UnnamedSample")
     parser_runner.add_argument("--species", help="Common or scientific species name to pass to RepeatMasker", default="human")
     parser_runner.add_argument("--runjobs", help="A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing number uses the value set by --jobs (or 1 if --jobs was not set).", default="")
-    parser_runner.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="-bestn 2 -maxAnchorsPerPosition 100 -advanceExactMatches 10 -affineAlign -affineOpen 100 -affineExtend 0 -insertion 5 -deletion 5 -extend -maxExtendDropoff 50")
+    parser_runner.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="--bestn 2 --maxAnchorsPerPosition 100 --advanceExactMatches 10 --affineAlign --affineOpen 100 --affineExtend 0 --insertion 5 --deletion 5 --extend --maxExtendDropoff 50")
     parser_runner.add_argument("--asm_alignment_parameters", help="BLASR parameters to use to align local assemblies", default="-affineAlign -affineOpen 8 -affineExtend 0 -bestn 1 -maxMatch 30 -sdpTupleSize 13")
     parser_runner.add_argument("--mapping_quality", type=int, help="minimum mapping quality of raw reads to use for local assembly", default=30)
     parser_runner.add_argument("--minutes_to_delay_jobs", type=int, help="maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage", default=1)

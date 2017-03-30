@@ -48,9 +48,20 @@ rule get_subread_and_alignment_lengths:
 # Sync input reads and reference assembly to local disk, align reads, sort
 # output, and write final BAM to shared disk.
 rule align_batch:
-    input: reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR, reference=config["reference"], suffix=config.get("suffix_array", "%s.sa" % config["reference"]), ctab=config.get("ctab", "%s.ctab" % config["reference"])
-    output: protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR)
-    params: threads=str(THREADS), samtools_threads="1", samtools_memory="4G", bwlimit="30000", alignment_parameters=config.get("alignment_parameters", "").strip('"')
+    input:
+        reads="%s_reads/{batch_id}.fofn" % ALIGNMENTS_DIR,
+        reference=config["reference"],
+        suffix=config.get("suffix_array", "%s.sa" % config["reference"]),
+        ctab=config.get("ctab", "%s.ctab" % config["reference"])
+    output:
+        bam=protected("%s/{batch_id}.bam" % ALIGNMENTS_DIR),
+        bai=protected("%s/{batch_id}.bam.bai" % ALIGNMENTS_DIR)
+    params:
+        threads=str(THREADS),
+        samtools_threads="1",
+        samtools_memory="4G",
+        bwlimit="30000",
+        alignment_parameters=config.get("alignment_parameters", "").strip('"')
     run:
 
         if os.path.getsize(input.reads) > 0:
@@ -59,22 +70,23 @@ rule align_batch:
                 """export REFERENCE_PATH=`readlink -f {input.reference}`; """
                 """export REFERENCE_SUFFIX_PATH=`readlink -f {input.suffix}`; """
                 """export REFERENCE_CTAB_PATH=`readlink -f {input.ctab}`; """
-                """mkdir -p {TMP_DIR}/{wildcards.batch_id}; """
-                """cd {TMP_DIR}/{wildcards.batch_id}; """
                 """set -o pipefail; """
                 """set -e; """
-                """LD_LIBRARY_PATH=/net/eichler/vol18/paudano/pitchfork/20170228/lib:$LD_LIBRARY_PATH """
-                """/net/eichler/vol18/paudano/pitchfork/20170228/bin/blasr {CWD}/{input.reads} $REFERENCE_PATH -unaligned /dev/null -out /dev/stdout -sam -sa $REFERENCE_SUFFIX_PATH -ctab $REFERENCE_CTAB_PATH -nproc {params.threads} -clipping subread {params.alignment_parameters} | """
-                    """samtools view -F 0x4 -hS - | """
-                    """samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T {wildcards.batch_id} -o {wildcards.batch_id}.bam -; """
-                """samtools index {wildcards.batch_id}.bam; """
-                """rsync --bwlimit={params.bwlimit} --remove-source-files {wildcards.batch_id}.bam* {CWD}/`dirname {output}`/; """
-                """rm -rf {TMP_DIR}/{wildcards.batch_id}; """
+                """ALIGN_BATCH_TEMP={TMP_DIR}/{wildcards.batch_id}; """
+                """mkdir -p ${{ALIGN_BATCH_TEMP}}; """
+                """LD_LIBRARY_PATH=/net/eichler/vol18/paudano/pitchfork/20170228/lib:${{LD_LIBRARY_PATH}} """
+                """/net/eichler/vol18/paudano/pitchfork/20170228/bin/blasr {input.reads} $REFERENCE_PATH --unaligned /dev/null --out ${{ALIGN_BATCH_TEMP}}/batch_out.bam --sam --sa $REFERENCE_SUFFIX_PATH --ctab $REFERENCE_CTAB_PATH --nproc {params.threads} --clipping subread {params.alignment_parameters}; """
+                """samtools sort -@ {params.samtools_threads} -m {params.samtools_memory} -O bam -T ${{ALIGN_BATCH_TEMP}}/{wildcards.batch_id} -o {output.bam} ${{ALIGN_BATCH_TEMP}}/batch_out.bam; """
+                """samtools index {output.bam}; """
+                """rm -rf ${{ALIGN_BATCH_TEMP}}"""
             )
 
         else:
             # Empty FOFN, generate empty BAM
-            shell("""echo -e "@HD\tVN:1.3\tSO:coordinate" | samtools view -bS /dev/stdin > {output}""")
+            shell(
+                """echo -e "@HD\tVN:1.3\tSO:coordinate" | samtools view -b > {output.bam}; """
+                """samtools index {output.bam}"""
+            )
 
 # Divide input reads into batches for alignment.
 rule assign_batches:
