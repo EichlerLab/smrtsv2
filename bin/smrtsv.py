@@ -6,6 +6,8 @@ import sys
 import os
 import re
 
+from smrtsvlib.args import args_dict
+
 # Set logging
 logging.basicConfig(filename="smrtsv.log", level=logging.DEBUG)
 
@@ -443,13 +445,13 @@ if __name__ == "__main__":
 
     # Align PacBio reads to an indexed reference with BLASR.
     parser_align = subparsers.add_parser("align", help="align PacBio reads to an indexed reference with BLASR")
-    parser_align.add_argument("reference", help="FASTA file of indexed reference with .ctab and .sa in the same directory")
-    parser_align.add_argument("reads", help="text file with one absolute path to a PacBio reads file (.bax.h5) per line")
-    parser_align.add_argument("--alignments", help="text file with one absolute path to a BLASR alignments file (.bam) per line", default="alignments.fofn")
-    parser_align.add_argument("--alignments_dir", help="absolute path of directory for BLASR alignment files", default="alignments")
-    parser_align.add_argument("--batches", help="number of batches to split input reads into such that there will be one BAM output file per batch", type=int, default=1)
-    parser_align.add_argument("--threads", help="number of threads to use for each BLASR alignment job", type=int, default=1)
-    parser_align.add_argument("--alignment_parameters", help="BLASR parameters to use to align raw reads", default="--bestn 2 --maxAnchorsPerPosition 100 --advanceExactMatches 10 --affineAlign --affineOpen 100 --affineExtend 0 --insertion 5 --deletion 5 --extend --maxExtendDropoff 50")
+    parser_align.add_argument('reference', **args_dict['reference'])
+    parser_align.add_argument('reads', **args_dict['reads'])
+    parser_align.add_argument('--alignments', **args_dict['alignments'])
+    parser_align.add_argument('--alignments_dir', **args_dict['alignments_dir'])
+    parser_align.add_argument('--batches', **args_dict['batches'])
+    parser_align.add_argument('--threads', **args_dict['threads'])
+    parser_align.add_argument('--alignment_parameters', **args_dict['alignment_parameters'])
     parser_align.set_defaults(func=align)
 
     # Detect SV signatures in BLASR alignments and build sliding windows to assemble.
