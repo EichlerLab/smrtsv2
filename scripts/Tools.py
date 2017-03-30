@@ -185,8 +185,8 @@ tleni = 9
 def ParseSamLine(line):
     try:
         vals = line.split("\t")
-        if (vals[6] == "*" and vals[7] == "0" and vals[8] == "0"):
-            return None
+        #if (vals[6] == "*" and vals[7] == "0" and vals[8] == "0"):
+        #    return None
         title = vals[0]
         flag = int(vals[1])
         tName = vals[2]
