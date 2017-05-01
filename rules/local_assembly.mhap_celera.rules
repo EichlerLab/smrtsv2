@@ -51,9 +51,17 @@ def _get_assembly_alignments(wildcards):
 # Collect assemblies.
 #
 
+# collect_assembly_alignments
+#
+# Collect all assembly alignments.
 rule collect_assembly_alignments:
-    input: alignments=_get_assembly_alignments, chromosome_lengths=CHROMOSOME_LENGTHS, reference=config["reference"]
-    output: LOCAL_ASSEMBLY_ALIGNMENTS
+    input:
+        alignments=_get_assembly_alignments,
+        chromosome_lengths=CHROMOSOME_LENGTHS,
+        reference=config["reference"],
+        regions=REGIONS_TO_ASSEMBLE
+    output:
+        LOCAL_ASSEMBLY_ALIGNMENTS
     run:
         list_filename = output[0].replace("bam", "list.txt")
         base_filename = os.path.basename(list_filename)
@@ -63,22 +71,66 @@ rule collect_assembly_alignments:
 
         shell("""mkdir -p {TMP_DIR}; while read file; do sed 's/\/0_[0-9]\+//' $file; done < %s | samtools view -Sbu -t {input.chromosome_lengths} - | bamleftalign -f {input.reference} | samtools sort -O bam -T {TMP_DIR}/%s -o {output}""" % (list_filename, base_filename))
 
+# assemble_region
+#
+# Assemble one region. Extracts reads from the region, assembles, polishes, and re-aligns the contig back to the
+# reference sequence.
 rule assemble_region:
-    input: alignments=ALIGNMENTS, regions=REGIONS_TO_ASSEMBLE
-    output: "{ASSEMBLY_DIR}/{chromosome}/{region}/consensus_reference_alignment.sam"
-    params: threads="4"
+    input:
+        alignments=ALIGNMENTS
+    output:
+        sam=touch(ASSEMBLY_DIR + '/{chromosome}/{region}/consensus_reference_alignment.sam')
+    log:
+        ASSEMBLY_DIR + '/{chromosome}/{region}/mhap.log'
+    params:
+        threads='4'
     shell:
-        "export ANALYSIS_DIR=`pwd`; "
-        "export ALIGNMENTS_PATH=`readlink -f {input.alignments}`;"
-        "export REFERENCE_PATH=`readlink -f {REFERENCE}`; "
-        "export INPUT_READS_PATH=`readlink -f {INPUT_READS}`; "
-        "export LOG_FILE=`readlink -f {LOG_FILE}`;"
-        "mkdir -p {TMP_DIR}/{wildcards.region}; "
-        "pushd {TMP_DIR}/{wildcards.region}; "
+        # Setup Log
+        """JOB_LOG=$(readlink -f {log}); """
+
+        # Random sleep up to 60 seconds; prevents overwhelming IO starting many jobs
+        """sleep $(shuf -i 0-60 -n 1); """
+
+        # Setup paths
+        """export ANALYSIS_DIR=`pwd`; """
+        """export ALIGNMENTS_PATH=`readlink -f {input.alignments}`; """
+        """export REFERENCE_PATH=`readlink -f {REFERENCE}`; """
+        """export INPUT_READS_PATH=`readlink -f {INPUT_READS}`; """
+        """export LOG_FILE=`readlink -f {LOG_FILE}`; """
+
+        # Get locations of output files
+        """ALIGN_FILE={TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam; """
+        """ALIGN_LOG_FILE={TMP_DIR}/{wildcards.region}/assembly.log; """
+
+        # Make temp directory
+        """mkdir -p {TMP_DIR}/{wildcards.region}; """
+        """echo "Temp directory: {TMP_DIR}/{wildcards.region}" > $JOB_LOG; """
+
+        # Enter temp directory
+        """echo -n "Entering temp directory (popd): " >> $JOB_LOG; """
+        """pushd {TMP_DIR}/{wildcards.region} >> $JOB_LOG 2>&1; """
+
+        # Copy config.json
         """if [[ -e "$ANALYSIS_DIR/config.json" ]]; then rsync $ANALYSIS_DIR/config.json {TMP_DIR}/{wildcards.region}/; fi; """
-        "snakemake -q -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules --config alignments=$ALIGNMENTS_PATH reference=$REFERENCE_PATH reads=$INPUT_READS_PATH region={wildcards.region} log=$LOG_FILE mapping_quality={MAPPING_QUALITY} asm_alignment_parameters={ASM_ALIGNMENT_PARAMETERS}; "
-        "popd; "
-        "mkdir -p `dirname {output[0]}`; "
-        "rsync -a {TMP_DIR}/{wildcards.region}/consensus_reference_alignment.sam {TMP_DIR}/{wildcards.region}/assembly.log `dirname {output[0]}`/; "
-        "rm -rf {TMP_DIR}/{wildcards.region}; "
-        "touch {output}"
+
+        # Run assembly
+        """echo "Running snakemake" >> $JOB_LOG; """
+        """snakemake -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules """
+            """--config alignments=$ALIGNMENTS_PATH """
+            """reference=$REFERENCE_PATH """
+            """reads=$INPUT_READS_PATH """
+            """region={wildcards.region} """
+            """log=$LOG_FILE """
+            """mapping_quality={MAPPING_QUALITY} """
+            """asm_alignment_parameters=\\"{ASM_ALIGNMENT_PARAMETERS}\\" """  # Quote BLASR parameters to prevent Snakemake from interpreting them
+            """>> $JOB_LOG 2>&1; """
+        """echo "Snakemake complete" >> $JOB_LOG; """
+        """popd; """
+
+        # Copy alignment and alignment log
+        """echo -n "$ALIGN_FILE exists: " >>$JOB_LOG; """
+            """if [[ -e $ALIGN_FILE ]]; then echo "True" >>$JOB_LOG; else echo "False" >>$JOB_LOG; fi; """
+        """rsync -a $ALIGN_FILE $ALIGN_LOG_FILE $(dirname {output.sam})/ 2>>$JOB_LOG; """
+
+        # Cleanup
+        """rm -rf {TMP_DIR}/{wildcards.region}; """

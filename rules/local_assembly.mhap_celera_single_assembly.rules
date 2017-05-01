@@ -62,7 +62,7 @@ rule align_consensus_to_reference_region:
     params:
         sge_opts='',
         mapping_quality_threshold=str(config['mapping_quality']),
-        asm_alignment_parameters=config['asm_alignment_parameters']
+        asm_alignment_parameters=config['asm_alignment_parameters'].strip('"')  # Parameters are surrounded by quotes to prevent Snakemake from trying to interpret them
     shell:
         """LD_LIBRARY_PATH=/net/eichler/vol18/paudano/pitchfork/20170228/lib:${{LD_LIBRARY_PATH}} """
             """/net/eichler/vol18/paudano/pitchfork/20170228/bin/blasr """
@@ -164,14 +164,24 @@ rule map_reads_to_assembly:
         sge_opts='',
         threads='4'
     shell:
-        """LD_LIBRARY_PATH=/net/eichler/vol18/paudano/pitchfork/20170228/lib:${{LD_LIBRARY_PATH}} """
-            """/net/eichler/vol18/paudano/pitchfork/20170228/bin/blasr """
-            """{input.bam} {input.fasta} """
-            """--bam --bestn 1 """
-            """--unaligned /dev/null """
-            """--out {output.usort_bam} """
-            """--nproc {params.threads}; """
-        """samtools sort {output.usort_bam} -o {output.bam}; """
+        try:
+            shell(
+                """LD_LIBRARY_PATH=/net/eichler/vol18/paudano/pitchfork/20170228/lib:${{LD_LIBRARY_PATH}} """
+                    """/net/eichler/vol18/paudano/pitchfork/20170228/bin/blasr """
+                    """{input.bam} {input.fasta} """
+                    """--bam --bestn 1 """
+                    """--unaligned /dev/null """
+                    """--out {output.usort_bam} """
+                    """--nproc {params.threads}; """
+                """samtools sort {output.usort_bam} -o {output.bam}; """
+            )
+
+        except:
+            print("Mapping reads to assembly crashed, continuing")
+
+            shell(
+                """
+            )
 
 # index_assembly
 #
@@ -258,7 +268,8 @@ rule convert_reads_to_fastq:
         fastq='reads.fastq'
     params:
         sge_opts=''
-    shell: "{SNAKEMAKE_DIR}/../scripts/FastaToFakeFastq.py {input.fasta} {output.fastq}"
+    shell:
+        """{SNAKEMAKE_DIR}/../scripts/FastaToFakeFastq.py {input.fasta} {output.fastq}"""
 
 # convert_reads_to_fasta
 #
