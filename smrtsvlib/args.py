@@ -46,7 +46,7 @@ args_dict['asm_alignment_parameters'] = {
 
 # assembly_alignments
 args_dict['assembly_alignments'] = {
-    help: 'BAM file with BLASR alignments of local assemblies against the reference'
+    'help': 'BAM file with BLASR alignments of local assemblies against the reference'
 }
 
 # assembly_log
@@ -175,6 +175,14 @@ args_dict['rebuild_regions'] = {
 # reference
 args_dict['reference'] = {
     'help': 'FASTA file of reference to index'
+}
+
+# runjobs
+args_dict['runjobs'] = {
+    'help':
+        'A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing '
+        'number uses the value set by --jobs (or 1 if --jobs was not set).',
+    'default': ''
 }
 
 # threads
