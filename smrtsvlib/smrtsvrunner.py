@@ -33,8 +33,7 @@ def get_env(install_dir):
     """
     Get environment variables
 
-    :param install_dir: The directory where SMRTSV is installed. This is the directory containing `Snakefile` and
-        'smrtsv.py'.
+    :param install_dir: The directory where SMRTSV is installed (contains 'smrtsv.py').
 
     :return: A hash of all environment variables with modifications made by this function.
     """
@@ -96,7 +95,7 @@ def run_cmd(args, process_env):
     return ret_code if ret_code is not None else -1024
 
 
-def run_snake_target(args, process_env, smrtsv_dir, cluster_flag, *cmd):
+def run_snake_target(snakefile, args, process_env, smrtsv_dir, cluster_flag, *cmd):
     """
     Run a snakemake target.
 
@@ -105,6 +104,7 @@ def run_snake_target(args, process_env, smrtsv_dir, cluster_flag, *cmd):
 
     :return: Return code from snakemake.
     """
+
     # Use the user-defined cluster config path if one is given. Otherwise, use
     # an empty config that comes with the SMRT-SV distribution.
     if args.cluster_config is not None:
@@ -115,10 +115,10 @@ def run_snake_target(args, process_env, smrtsv_dir, cluster_flag, *cmd):
     # Setup snakemake command
     prefix = [
         'snakemake',
+        '--snakefile', os.path.join(smrtsv_dir, 'rules', snakefile),
         '-T',
         '--rerun-incomplete',
         '--cluster-config', cluster_config_path,
-        '--snakefile', os.path.join(smrtsv_dir, 'Snakefile'),
         '-j', str(args.jobs)
     ]
 

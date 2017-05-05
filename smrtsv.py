@@ -24,11 +24,11 @@ PROCESS_ENV = smrtsvrunner.get_env(SMRTSV_DIR)
 
 def index(args):
     
-    print('Indexing reference')
+    print('Preparing reference')
     
     return smrtsvrunner.run_snake_target(
-        args,
-        'prepare_reference',
+        'reference.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'ref_run',
         '--config',
         'reference={}'.format(args.reference)
     )
@@ -39,7 +39,7 @@ def align(args):
     print('Aligning sequence reads')
 
     return smrtsvrunner.run_snake_target(
-        args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
         'align_reads',
         '--config',
         'reference={}'.format(args.reference),
@@ -82,7 +82,7 @@ def detect(args):
     if args.candidates:
         command = command + ('candidates={}'.format(args.candidates),)
 
-    return smrtsvrunner.run_snake_target(args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
+    return smrtsvrunner.run_snake_target('XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
 
 
 def assemble(args):
@@ -172,7 +172,7 @@ def assemble(args):
             sys.stdout.write('Starting local assemblies for {}\n'.format(contig))
             logging.debug('Assembly command: %s', ' '.join(command))
 
-            return_code = smrtsvrunner.run_snake_target(args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
+            return_code = smrtsvrunner.run_snake_target('XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
 
             contig_count += 1
 
@@ -208,7 +208,7 @@ def call(args):
     sys.stdout.write("Calling variants\n")
 
     return_code = smrtsvrunner.run_snake_target(
-        args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
         'call_variants',
         '--config',
         'reference={}'.format(args.reference),
@@ -321,7 +321,7 @@ def genotype(args):
     print('Genotyping SVs')
 
     return_code = smrtsvrunner.run_snake_target(
-        args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
         'convert_genotypes_to_vcf',
         '--config',
         'genotyper_config={}'.format(args.genotyper_config),
