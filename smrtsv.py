@@ -39,16 +39,14 @@ def align(args):
     print('Aligning sequence reads')
 
     return smrtsvrunner.run_snake_target(
-        'XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
-        'align_reads',
+        'align.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'aln_run',
         '--config',
-        'reference={}'.format(args.reference),
         'reads={}'.format(args.reads),
-        'alignments={}'.format(args.alignments),
-        'alignments_dir={}'.format(args.alignments_dir),
         'batches={}'.format(args.batches),
         'threads={}'.format(args.threads),
-        'tmp_dir={}'.format(args.tmpdir),
+        'tempdir={}'.format(args.tempdir),
+        'link_index={}'.format(args.link_index),
         'alignment_parameters="{}"'.format(args.alignment_parameters)
     )
 
@@ -98,7 +96,7 @@ def assemble(args):
         'reference={}'.format(args.reference),
         'alignments={}'.format(args.alignments),
         'reads={}'.format(args.reads),
-        'tmp_dir={}'.format(args.tmpdir),
+        'tempdir={}'.format(args.tempdir),
         'asm_alignment_parameters="{}"'.format(args.asm_alignment_parameters),
         'mapping_quality="{}"'.format(args.mapping_quality),
         'minutes_to_delay_jobs="{}"'.format(args.minutes_to_delay_jobs),
@@ -350,9 +348,8 @@ if __name__ == '__main__':
     parser.add_argument('--jobs', type=int, default=1,
                         help='number of jobs to run simultaneously')
 
-    parser.add_argument('--tmpdir', default='default',
-                        help='temporary directory to use for distributed jobs. Keyword "default" tells Python to pick '
-                             'a directory.'
+    parser.add_argument('--tempdir', default=None,
+                        help='Temporary directory.'
                         )
 
     parser.add_argument('--verbose', '-v', action='store_true',
@@ -373,6 +370,7 @@ if __name__ == '__main__':
     # SMRTSV command: Index reference
     parser_index = subparsers.add_parser('index', help='Index a reference for BLASR')
     parser_index.add_argument('reference', **args_dict['reference'])
+    parser_index.add_argument('--no_link_index', **args_dict['no_link_index'])
     parser_index.set_defaults(func=index)
 
     # SMRTSV command: Align PacBio reads

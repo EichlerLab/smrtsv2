@@ -1,13 +1,15 @@
 {
   "__default__": {
-  "params": "-l mfree=1G -l h_rt=00:30:00"
+  "params": "-l mfree=1G -l h_rt=00:30:00 -N smrtv_job"
   },
-  "ref_make_fai": {"params": "-l mfree=4G -l h_rt=01:00:00"},
-  "ref_make_sa": {"params": "-l mfree=32G -l h_rt=08:00:00"},
+  "ref_make_fai": {"params": "-l mfree=4G -l h_rt=01:00:00 -N ref_make_fai"},
+  "ref_make_sa": {"params": "-l mfree=32G -l h_rt=04:00:00 -N ref_make_sa"},
+
+  "aln_align_batch": {"params": "-l h_rt=48:00:00 -l disk_free=10G -l mfree=8.25G -pe serial 8 -N aln_align_batch"},
+
   "prepare_tuple_count_table_for_reference": {"params": "-l mfree=8G -l h_rt=00:30:00"},
   "prepare_suffix_array_for_reference": {"params": "-l mfree=40G -l h_rt=08:00:00"},
   "plot_alignment_summaries": {"params": "-l mfree=8G -l h_rt=00:15:00"},
-  "align_batch": {"params": "-l h_rt=48:00:00 -l disk_free=10G -l mfree=8.25G -pe serial 8 -N align_batch"},
   "annotate_coverage_for_candidates": {"params": "-l mfree=10G -l h_rt=01:00:00"},
   "identify_gaps_in_reference_assembly": {"params": "-l h_rt=04:00:00 -l mfree=2G"},
   "collect_hardstops": {"params": "-l mfree=4G -l h_rt=01:00:00"},
