@@ -29,16 +29,16 @@ args_dict['no_link_index'] = {
 args_dict['alignment_parameters'] = {
     'help': 'BLASR parameters for raw read alignments.',
     'default':
-        '-bestn 2 '
-        '-maxAnchorsPerPosition 100 '
-        '-advanceExactMatches 10 '
-        '-affineAlign '
-        '-affineOpen 100 '
-        '-affineExtend 0 '
-        '-insertion 5 '
-        '-deletion 5 '
-        '-extend '
-        '-maxExtendDropoff 50'
+        '--bestn 2 '
+        '--maxAnchorsPerPosition 100 '
+        '--advanceExactMatches 10 '
+        '--affineAlign '
+        '--affineOpen 100 '
+        '--affineExtend 0 '
+        '--insertion 5 '
+        '--deletion 5 '
+        '--extend '
+        '--maxExtendDropoff 50'
 }
 
 # alignments
@@ -94,12 +94,7 @@ args_dict['assembly_window_slide'] = {
 args_dict['batches'] = {
     'help': 'number of batches to split input reads into such that there will be one BAM output file per batch',
     'type': int,
-    'default': 1
-}
-
-# candidates
-args_dict['candidates'] = {
-    'help': 'BED file of candidates detected in read alignments.'
+    'default': 20
 }
 
 # exclude

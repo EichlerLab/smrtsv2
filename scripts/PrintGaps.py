@@ -316,7 +316,7 @@ for samFileName in args.sam:
                     if (doPrint):
                         if (tsd == ""):
                             sys.stderr.write(line + "\n")
-                        outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "insertion", oplen, gapSeq, tsd, aln.title, qPos, qPos + oplen))
+                        outFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "INS", oplen, gapSeq, tsd, aln.title, qPos, qPos + oplen))
                         if (args.context > 0):
                             outFile.write("\t{}".format(homopolymer))
                         if (args.qpos):
@@ -346,7 +346,7 @@ for samFileName in args.sam:
                     #delSeq = genomeDict[chrName].seq[delStart:delEnd].tostring()
                     delSeq = Tools.ExtractSeq([chrName, delStart, delEnd], genomeFile, fai)
 
-                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "deletion", oplen, delSeq, aln.title, qPos, qPos + 1))
+                    outFile.write("{}\t{}\t{}\t{}\t{}\t{}\tno_tsd\t{}\t{}\t{}".format(chrName, tPos, tPos + oplen, "DEL", oplen, delSeq, aln.title, qPos, qPos + 1))
                     if (args.context > 0):
                         outFile.write("\t{}".format(homopolymer))
 

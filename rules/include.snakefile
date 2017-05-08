@@ -5,6 +5,17 @@ Sets up common constructs needed by Snakefile called by Snakemake.
 import os
 import tempfile
 
+###################
+### Definitions ###
+###################
+
+#
+# Set universal constants
+#
+
+SVTYPES = ['INS', 'DEL', 'INV']
+INSDEL= ['INS', 'DEL']
+
 
 #
 # Set SMRTSV locations
@@ -19,9 +30,12 @@ LD_LIBRARY_PATH = config.get("ld_path")
 PATH = config.get("path")
 PERL5LIB = config.get("perl5lib")
 
-#shell.prefix("export PATH=\"%s\"; export LD_LIBRARY_PATH=\"%s\"; export PERL5LIB=\"%s\"; " % (PATH, LD_LIBRARY_PATH, PERL5LIB))
+os.environ['LD_LIBRARY_PATH'] = LD_LIBRARY_PATH
+os.environ['PATH'] = PATH
+os.environ['PERL5LIB'] = PERL5LIB
 
-shell.prefix('set -euo pipefail')
+shell.prefix('set -euo pipefail; ')
+
 
 #
 # Define internal constants.

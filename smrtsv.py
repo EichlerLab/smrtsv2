@@ -30,7 +30,8 @@ def index(args):
         'reference.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
         'ref_run',
         '--config',
-        'reference={}'.format(args.reference)
+        'reference={}'.format(args.reference),
+        'link_index={}'.format(args.link_index)
     )
 
 
@@ -45,8 +46,7 @@ def align(args):
         'reads={}'.format(args.reads),
         'batches={}'.format(args.batches),
         'threads={}'.format(args.threads),
-        'tempdir={}'.format(args.tempdir),
-        'link_index={}'.format(args.link_index),
+        'tempdir={}'.format(args.tempdir if args.tempdir is not None else ''),
         'alignment_parameters="{}"'.format(args.alignment_parameters)
     )
 
@@ -56,13 +56,11 @@ def detect(args):
     Detect SVs from signatures in read alignments.
     """
 
-    print('Searching for variant signatures')
+    print('Detecting variant signatures')
 
     command = (
-        'get_regions',
+        'detect_get_regions',
         '--config',
-        'reference={}'.format(args.reference),
-        'alignments={}'.format(args.alignments),
         'assembly_window_size={}'.format(args.assembly_window_size),
         'assembly_window_slide={}'.format(args.assembly_window_slide),
         'min_length={}'.format(args.min_length),
@@ -77,10 +75,7 @@ def detect(args):
     if args.exclude:
         command = command + ('regions_to_exclude={}'.format(args.exclude),)
 
-    if args.candidates:
-        command = command + ('candidates={}'.format(args.candidates),)
-
-    return smrtsvrunner.run_snake_target('XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
+    return smrtsvrunner.run_snake_target('detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
 
 
 def assemble(args):
@@ -375,7 +370,6 @@ if __name__ == '__main__':
 
     # SMRTSV command: Align PacBio reads
     parser_align = subparsers.add_parser('align', help='Align reads.')
-    parser_align.add_argument('reference', **args_dict['reference'])
     parser_align.add_argument('reads', **args_dict['reads'])
     parser_align.add_argument('--alignments', **args_dict['alignments'])
     parser_align.add_argument('--alignments_dir', **args_dict['alignments_dir'])
@@ -386,9 +380,6 @@ if __name__ == '__main__':
 
     # SMRTSV command: Detect windows
     parser_detector = subparsers.add_parser('detect', help='Detect SV signatures in aligned reads')
-    parser_detector.add_argument('reference', **args_dict['reference'])
-    parser_detector.add_argument('alignments', **args_dict['alignments'])
-    parser_detector.add_argument('candidates', **args_dict['candidates'])
     parser_detector.add_argument('--exclude', **args_dict['exclude'])
     parser_detector.add_argument('--assembly_window_size', **args_dict['assembly_window_size'])
     parser_detector.add_argument('--assembly_window_slide', **args_dict['assembly_window_slide'])
@@ -406,7 +397,6 @@ if __name__ == '__main__':
     parser_assembler.add_argument('reference', **args_dict['reference'])
     parser_assembler.add_argument('reads', **args_dict['reads'])
     parser_assembler.add_argument('alignments', **args_dict['alignments'])
-    parser_assembler.add_argument('candidates', **args_dict['candidates'])
     parser_assembler.add_argument('assembly_alignments', **args_dict['assembly_alignments'])
     parser_assembler.add_argument('--rebuild_regions', **args_dict['rebuild_regions'])
     parser_assembler.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
@@ -432,7 +422,6 @@ if __name__ == '__main__':
     parser_runner.add_argument('--variants', **args_dict['variants'])
     parser_runner.add_argument('--alignments', **args_dict['alignments'])
     parser_runner.add_argument('--alignments_dir', **args_dict['alignments_dir'])
-    parser_runner.add_argument('--candidates', **args_dict['candidates'])
     parser_runner.add_argument('--assembly_alignments', **args_dict['assembly_alignments'])
     parser_runner.add_argument('--batches', **args_dict['batches'])
     parser_runner.add_argument('--threads', **args_dict['threads'])

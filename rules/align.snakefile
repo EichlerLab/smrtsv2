@@ -4,14 +4,16 @@ Align sequence reads in batches and produce an FOFN file listing each BAM file.
 
 import os
 
+import numpy as np
+
 include: 'include.snakefile'
 
 localrules: aln_run, aln_assign_batches
 
 
-#
-# Parameters
-#
+####################
+### Declarations ###
+####################
 
 # Run parameters
 READS = config.get('reads')
@@ -23,9 +25,9 @@ ALIGN_PARAMS = config.get("alignment_parameters", "").strip('"')
 BATCHES = list(range(BATCH_COUNT))
 
 
-#
-# Rules
-#
+#############
+### Rules ###
+#############
 
 # aln_run
 #
@@ -38,7 +40,7 @@ rule aln_run:
         fofn='align/alignments.fofn'
     run:
         with open(output.fofn, 'w') as out_file:
-            out_file.write('\n'.join[os.path.abspath(bam_file) for bam_file in input.bam])
+            out_file.write('\n'.join([os.path.abspath(bam_file) for bam_file in input.bam]))
             out_file.write('\n')
 
 # aln_align_batch
@@ -46,7 +48,7 @@ rule aln_run:
 # Align one batch of reads to the reference.
 rule aln_align_batch:
     input:
-        reads='align/batches/fofn/{batch_id}.fofn,
+        reads='align/batches/fofn/{batch_id}.fofn',
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
         ref_sa='reference/ref.fasta.sa',
@@ -60,6 +62,8 @@ rule aln_align_batch:
         samtools_memory="4G",
         bwlimit="30000",
         align_params=ALIGN_PARAMS
+    log:
+        'align/batches/fofn/log/{batch_id}.log'
     run:
 
         if os.path.getsize(input.reads) > 0:
@@ -67,6 +71,7 @@ rule aln_align_batch:
             shell(
                 """ALIGN_BATCH_TEMP={TEMP_DIR}/aln_align_batch_{wildcards.batch_id}; """
                 """mkdir -p ${{ALIGN_BATCH_TEMP}}; """
+                """echo "Aligning batch {wildcards.batch_id}..." >{log}; """
                 """blasr {input.reads} {input.ref_fa} """
                     """--unaligned /dev/null """
                     """--out ${{ALIGN_BATCH_TEMP}}/batch_out.bam """
@@ -75,24 +80,34 @@ rule aln_align_batch:
                     """--ctab {input.ref_ctab} """
                     """--nproc {params.threads} """
                     """--clipping subread """
-                    """{params.align_params}; """
+                    """{params.align_params} """
+                    """>>{log} 2>&1; """
+                """echo "Sorting..." >>{log}; """
                 """samtools sort """
                     """-@ {params.samtools_threads} """
                     """-m {params.samtools_memory} """
                     """-O bam """
                     """-T ${{ALIGN_BATCH_TEMP}}/{wildcards.batch_id} """
                     """-o {output.bam} """
-                    """${{ALIGN_BATCH_TEMP}}/batch_out.bam; """
+                    """${{ALIGN_BATCH_TEMP}}/batch_out.bam """
+                    """>>{log} 2>&1; """
+                """echo "Indexing..." >>{log} 2>&1; """
                 """samtools index {output.bam}; """
+                """echo "Cleaning temp \\"${{ALIGN_BATCH_TEMP}}\\"..." >>{log}; """
                 """rm -rf ${{ALIGN_BATCH_TEMP}}"""
+                """echo "Indexing..." >>{log} 2>&1; """
+                """echo "Done aligning batch {wildcards.batch_id}" >>{log}; """
             )
 
         else:
             # Empty FOFN, generate empty BAM
             shell(
+                """echo "Empty FOFN for batch {wildcards.batch_id}." >{log}; """
+                """echo "Creating empty BAM with headers..." >>{log}; """
                 """echo -e "@HD\tVN:1.3\tSO:coordinate" | """
                 """samtools view -b > {output.bam}; """
                 """samtools index {output.bam}"""
+                """echo "Done" >>{log}; """
             )
 
 # aln_assign_batches

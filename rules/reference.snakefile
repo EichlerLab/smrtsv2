@@ -9,17 +9,17 @@ include: 'include.snakefile'
 localrules: ref_run, ref_set_fa
 
 
-#
-# Parameters
-#
+####################
+### Declarations ###
+####################
 
 REFERENCE = config.get('reference', None)
-LINK_INDEX = config.get('link_index', True)
+LINK_INDEX = str(config.get('link_index', True))
 
 
-#
-# Rules
-#
+#############
+### Rules ###
+#############
 
 # ref_run
 #
@@ -39,14 +39,13 @@ rule ref_make_ctab:
         ref_fa='reference/ref.fasta'
     output:
         ref_ctab='reference/ref.fasta.ctab'
-    run:
-
-        reference_ctab = REFERENCE + '.ctab'
-
-        if os.path.isfile(reference_ctab) and LINK_INDEX:
-            shell("""ln -sf {} {}""".format(reference_ctab, output.ref_ctab))
-        else:
-            shell("""printTupleCountTable {input.ref_fa} > {output.ref_ctab}""")
+    shell:
+        """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.ctab ]; then """
+            """ln -sf {REFERENCE}.ctab {output.ref_ctab}; """
+        """else """
+            """printTupleCountTable {input.ref_fa} > {output.ref_ctab}; """
+            """chmod a-w {output.ref_ctab}; """
+        """fi"""
 
 # ref_make_sa
 #
@@ -58,14 +57,13 @@ rule ref_make_sa:
         ref_sa='reference/ref.fasta.sa'
     log:
         'reference/log/ref_make_sa.log'
-    run:
-
-        reference_sa = REFERENCE + '.sa'
-
-        if os.path.isfile(reference_sa) and LINK_INDEX:
-            shell("""ln -sf {} {}""".format(reference_sa, output.ref_sa))
-        else:
-            shell("""sawriter {output} {input} >{log} 2>&1""")
+    shell:
+        """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.sa ]; then """
+            """ln -sf {REFERENCE}.sa {output.ref_sa}; """
+        """else """
+            """sawriter {output.ref_sa} {input.ref_fa} >{log} 2>&1; """
+            """chmod a-w {output.ref_sa}; """
+        """fi"""
 
 # ref_make_fai
 #
@@ -77,14 +75,13 @@ rule ref_make_fai:
         ref_fai='reference/ref.fasta.fai'
     log:
         'reference/log/ref_make_fai.log'
-    run:
-
-        REFERENCE_FAI = REFERENCE + '.fai'
-
-        if os.path.isfile(REFERENCE_FAI) and LINK_INDEX:
-            shell("""ln -sf {} {}""".format(REFERENCE_FAI, output.ref_fai))
-        else:
-            shell("""samtools faidx {input.fa} >{log} 2>&1""")
+    shell:
+        """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.fai ]; then """
+            """ln -sf {REFERENCE}.fai {output.ref_fai}; """
+        """else """
+            """samtools faidx {input.ref_fa} >{log} 2>&1; """
+            """chmod a-w {output.ref_fai}; """
+        """fi"""
 
 # ref_set_fa
 #
