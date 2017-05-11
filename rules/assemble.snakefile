@@ -115,7 +115,7 @@ rule assemble_region:
 
         # Run assembly
         """echo "Running snakemake" >> $JOB_LOG; """
-        """snakemake -j {params.threads} -s {SNAKEMAKE_DIR}/rules/local_assembly.mhap_celera_single_assembly.rules """
+        """snakemake -j {params.threads} -s {SNAKEMAKE_DIR}/rules/assemble_group.snakefile """
             """--config alignments=$ALIGNMENTS_PATH """
             """reference=$REFERENCE_PATH """
             """reads=$INPUT_READS_PATH """

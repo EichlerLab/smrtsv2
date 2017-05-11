@@ -4,7 +4,8 @@ Rules for preparing the reference.
 
 import os
 
-include: 'include.snakefile'
+if not 'INCLUDE_SNAKEFILE' in globals():
+    include: 'include.snakefile'
 
 localrules: ref_run, ref_set_fa
 
@@ -16,20 +17,40 @@ localrules: ref_run, ref_set_fa
 REFERENCE = config.get('reference', None)
 LINK_INDEX = str(config.get('link_index', True))
 
+if REFERENCE is not None:
+    REFERENCE = os.path.abspath(REFERENCE)
+
 
 #############
 ### Rules ###
 #############
 
-# ref_run
+# ref_all
 #
 # Create all reference files that do not exist.
-rule ref_run:
+rule ref_all:
     input:
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
         ref_ctab='reference/ref.fasta.ctab',
-        ref_sa='reference/ref.fasta.sa'
+        ref_sa='reference/ref.fasta.sa',
+        ref_sizes='reference/ref.fasta.sizes'
+
+# ref_make_sizes
+#
+# Make a file of each reference sequence and it's size, and sort by the sequence name. This
+# file is often used by bedtools as the genome file. Some of the bedtools commands will fail
+# if the genomes file is not sorted or contains extra fields, so the the .fai file cannot always
+# be used.
+rule ref_make_sizes:
+    input:
+        ref_fai='reference/ref.fasta.fai'
+    output:
+        ref_sizes='reference/ref.fasta.sizes'
+    shell:
+        """awk -vOFS="\t" '{{print $1, $2}}' {input.ref_fai} | """
+        """sort -k1,1 """
+        """>{output.ref_sizes}"""
 
 # ref_make_ctab
 #

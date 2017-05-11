@@ -6,23 +6,18 @@ import os
 
 import numpy as np
 
-include: 'include.snakefile'
+if not 'INCLUDE_SNAKEFILE' in globals():
+    include: 'include.snakefile'
 
 localrules: aln_run, aln_assign_batches
 
 
-####################
-### Declarations ###
-####################
+###################
+### Definitions ###
+###################
 
-# Run parameters
-READS = config.get('reads')
-BATCH_COUNT = int(config.get('batches', '1'))
-THREADS = int(config.get('threads', '1'))
-ALIGN_PARAMS = config.get("alignment_parameters", "").strip('"')
-
-# List of batches
-BATCHES = list(range(BATCH_COUNT))
+# List of batch numbers
+ALIGN_BATCH_LIST = list(range(int(get_config_param('batches'))))
 
 
 #############
@@ -34,8 +29,8 @@ BATCHES = list(range(BATCH_COUNT))
 # Run all alignments in batches and write and FOFN file of each BAM (one per batch).
 rule aln_run:
     input:
-        bam=expand('align/bam/{batch_id}.bam', batch_id=BATCHES),
-        bai=expand('align/bam/{batch_id}.bam.bai', batch_id=BATCHES),
+        bam=expand('align/bam/{batch_id}.bam', batch_id=ALIGN_BATCH_LIST),
+        bai=expand('align/bam/{batch_id}.bam.bai', batch_id=ALIGN_BATCH_LIST),
     output:
         fofn='align/alignments.fofn'
     run:
@@ -48,7 +43,7 @@ rule aln_run:
 # Align one batch of reads to the reference.
 rule aln_align_batch:
     input:
-        reads='align/batches/fofn/{batch_id}.fofn',
+        reads='align/batches/{batch_id}.fofn',
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
         ref_sa='reference/ref.fasta.sa',
@@ -57,13 +52,13 @@ rule aln_align_batch:
         bam=protected('align/bam/{batch_id}.bam'),
         bai=protected('align/bam/{batch_id}.bam.bai')
     params:
-        threads=str(THREADS),
+        threads=get_config_param('threads'),
         samtools_threads="1",
         samtools_memory="4G",
         bwlimit="30000",
-        align_params=ALIGN_PARAMS
+        align_params=config.get('alignment_parameters', '').strip('"')
     log:
-        'align/batches/fofn/log/{batch_id}.log'
+        'align/bam/log/{batch_id}.log'
     run:
 
         if os.path.getsize(input.reads) > 0:
@@ -115,20 +110,20 @@ rule aln_align_batch:
 # Assign input reads to batches for alignment.
 rule aln_assign_batches:
     input:
-        reads=config.get('reads', '')
+        reads=get_config_param('reads')
     output:
-        fofn=expand('align/batches/fofn/{batch_id}.fofn', batch_id=BATCHES)
+        fofn=expand('align/batches/{batch_id}.fofn', batch_id=ALIGN_BATCH_LIST)
     run:
 
         # Check input
         if not input.reads:
-            raise RuntimeError('Missing input reads (.fofn) file')
+            raise RuntimeError('Missing input reads (.fofn) file in parameter "reads"')
 
         if not input.reads.endswith('.fofn'):
             raise RuntimeError('Input file must end with ".fofn" and contain a paths to sequence files (one per line)')
 
         if not os.path.isfile(input.reads):
-            raise RuntimeError('Input file does not exist or is not a regular file: %s' % input.reads)
+            raise RuntimeError('Input file does not exist or is not a regular file: {}'.format(input.reads))
 
         # Read input file
         with open(input.reads, 'r') as fh:

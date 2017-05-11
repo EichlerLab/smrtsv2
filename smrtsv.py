@@ -11,10 +11,6 @@ from smrtsvlib import smrtsvrunner
 # Set logging
 logging.basicConfig(filename='smrtsv.log', level=logging.DEBUG)
 
-# Set cluster parameters
-CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
-CLUSTER_FLAG = ('--drmaa', CLUSTER_SETTINGS, '-w', '120')
-
 # Get SMRTSV base directory
 SMRTSV_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,8 +23,8 @@ def index(args):
     print('Preparing reference')
     
     return smrtsvrunner.run_snake_target(
-        'reference.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
-        'ref_run',
+        'rules/reference.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
+        'ref_all',
         '--config',
         'reference={}'.format(args.reference),
         'link_index={}'.format(args.link_index)
@@ -40,7 +36,7 @@ def align(args):
     print('Aligning sequence reads')
 
     return smrtsvrunner.run_snake_target(
-        'align.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'rules/align.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'aln_run',
         '--config',
         'reads={}'.format(args.reads),
@@ -73,9 +69,9 @@ def detect(args):
     )
 
     if args.exclude:
-        command = command + ('regions_to_exclude={}'.format(args.exclude),)
+        command = command + ('exclude={}'.format(args.exclude),)
 
-    return smrtsvrunner.run_snake_target('detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
+    return smrtsvrunner.run_snake_target('rules/detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command)
 
 
 def assemble(args):
@@ -165,7 +161,9 @@ def assemble(args):
             sys.stdout.write('Starting local assemblies for {}\n'.format(contig))
             logging.debug('Assembly command: %s', ' '.join(command))
 
-            return_code = smrtsvrunner.run_snake_target('XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG, *command)
+            return_code = smrtsvrunner.run_snake_target(
+                'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command
+            )
 
             contig_count += 1
 
@@ -201,7 +199,7 @@ def call(args):
     sys.stdout.write("Calling variants\n")
 
     return_code = smrtsvrunner.run_snake_target(
-        'XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'call_variants',
         '--config',
         'reference={}'.format(args.reference),
@@ -314,7 +312,7 @@ def genotype(args):
     print('Genotyping SVs')
 
     return_code = smrtsvrunner.run_snake_target(
-        'XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR, CLUSTER_FLAG,
+        'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'convert_genotypes_to_vcf',
         '--config',
         'genotyper_config={}'.format(args.genotyper_config),
@@ -371,8 +369,6 @@ if __name__ == '__main__':
     # SMRTSV command: Align PacBio reads
     parser_align = subparsers.add_parser('align', help='Align reads.')
     parser_align.add_argument('reads', **args_dict['reads'])
-    parser_align.add_argument('--alignments', **args_dict['alignments'])
-    parser_align.add_argument('--alignments_dir', **args_dict['alignments_dir'])
     parser_align.add_argument('--batches', **args_dict['batches'])
     parser_align.add_argument('--threads', **args_dict['threads'])
     parser_align.add_argument('--alignment_parameters', **args_dict['alignment_parameters'])
@@ -396,20 +392,15 @@ if __name__ == '__main__':
     parser_assembler = subparsers.add_parser('assemble', help='Assemble candidate regions.')
     parser_assembler.add_argument('reference', **args_dict['reference'])
     parser_assembler.add_argument('reads', **args_dict['reads'])
-    parser_assembler.add_argument('alignments', **args_dict['alignments'])
-    parser_assembler.add_argument('assembly_alignments', **args_dict['assembly_alignments'])
     parser_assembler.add_argument('--rebuild_regions', **args_dict['rebuild_regions'])
     parser_assembler.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
     parser_assembler.add_argument('--mapping_quality', **args_dict['mapping_quality'])
     parser_assembler.add_argument('--minutes_to_delay_jobs', **args_dict['minutes_to_delay_jobs'])
-    parser_assembler.add_argument('--assembly_log', **args_dict['assembly_log'])
     parser_assembler.set_defaults(func=assemble)
 
     # SMRTSV command: Call variants
     parser_caller = subparsers.add_parser('call', help='Call variants from assemblies.')
     parser_caller.add_argument('reference', **args_dict['reference'])
-    parser_caller.add_argument('alignments', **args_dict['alignments'])
-    parser_caller.add_argument('assembly_alignments', **args_dict['assembly_alignments'])
     parser_caller.add_argument('variants', **args_dict['variants'])
     parser_caller.add_argument('--sample', **args_dict['sample'])
     parser_caller.add_argument('--species', **args_dict['species'])
@@ -420,9 +411,6 @@ if __name__ == '__main__':
     parser_runner.add_argument('reference', **args_dict['reference'])
     parser_runner.add_argument('reads', **args_dict['reads'])
     parser_runner.add_argument('--variants', **args_dict['variants'])
-    parser_runner.add_argument('--alignments', **args_dict['alignments'])
-    parser_runner.add_argument('--alignments_dir', **args_dict['alignments_dir'])
-    parser_runner.add_argument('--assembly_alignments', **args_dict['assembly_alignments'])
     parser_runner.add_argument('--batches', **args_dict['batches'])
     parser_runner.add_argument('--threads', **args_dict['threads'])
     parser_runner.add_argument('--exclude', **args_dict['exclude'])
@@ -441,7 +429,6 @@ if __name__ == '__main__':
     parser_runner.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
     parser_runner.add_argument('--mapping_quality', **args_dict['mapping_quality'])
     parser_runner.add_argument('--minutes_to_delay_jobs', **args_dict['minutes_to_delay_jobs'])
-    parser_runner.add_argument('--assembly_log', **args_dict['assembly_log'])
     parser_runner.add_argument('--min_hardstop_support', **args_dict['min_hardstop_support'])
     parser_runner.add_argument('--max_candidate_length', **args_dict['max_candidate_length'])
     parser_runner.set_defaults(func=run)
@@ -480,10 +467,6 @@ if __name__ == '__main__':
         for PATH_ELEMENT in PROCESS_ENV['LD_LIBRARY_PATH'].split(':'):
             print('\t* {}'.format(PATH_ELEMENT))
 
-        print('PERL5LIB:')
-        for PATH_ELEMENT in PROCESS_ENV['PERL5LIB'].split(':'):
-            print('\t* {}'.format(PATH_ELEMENT))
-
         if 'DRMAA_LIBRARY_PATH' in PROCESS_ENV:
             print('DRMAA_LIBRARY_PATH: {}'.format(PROCESS_ENV['DRMAA_LIBRARY_PATH']))
         else:
@@ -499,7 +482,7 @@ if __name__ == '__main__':
 
     # Make log directory for distributed jobs
     if cmd_args.distribute and not cmd_args.dryrun and not os.path.isdir('log'):
-        os.mkdir('log')
+        os.makedirs('log', exist_ok=True)
 
     # Run target command
     cmd_return_code = cmd_args.func(cmd_args)

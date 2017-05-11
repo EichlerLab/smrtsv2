@@ -23,10 +23,9 @@ INSTALL_LD_PATH = [
     'dist/hdf5/lib'
 ]
 
-# List of relative paths for PERL5LIB
-INSTALL_PERL5LIB = [
-    'dist/pm'
-]
+# Cluster parameters
+CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
+CLUSTER_FLAG = ('--drmaa', CLUSTER_SETTINGS, '-w', '120')
 
 
 def get_env(install_dir):
@@ -59,16 +58,6 @@ def get_env(install_dir):
 
     os.environ['LD_LIBRARY_PATH'] = process_env['LD_LIBRARY_PATH']
 
-    # Prepend PERL5LIB
-    process_env_perl5lib = ':'.join([os.path.join(install_dir, this_path) for this_path in INSTALL_PERL5LIB])
-
-    if 'PERL5LIB' in process_env:
-        process_env['PERL5LIB'] = process_env_perl5lib + ':' + process_env['PERL5LIB']
-    else:
-        process_env['PERL5LIB'] = process_env_perl5lib
-
-    os.environ['PERL5LIB'] = process_env['PERL5LIB']
-
     # Return environment variables
     return process_env
 
@@ -95,7 +84,7 @@ def run_cmd(args, process_env):
     return ret_code if ret_code is not None else -1024
 
 
-def run_snake_target(snakefile, args, process_env, smrtsv_dir, cluster_flag, *cmd):
+def run_snake_target(snakefile, args, process_env, smrtsv_dir, *cmd):
     """
     Run a snakemake target.
 
@@ -104,6 +93,8 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cluster_flag, *cm
 
     :return: Return code from snakemake.
     """
+
+    cmd = list(cmd)
 
     # Use the user-defined cluster config path if one is given. Otherwise, use
     # an empty config that comes with the SMRT-SV distribution.
@@ -115,27 +106,37 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cluster_flag, *cm
     # Setup snakemake command
     prefix = [
         'snakemake',
-        '--snakefile', os.path.join(smrtsv_dir, 'rules', snakefile),
+        '--snakefile', os.path.join(smrtsv_dir, snakefile),
         '-T',
-        '--rerun-incomplete',
-        '--cluster-config', cluster_config_path,
-        '-j', str(args.jobs)
+        '--rerun-incomplete'
     ]
 
+    # Set jobs
+    if hasattr(args, 'jobs'):
+        prefix.extend(['-j', str(args.jobs)])
+
+    # Set dryrun
     if args.dryrun:
         prefix.append("-n")
 
+    # Set distribute
     if args.distribute:
-        prefix.extend(cluster_flag)
+        prefix.extend(['--cluster-config', cluster_config_path])
+        prefix.extend(CLUSTER_FLAG)
+
+        if not hasattr(args, 'jobs'):
+            prefix.extend(['-j', '1'])
 
     # Append command
     prefix.extend(cmd)
 
     # Append path and ld_path
+    if '--config' not in cmd:
+        prefix.append('--config')
+
     prefix.extend([
         'ld_path={}'.format(process_env['LD_LIBRARY_PATH']),
-        'path={}'.format(process_env['PATH']),
-        'perl5lib={}'.format(process_env['PERL5LIB'])
+        'path={}'.format(process_env['PATH'])
     ])
 
     # Report (verbose)

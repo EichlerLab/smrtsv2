@@ -3,35 +3,31 @@ Rules to identify SV candidates from read alignments confirmation by for local
 assembly.
 """
 
+import os
+import pandas as pd
+
 localrules: detect_get_regions
 
-include: 'include.snakefile'
-
-import os
-
-
-####################
-### Declarations ###
-####################
-
-# Get the region filter file
-REGIONS_TO_EXCLUDE = config.get('regions_to_exclude', None)
-
-if REGIONS_TO_EXCLUDE == 'None':
-    REGIONS_TO_EXCLUDE = None
+if not 'INCLUDE_SNAKEFILE' in globals():
+    include: 'include.snakefile'
 
 
-# Get a list of alignment batches
-BATCHES = list()
+###################
+### Definitions ###
+###################
 
-with open('align/alignments.fofn', 'r') as in_file:
-    for line in in_file:
-        line = line.strip()
+# Set list of alignment batches
+DETECT_BATCH_LIST = list()
 
-        if not line:
-            continue
+if os.path.isfile('align/alignments.fofn'):
+    with open('align/alignments.fofn', 'r') as in_file:
+        for line in in_file:
+            line = line.strip()
 
-        BATCHES.append(os.path.basename(line).rstrip('.bam'))
+            if not line or line.startswith('#'):
+                continue
+
+            DETECT_BATCH_LIST.append(int(os.path.basename(line).rstrip('.bam')))
 
 
 #############
@@ -39,33 +35,88 @@ with open('align/alignments.fofn', 'r') as in_file:
 #############
 
 #
-# Plots
+# Group candidate regions
 #
 
-
-# plot_candidate_summary
+# detect_group_merge_regions
 #
-# Plot candidate summary.
-rule plot_candidate_summary:
+# Each candidate region within a group is run as one unit. Reads are extracted from the reference for the group,
+# the reads are cached locally, and each candidate assembly will extract reads from that cache. Candidate regions
+# are assigned to the best group, but they extend past the ends of the groups. This rule generates a file of full
+# regions for each group from the first base of the left-most candidate window to the last base of the right-most
+# candidate window.
+rule detect_group_merge_regions:
     input:
-        tab='detect/gaps/reads/plot/candidate_summary.tab'
+        bed_can='detect/group/regions/candidates_with_window.bed',
+        bed_win='detect/group/regions/windows.bed'
     output:
-        lengths='detect/gaps/plot/sv_candidate_lengths.pdf',
-        support='detect/gaps/plot/sv_candidate_support.pdf'
-    shell:
-        """Rscript {SMRTSV_DIR}/scripts/detect/plot_SV_candidate_summary.R {input.tab} {output.lengths} {output.support}"""
+        bed='detect/group/group_regions.bed'
+    run:
 
-# detect_gaps_ref_make_candidates_summary
+        # Read candidates and windows
+        df_can = pd.read_table(input.bed_can, header=0)
+        del(df_can['DEPTH'])
+
+        df_win = pd.read_table(input.bed_win, header=0)
+
+        # Filter windows by those with candidate regions
+        group_set = set(df_can['GROUP_ID'].tolist())
+
+        df_win = df_win.ix[df_win['GROUP_ID'].apply(lambda set_name: set_name in group_set), :]
+
+        # Merge
+        df = pd.concat([df_can, df_win])
+
+        # Group and merge
+        df_group = df.groupby('GROUP_ID')
+
+        df_range = pd.concat([
+            df_group['#CHROM'].all(),
+            df_group['POS'].min(),
+            df_group['END'].max(),
+            df_group['GROUP_ID'].all(),
+        ], axis=1)
+
+        # Add actual size after merging the candidate regions with groups
+        df_range['SIZE'] = df_range.apply(lambda row: row['END'] - row['POS'], axis=1)
+
+        # Write
+        df_range.to_csv(output.bed, sep='\t', header=True, index=False)
+
+
+# detect_group_merge_candidates
 #
-# Summarize filtered candidates by event attributes.
-rule detect_gaps_ref_make_candidates_summary:
+# Assign each candidate region to a window containing many regions.
+rule detect_group_assign_candidates:
     input:
-        bed=expand('detect/gaps/gaps_with_cov_{svtype}_filtered.bed', svtype=INSDEL)
+        bed_can='detect/candidates.bed',
+        bed_win='detect/group/regions/windows.bed',
+        ref_sizes='reference/ref.fasta.sizes'
     output:
-        tab='detect/gaps/reads/plot/candidate_summary.tab'
+        bed='detect/group/regions/candidates_with_window.bed'
     shell:
-        """awk 'OFS="\\t" {{ if (NR == 1) {{ print "event_type","mean_length","support" }} print $4,$5,$6 }}' {input.bed} """
-        """>{output.tab}"""
+        """echo -e "#CHROM\tPOS\tEND\tDEPTH\tGROUP_ID" > {output.bed}; """
+        """bedtools closest -a {input.bed_can} -b {input.bed_win} -t first -g {input.ref_sizes} -sorted | """
+        """awk -vOFS="\\t" '{{print $1, $2, $3, $4, $8}}' """
+        """>>{output.bed}"""
+
+# detect_group_make_windows
+#
+# Make windows candidate regions will be grouped into. To reduce redundant IO on a cluster, candidate regions will
+# grouped into these windows, reads over the window will be queried stored on a compute node, and a local assembly
+# will be performed for each candidate within the group.
+rule detect_group_make_windows:
+    input:
+        ref_sizes='reference/ref.fasta.sizes'
+    output:
+        bed_win='detect/group/regions/windows.bed'
+    params:
+        group_size=get_config_param('candidate_group_size')
+    shell:
+        """echo -e "#CHROM\tPOS\tEND\tGROUP_ID" > {output.bed_win}; """
+        """bedtools makewindows -g {input.ref_sizes} -w {params.group_size} | """
+            """awk -vOFS="\t" '{{print $0, $1 "-" $2 "-" ($3 - $2)}}' """
+            """>>{output.bed_win}; """
 
 
 #
@@ -81,13 +132,14 @@ rule detect_get_regions:
     output:
         bed='detect/candidates.bed'
     params:
-        min_coverage=str(config.get('min_coverage')),
-        max_coverage=str(config.get('max_coverage')),
-        max_length=str(config.get('max_candidate_length'))
+        exclude_regions=get_config_param('exclude', as_is=True),
+        min_coverage=get_config_param('min_coverage'),
+        max_coverage=get_config_param('max_coverage'),
+        max_length=get_config_param('max_candidate_length')
     run:
-        if REGIONS_TO_EXCLUDE is not None:
+        if params.exclude_regions is not None:
             shell(
-                """bedtools intersect -a {input.bed} -b {REGIONS_TO_EXCLUDE} -wa -v | """
+                """bedtools intersect -a {input.bed} -b {params.exclude_regions} -wa -v | """
                 """awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' """
                 """>{output.bed}"""
             )
@@ -131,19 +183,18 @@ rule detect_candidates_merge_windows:
 rule detect_candidates_merge:
     input:
         bed_gap='detect/gaps/gaps.bed',
-        bed_hardstop='detect/stops/hardstops_merged.bed',
-        ref_fai='reference/ref.fasta.fai'
+        bed_hardstop='detect/stops/hardstops.bed',
+        ref_sizes='reference/ref.fasta.sizes'
     output:
         bed='detect/candidates/assembly_candidates.bed'
     params:
         merge_distance='500',
         slop='10000'
     shell:
-        """set -o pipefail; """
         """cut -f 1-3 {input.bed_gap} {input.bed_hardstop} | """
         """sort -k 1,1 -k 2,2n | """
         """bedtools merge -i stdin -d {params.merge_distance} | """
-        """bedtools slop -i stdin -g {input.ref_fai} -b {params.slop} """
+        """bedtools slop -i stdin -g {input.ref_sizes} -b {params.slop} """
         """>{output}"""
 
 
@@ -156,14 +207,14 @@ rule detect_candidates_merge:
 # Create a sliding windows over the genome reference.
 rule detect_windows_create:
     input:
-        ref_fai='reference/ref.fasta.fai'
+        ref_sizes='reference/ref.fasta.sizes'
     output:
         bed='detect/windows/windows.bed'
     params:
-        window=str(config.get('assembly_window_size')),
-        slide=str(config.get('assembly_window_slide'))
+        window=get_config_param('assembly_window_size'),
+        slide=get_config_param('assembly_window_slide')
     shell:
-        """bedtools makewindows -g {input.ref_fai} -w {params.window} -s {params.slide} | """
+        """bedtools makewindows -g {input.ref_sizes} -w {params.window} -s {params.slide} | """
         """sort -k 1,1 -k 2,2n """
         """>{output.bed}"""
 
@@ -180,11 +231,11 @@ rule detect_stops_filter_merge:
     input:
         bed_hardstop='detect/stops/hardstops/hardstop_breakpoints_binned.bed',
         bed_refgap='detect/stops/hardstops/ref_gap.bed',
-        bed_gaps='detect/gaps/candidates.bed'
+        bed_gaps='detect/gaps/gaps.bed'
     output:
-        bed='detect/stops/hardstops_merged.bed'
+        bed='detect/stops/hardstops.bed'
     params:
-        min_support=str(config.get('min_hardstop_support'))
+        min_support=get_config_param('min_hardstop_support')
     shell:
         """awk '$4 > {params.min_support}' {input.bed_hardstop} | """
         """bedtools window -w 1000 -a stdin -b {input.bed_refgap} -v | """
@@ -243,7 +294,7 @@ rule detect_stops_find_breakpoints:
 # Collect gaps in one command
 rule detect_stops_merge_batches:
     input:
-        bed=expand('detect/stops/hardstops/batches/hardstops_{batch_id}.bed', batch_id=BATCHES)
+        bed=expand('detect/stops/hardstops/batches/{batch_id}.bed', batch_id=DETECT_BATCH_LIST)
     output:
         bed='detect/stops/hardstops/hardstop.bed'
     shell:
@@ -257,12 +308,15 @@ rule detect_stops_find_hardstops:
     input:
         bam='align/bam/{batch_id}.bam'
     output:
-        bed='detect/stops/hardstops/batches/hardstops_{batch_id}.bed'
+        bed='detect/stops/hardstops/batches/{batch_id}.bed'
     params:
-        mapq=str(config.get('mapping_quality')),
+        mapq=get_config_param('mapping_quality'),
         min_clipping='500'
+    log:
+        'detect/stops/hardstops/batches/log/{batch_id}.log'
     shell:
-        """{SNAKEMAKE_DIR}/scripts/mcst/hardstop {input.bam} {params.mapq} {params.min_clipping} {output.bam}; """
+        """{SMRTSV_DIR}/scripts/mcst/hardstop {input.bam} {params.mapq} {params.min_clipping} {output.bed} """
+        """>{log} 2>&1; """
         """sort -k 1,1 -k 2,2n -o {output.bed} {output.bed}"""
 
 # detect_stops_make_bins
@@ -270,13 +324,13 @@ rule detect_stops_find_hardstops:
 # Make 500 bp windows across the reference.
 rule detect_stops_make_bins:
     input:
-        ref_fai='reference/ref.fasta.fai'
+        ref_sizes='reference/ref.fasta.sizes'
     output:
         bed='detect/stops/hardstop_bins.bed'
     params:
         bin_size='500'
     shell:
-        """bedtools makewindows -g {input.ref_fai} -w {params.bin_size} | """
+        """bedtools makewindows -g {input.ref_sizes} -w {params.bin_size} | """
         """sort -k 1,1 -k 2,2n """
         """>{output.bed}"""
 
@@ -290,11 +344,12 @@ rule detect_stops_make_bins:
 # Summarize filtered candidates by event attributes.
 rule detect_gaps_make_candidates:
     input:
-        bed=expand('detect/gaps/gaps_with_cov_{svtype}_filtered.bed', svtype=INSDEL)
+        bed_ins='detect/gaps/gaps_ins.bed',
+        bed_del='detect/gaps/gaps_del.bed'
     output:
         bed='detect/gaps/gaps.bed'
     shell:
-        """sort -k 1,1 -k 2,2n -m {input.bed} | """
+        """sort -k 1,1 -k 2,2n -m {input.bed_ins} {input.bed_del} | """
         """cut -f 1-4,6 """
         """>{output.bed}"""
 
@@ -305,24 +360,26 @@ rule detect_gaps_filter:
     input:
         bed='detect/gaps/gaps_with_cov_{svtype}.bed'
     output:
-        bed='detect/gaps/gaps_with_cov_{svtype}_filtered.bed',
-        temp=temp('detect/gaps/gaps_with_cov_{svtype}_filtered.temp')
+        bed='detect/gaps/gaps_{svtype,ins|del}.bed',
+        temp=temp('detect/gaps/gaps_{svtype,ins|del}.temp')
     params:
-        min_support=str(config.get('min_support')),
-        max_support=str(config.get('max_support')),
-        min_length=str(config.get('min_length')),
-        min_coverage=str(config.get('min_coverage')),
-        max_coverage=str(config.get('max_coverage'))
+        min_support=get_config_param('min_support'),
+        max_support=get_config_param('max_support'),
+        min_length=get_config_param('min_length'),
+        min_coverage=get_config_param('min_coverage'),
+        max_coverage=get_config_param('max_coverage')
     run:
 
         # Filter
         shell(
-            """awk '"""
+            """awk -vOFS="\\t" '("""
+                """$1 ~ /^#/ || ("""
                 """$4 >= {params.min_length} && """
                 """$5 >= {params.min_support} && """
                 """$5 <= {params.max_support} && """
                 """$9 >= {params.min_coverage} && """
                 """$9 <= {params.max_coverage}"""
+                """)) {{print}}"""
             """' {input.bed} """
             """>{output.temp}"""
         )
@@ -335,28 +392,28 @@ rule detect_gaps_filter:
 
 # detect_gaps_annotate_coverage
 #
-# Annotate merged gap support with alignment coverage.
+# Annotate gap support with alignment coverage.
 rule detect_gaps_annotate_coverage:
     input:
-        bed_gap='detect/gaps/gaps_{svtype}.bed',
+        bed_gap='detect/gaps/gaps_no_cov_{svtype}.bed',
         bed_cov='detect/coverage/coverage.bed'
     output:
-        bed='detect/gaps/gaps_with_cov_{svtype}.bed'
+        bed='detect/gaps/gaps_with_cov_{svtype,ins|del}.bed'
     shell:
         """bedtools intersect -a {input.bed_gap} -b {input.bed_cov} -sorted -wao | """
         """awk 'OFS="\\t" {{ if ($13 == ".") {{ $13 = 0 }} print }}' | """
         """cut -f 1-6,8- | """
-        """groupBy -i stdin -g 1,2,3,4,5,6,7,8 -c 12 -o mean """
-        """>{output}"""
+        """bedtools groupby -i stdin -g 1,2,3,4,5,6,7,8 -c 12 -o mean """
+        """>{output.bed}"""
 
 # detect_gaps_merge_batches
 #
-# Merge gap support for each variant type over all alignment batches.
+# Merge gaps and annotate the number of reads for each variant type.
 rule detect_gaps_merge_batches:
     input:
-        bed=expand('detect/gaps/batch/{batch_id}_{{svtype}}.bed', batch_id=BATCHES)
+        bed=expand('detect/gaps/batch/{batch_id}_{{svtype}}.bed', batch_id=DETECT_BATCH_LIST)
     output:
-        bed='detect/gaps/gaps_{svtype}.bed'
+        bed=temp('detect/gaps/gaps_no_cov_{svtype,ins|del}.bed')
     shell:
         """sort -k 1,1 -k 2,2n -m {input.bed} | """
         """python {SMRTSV_DIR}/scripts/PrintGapSupport.py /dev/stdin /dev/stdout | """
@@ -368,31 +425,36 @@ rule detect_gaps_merge_batches:
 # Separate gaps by variant type.
 rule detect_gaps_by_svtype:
     input:
-        bed='detect/gaps/batch/{batch_id}_ALL.bed'
+        bed='detect/gaps/batch/{batch_id}_all.bed'
     output:
-        bed='detect/gaps/batch/{batch_id}_{svtype}.bed'
-    shell:
-        """awk '$4 == "{wildcards.svtype}"' {input.bed} | """
-        """sort -k 1,1 -k 2,2n > {output.bed}"""
+        bed=temp('detect/gaps/batch/{batch_id}_{svtype,ins|del}.bed')
+    run:
+        sv_type = wildcards.svtype.upper()
+
+        shell(
+            """awk '($1 ~ /^#/ || $4 == "{sv_type}")' {input.bed} | """
+            """sort -k 1,1 -k 2,2n """
+            """>{output.bed}"""
+        )
 
 # detect_gaps_search
 #
 # Parse CIGAR string of aligned reads for insertions and deletions.
 rule detect_gaps_search:
     input:
-        bam='align/bam/{batch_id}.bam'
+        bam='align/bam/{batch_id}.bam',
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
     output:
-        bed=temp('detect/gaps/batch/{batch_id}_ALL.bed')
+        bed='detect/gaps/batch/{batch_id}_all.bed'
     log:
-        'detect/gaps/log/{batch_id}.log'
+        'detect/gaps/batch/log/{batch_id}.log'
     params:
-        mapq=str(config.get('mapping_quality'))
+        mapq=get_config_param('mapping_quality')
     shell:
         """samtools view -F 0x4 -q {params.mapq} {input.bam} | """
-        """python {SMRTSV_DIR}/scripts/PrintGaps.py {input.ref_fa} /dev/stdin --tsd 0 --condense 20 """
-        """>{output.bed} 2> {log}"""
+        """python {SMRTSV_DIR}/scripts/PrintGaps.py {input.ref_fa} /dev/stdin --condense 20 """
+        """>{output.bed} 2>{log}"""
 
 
 #
@@ -401,24 +463,27 @@ rule detect_gaps_search:
 
 # detect_merge_coverage
 #
-# Collect coverages from each alignment batch.
+# Coalesce alignment coverage from each batch.
 rule detect_merge_coverage:
     input:
-        bed=expand('detect/coverage/batch/{batch_id}.bed', batch_id=BATCHES)
+        bed=expand('detect/coverage/batch/{batch_id}.bed', batch_id=DETECT_BATCH_LIST)
     output:
         bed='detect/coverage/coverage.bed'
     shell:
+        """echo -e "#CHROM\tPOS\tEND\tDEPTH" > {output.bed}; """
         """paste {input.bed} | """
         """awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' | """
-        """sort -k 1,1 -k 2,2n > {output.bed}"""
+        """sort -k 1,1 -k 2,2n >> {output.bed}"""
 
 # detect_coverage_per_batch
 #
-# Calculate coverage from each batch.
+# Calculate alignment coverage over the reference on each alignment batch.
 rule detect_coverage_per_batch:
     input:
         bam='align/bam/{batch_id}.bam'
     output:
         bed='detect/coverage/batch/{batch_id}.bed'
+    log:
+        'detect/coverage/batch/log/{batch_id}.log'
     shell:
-        """{SMRTSV_DIR}/scripts/mcst/coverage {output.bed} -in {input.bam}"""
+        """{SMRTSV_DIR}/scripts/mcst/coverage {output.bed} -in {input.bam} >{log} 2>&1"""
