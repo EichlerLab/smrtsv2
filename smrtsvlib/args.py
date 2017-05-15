@@ -4,6 +4,70 @@ Defines a dictionary of command-line options.
 
 args_dict = dict()
 
+
+#
+# Option to the base parser
+#
+
+args_dict['cluster_config'] = {
+    'help': 'JSON/YAML file specifying cluster configuration parameters to pass to Snakemake\'s '
+            '--cluster-config option'
+}
+
+args_dict['distribute'] = {
+    'action': 'store_true',
+    'help': 'Distribute analysis to Grid Engine-style cluster.'
+}
+
+args_dict['drmaalib'] = {
+    'help': 'For jobs that are distributed, this is the location to the DRMAA library (libdrmaa.so) '
+            'installed with Grid Engine. If DRMAA_LIBRARY_PATH is already set in the environment, '
+            'then this option is not required.'
+}
+
+args_dict['dryrun'] = {
+    'action': 'store_true',
+    'help': 'Print commands that will run without running them.'
+}
+
+args_dict['jobs'] = {
+    'type': int,
+    'default': 1,
+    'help': 'Number of jobs to run simultaneously.'
+}
+
+args_dict['no_rm_temp'] = {
+    'type': bool,
+    'default': False,
+    'action': 'store_true',
+    'help': 'Do not remove temporary files. This option may leave behind many unwanted files including all '
+            'intermediate local assembly files.'
+}
+
+args_dict['tempdir'] = {
+    'default': None,
+    'help': 'Temporary directory.'
+}
+
+args_dict['verbose'] = {
+    'action': 'store_true',
+    'help': 'Print extra runtime information.'
+}
+
+#
+# Mulitple Component Options
+#
+
+# mapping_quality
+#
+#
+args_dict['mapping_quality'] = {
+    'type': int,
+    'default': 30,
+    'help': 'Minimum mapping quality of raw reads to use for local assembly.'
+}
+
+
 #
 # Reference
 #
@@ -92,13 +156,6 @@ args_dict['exclude'] = {
     'help': 'BED file of regions to exclude from local assembly (e.g., heterochromatic sequences, etc.).'
 }
 
-# mapping_quality
-args_dict['mapping_quality'] = {
-    'type': int,
-    'default': 30,
-    'help': 'Minimum mapping quality of raw reads to use for local assembly.'
-}
-
 # max_candidate_length
 args_dict['max_candidate_length'] = {
     'type': int,
@@ -150,7 +207,7 @@ args_dict['min_support'] = {
 
 
 #
-# Uncategorized
+# Local Assembly
 #
 
 # asm_alignment_parameters
@@ -165,6 +222,21 @@ args_dict['asm_alignment_parameters'] = {
     'help': 'BLASR parameters to use to align local assemblies.'
 }
 
+# rebuild_regions
+args_dict['rebuild_regions'] = {
+    'action': 'store_true',
+    'help': 'Rebuild subset of regions to assemble.'
+}
+
+
+
+
+
+#
+# Uncategorized
+#
+
+
 # genotyped_variants
 args_dict['genotyped_variants'] = {
     'help': 'VCF of SMRT SV variant genotypes for the given sample-level BAMs.'
@@ -175,19 +247,6 @@ args_dict['genotyper_config'] = {
     'help':
         'JSON configuration file with SV reference paths, samples to genotype as BAMs, '
         'and their corresponding references.'
-}
-
-# minutes_to_delay_jobs
-args_dict['minutes_to_delay_jobs'] = {
-    'type': int,
-    'default': 1,
-    'help': 'The Maximum number of minutes to delay local assembly jobs to limit simultaneous I/O on shared storage.'
-}
-
-# rebuild_regions
-args_dict['rebuild_regions'] = {
-    'action': 'store_true',
-    'help': 'Rebuild subset of regions to assemble.'
 }
 
 # runjobs

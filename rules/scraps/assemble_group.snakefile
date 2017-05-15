@@ -1,220 +1,3 @@
-"""
-Run assemblies for all windows in a group.
-"""
-
-import os
-import shutil
-
-if not 'INCLUDE_SNAKEFILE' in globals():
-    include: 'include.snakefile'
-
-
-###################
-### Definitions ###
-###################
-
-# Get local working directory
-LOCAL_ASM_DIR = config.get('local_asm_dir')
-
-os.mkdirs(LOCAL_ASM_DIR, exist_ok=True)
-
-os.chdir(LOCAL_ASM_DIR)
-
-
-#############
-### Rules ###
-#############
-
-# assemble_reads
-#
-# Assemble sequence reads.
-rule assemble_reads:
-    input:
-        fastq='region/{region_id}/reads/reads.fastq'
-    output:
-        fasta='region/{region_id}/asm/contigs.fasta'
-    params:
-        threads='4',
-        read_length='1000',
-        partitions='50',
-        max_runtime='10m'
-    run:
-
-        # Setup output locations and flag
-        assembly_output = 'local/9-terminator/asm.ctg.fasta'
-        unitig_output = 'local/9-terminator/asm.utg.fasta'
-        assembly_exists = False
-
-        # Run assembly
-        try:
-            shell(
-                """timeout {params.max_runtime} PBcR """
-                """-threads {params.threads} """
-                """-length {params.read_length} """
-                """-partitions {params.partitions} """
-                """-l local """
-                """-s {CELERA_SPEC} """
-                """-fastq {input} """
-                """genomeSize={REGION_SIZE} """
-                """assembleMinCoverage=5 """
-                """&> assembly.log"""
-            )
-        except:
-            shell(
-                """echo -e "{REGION}\tassembly_crashed" >> %s""" % config['log']
-            )
-
-        # Find assembly and copy to output.
-        if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
-            shell(
-                """cat {assembly_output} > {output.fasta}; """
-                """echo -e "{REGION}\tassembly_exists" >> %s""" % config['log']
-            )
-            assembly_exists = True
-
-        elif os.path.exists(unitig_output) and os.stat(unitig_output).st_size > 0:
-            shell(
-                """cat {unitig_output} > {output.fasta}; """ +
-                """echo -e "{REGION}\tunitig_assembly_exists" >> %s""" % config['log']
-            )
-            assembly_exists = True
-
-        else:
-            shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config['log'])
-
-        # Create an empty assembly for failed regions.
-        if not assembly_exists:
-            shell("echo -e '>{REGION}\nN' > {output}")
-
-
-# convert_reads_to_fasta
-#
-# Get FASTA and FASTQ file of extracted sequence reads.
-rule asm_group_reads_to_fasta:
-    input:
-        bam='region/{region_id}/reads/reads.bam'
-    output:
-        fasta='region/{region_id}/reads/reads.fasta',
-        fastq='region/{region_id}/reads/reads.fastq'
-    shell:
-        """echo "### Entering: asm_group_get_region_bam"; """
-        """echo "Writing FASTA: {output.fasta}"; """
-        """echo "Writing FASTQ: {output.fastq}"; """
-        """{SMRTSV_DIR}/scripts/align/BamToFasta.py {input.bam} {output.fasta} --fakename --fastq {output.fastq}"""
-
-# asm_group_get_region_bam
-#
-# Get reads for one region from the alignment cache (align/reads.bam).
-rule asm_group_get_region_bam:
-    input:
-        bed_can=os.path.join(WORKING_DIR, 'detect/candidates.bed'),
-        bam='align/reads.bam',
-        bai='align/reads.bam.bai'
-    output:
-        bam=temp('region/{region_id}/reads/reads.bam'),
-        bai=temp('region/{region_id}/reads/reads.bam.bai')
-    run:
-
-        print('### Entering: asm_group_get_region_bam')
-        print('Getting reads for region {}'.format(wildcards.region_id))
-
-        # Get region
-        df_can = pd.read_table(input.bed_can, header=0, index_col='ID')
-
-        if not wildcards.region_id in df_can.index:
-            raise RuntimeError('Region ID {} is not in the candidates file {}'.format(wildcards.region_id, input.bed_can))
-
-        region_series = pd.Series(df_can.loc[wildcards.region_id])  # Make a copy so it can be modified
-        region_series['POS'] += 1
-
-        region = '{#CHROM}:{POS}-{END}'.format(**region_series)
-
-        # Extract reads
-        print('Extracting over region: {}'.format(region))
-
-        shell(
-            """samtools view -hb {input.bam} {region} """
-            """>{output.bam}; """
-            """samtools index {output.bam}"""
-        )
-
-# asm_group_get_reads
-#
-# Cache reads for all regions within this group. When distributed, this makes the pipeline extract reads once from
-# shared storage, and each region fetches reads from local storage.
-rule asm_group_get_reads:
-    input:
-        fofn=os.path.join(WORKING_DIR, 'align/alignments.fofn'),
-        bed_group=os.path.join(WORKING_DIR, 'detect/candidate_groups.bed')
-    output:
-        bam='align/reads.bam',
-        bai='align/reads.bam.bai'
-    params:
-        mapq=get_config_param('mapping_quality'),
-        group_id = config['group_id']
-    run:
-
-        print('### Entering: asm_group_get_reads')
-        print('Getting reads for group {}'.format(params.group_id))
-
-        # Read input alignment batches into a list
-        bam_file_list = list()
-
-        with open(input.fofn, 'r') as in_file:
-            for line in in_file:
-
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                bam_file_list.append(line)
-
-        # Get group region
-        df_group = pd.read_table(input.bed_group, header=0, index_col='GROUP_ID')
-
-        if not params.group_id in df_group.index:
-            raise RuntimeError('Group ID {} is not in the groups file {}'.format(params.group_id, input.bed_group))
-
-        group_series = pd.Series(df_group.loc[params.group_id])  # Make a copy so it can be modified
-        group_series['POS'] += 1
-
-        group_region = '{#CHROM}:{POS}-{END}'.format(**group_series)
-
-        print('Extracting over region: {}'.format(group_region))
-
-        # Extract reads
-        os.makedirs('align/batch', exist_ok=True)
-
-        try:
-            for bam_file in bam_file_list:
-                batch_index = os.path.basename(bam_file).rstrip('.bam')
-
-                shell(
-                    """echo "Extracting reads from batch {batch_index}..."; """
-                    """samtools view -hb -q {params.mapq} {bam_file} {group_region} """
-                    """>align/batch/{batch_index}.bam"""
-                )
-
-            shell(
-                """echo "Merging batches..."; """
-                """samtools merge {output.bam} align/batch/*.bam; """
-                """samtools index {output.bam}; """
-            )
-
-        finally:
-            shutil.rmtree('align/batch', ignore_errors=True)
-
-
-
-
-######################################################################################################
-######################################################################################################
-######                                          OLD CODE                                        ######
-######################################################################################################
-######################################################################################################
-
-
 import operator
 import os
 
@@ -474,3 +257,71 @@ rule assemble_reads:
         # Create an empty assembly for failed regions.
         if not assembly_exists:
             shell("echo -e '>{REGION}\nN' > {output}")
+
+# convert_reads_to_fastq
+#
+# Get FASTQ from the sequence read FASTA.
+rule convert_reads_to_fastq:
+    input:
+        fasta='reads.fasta'
+    output:
+        fastq='reads.fastq'
+    params:
+        sge_opts=''
+    shell:
+        """{SNAKEMAKE_DIR}/../scripts/FastaToFakeFastq.py {input.fasta} {output.fastq}"""
+
+# convert_reads_to_fasta
+#
+# Get FASTA of extracted sequence reads.
+rule convert_reads_to_fasta:
+    input:
+        bam='reads.bam'
+    output:
+        fasta=temp('reads.fasta')
+    params:
+        sge_opts=''
+    shell:
+        """samtools view {input.bam} | awk '{{ print ">"$1; print $10 }}' | """
+            """{SNAKEMAKE_DIR}/../scripts/FormatFasta.py --fakename """
+            """> {output.fasta}"""
+
+# get_reads
+#
+# Extract sequence reads in the target region from each aligned batch.
+rule get_reads:
+    input:
+        fofn=ALIGNMENTS
+    output:
+        bam='reads.bam',
+        bai='reads.bam.bai'
+    params:
+        sge_opts='',
+        mapping_quality_threshold=str(config['mapping_quality'])
+    run:
+
+        # Read input alignment batches into a list
+        in_file_list = list()
+
+        with open(input.fofn, 'r') as in_file:
+            for line in in_file:
+
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                in_file_list.append(line)
+
+        # Extract reads
+        os.makedirs('align_batches', exist_ok=True)
+
+        for index in range(len(in_file_list)):
+            this_input_file = in_file_list[index]
+            shell("""samtools view -h -q {params.mapping_quality_threshold} {this_input_file} {STANDARD_REGION} > align_batches/{index}.bam""")
+
+        shell(
+            """samtools merge {output.bam} align_batches/*.bam; """
+            """samtools index {output.bam}; """
+            """rm -rf align_batches"""
+        )

@@ -1,0 +1,2 @@
+* Verify that config (--config) is being set in smrtsv.py for each option retrieved by get_config_param() in the comonent's snakefile.
+

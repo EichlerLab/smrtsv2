@@ -47,15 +47,16 @@ if os.path.isfile('align/alignments.fofn'):
 # candidate window.
 rule detect_group_merge_regions:
     input:
-        bed_can='detect/group/regions/candidates_with_window.bed',
+        bed_can='detect/candidates.bed',
         bed_win='detect/group/regions/windows.bed'
     output:
-        bed='detect/group/group_regions.bed'
+        bed='detect/candidate_groups.bed'
     run:
 
         # Read candidates and windows
         df_can = pd.read_table(input.bed_can, header=0)
         del(df_can['DEPTH'])
+        del(df_can['ID'])
 
         df_win = pd.read_table(input.bed_win, header=0)
 
@@ -89,15 +90,15 @@ rule detect_group_merge_regions:
 # Assign each candidate region to a window containing many regions.
 rule detect_group_assign_candidates:
     input:
-        bed_can='detect/candidates.bed',
+        bed_can='detect/candidates/candidates.bed',
         bed_win='detect/group/regions/windows.bed',
         ref_sizes='reference/ref.fasta.sizes'
     output:
-        bed='detect/group/regions/candidates_with_window.bed'
+        bed='detect/candidates.bed'
     shell:
-        """echo -e "#CHROM\tPOS\tEND\tDEPTH\tGROUP_ID" > {output.bed}; """
+        """echo -e "#CHROM\tPOS\tEND\tID\tDEPTH\tGROUP_ID" > {output.bed}; """
         """bedtools closest -a {input.bed_can} -b {input.bed_win} -t first -g {input.ref_sizes} -sorted | """
-        """awk -vOFS="\\t" '{{print $1, $2, $3, $4, $8}}' """
+        """awk -vOFS="\\t" '{{print $1, $2, $3, $4, $5, $9}}' """
         """>>{output.bed}"""
 
 # detect_group_make_windows
@@ -115,7 +116,7 @@ rule detect_group_make_windows:
     shell:
         """echo -e "#CHROM\tPOS\tEND\tGROUP_ID" > {output.bed_win}; """
         """bedtools makewindows -g {input.ref_sizes} -w {params.group_size} | """
-            """awk -vOFS="\t" '{{print $0, $1 "-" $2 "-" ($3 - $2)}}' """
+            """awk -vOFS="\t" '{{print $0, "gr-" $1 "-" $2 "-" ($3 - $2)}}' """
             """>>{output.bed_win}; """
 
 
@@ -130,24 +131,39 @@ rule detect_get_regions:
     input:
         bed='detect/candidates/assembly_candidates_with_coverage.bed'
     output:
-        bed='detect/candidates.bed'
+        bed='detect/candidates/candidates.bed'
     params:
         exclude_regions=get_config_param('exclude', as_is=True),
         min_coverage=get_config_param('min_coverage'),
         max_coverage=get_config_param('max_coverage'),
         max_length=get_config_param('max_candidate_length')
     run:
+
+        # Filter
         if params.exclude_regions is not None:
             shell(
                 """bedtools intersect -a {input.bed} -b {params.exclude_regions} -wa -v | """
                 """awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' """
-                """>{output.bed}"""
+                """>{output.bed}.temp"""
             )
         else:
             shell(
                 """awk '$4 >= {params.min_coverage} && $4 <= {params.max_coverage} && $3 - $2 <= {params.max_length}' {input} """
-                """> {output}"""
+                """>{output.bed}.temp"""
             )
+
+        # Add header and id
+        shell(
+            """awk -vOFS="\\t" '"""
+                """BEGIN {{print "#CHROM", "POS", "END", "ID", "DEPTH"}} """
+                """{{print $1, $2, $3, $1 "-" $2 "-" ($3 - $2), $4}}"""
+            """' {output.bed}.temp """
+            """>{output.bed}"""
+        )
+
+        # Remove temp
+        os.remove(output.bed + '.temp')
+
 
 # detect_candidates_annotate_coverage
 #

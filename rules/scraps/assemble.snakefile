@@ -1,139 +1,39 @@
 """
-Coordinates assembly of each group of regions and merges results from each group.
+Rules for local assembly of genomic regions.
 """
+import csv
+import os
 
-import pandas as pd
-import shutil
-
-from smrtsvlib import smrtsvrunner
-
-if not 'INCLUDE_SNAKEFILE' in globals():
-    include: 'include.snakefile'
-
-
-###################
-### Definitions ###
-###################
-
-class _AsmArguments:
-    """
-    Assembly arguments for recursive calls to snakemake (calling assemble_group.snakefile).
-    """
-
-    def __init__(self, config):
-        self.drmaalib = config.get('drmaalib', None)
-        self.verbose = config.get('verbose', False)
-        self.dryrun = False
-
-        # These jobs are never distributed (run in a temp directory on the local machine)
-        self.distribute = False
-        self.cluster_config = None
-
-def _get_group_bams(wildcards):
-    """
-    Return a list of all BAM files produced by running local assemblies on each group. There is one BAM file per
-    group, and each are output by a call to rule "asm_assemble_group".
-
-    :param wildcards: Ignored
-
-    :return: A list of BAM files output by local assemblies.
-    """
-    return [
-        'assemble/group/{}/contig.bam'.format(group_id)
-        for group_id in
-            pd.read_table('detect/candidate_groups.bed', header=0, usecols=('GROUP_ID', ), squeeze=True).tolist()
-    ]
-
-
-#############
-### Rules ###
-#############
-
-# asm_merge_assembled_groups
 #
-# Merge local assemblies into one BAM.
-rule asm_merge_assembled_groups:
-    input:
-        bam=_get_group_bams
-    output:
-        bam='assemble/local_assemblies.bam',
-        bai='assemble/local_assemblies.bam.bai'
-    log:
-        'assemble/log/local_assemblies.merge.log'
-    run:
-
-        # Merge BAMs from each group into one
-        if len(input.bam) > 1:
-            shell("""samtools merge {output.bam} {input.bam} >{log} 2>&1""")
-        else:
-            # Copy if there was only one group
-            shell("""cp {input.bam} {output.bam}""")
-
-        # Index
-        shell("""samtools index {output.bam}""")
-
-        # TODO: See old rule collect_assembly_alignments for commands to left-align, etc
-
-# asm_assemble_group
+# Inputs:
+#  1. Text file with a list of absolute paths for BAMs with reads for assembly
+#  2. BED file with a list of regions to assemble
 #
-# Assemble one group of regions.
-rule asm_assemble_group:
-    output:
-        bam='assemble/group/{group_id}/contig.bam',
-        bai='assemble/group/{group_id}/contig.bam.bai',
-        log='assemble/group/{group_id}/contig.log'
-    run:
-
-        # Setup assembly
-        args = _AsmArguments(config, wildcards.group_id)
-
-        local_asm_dir = None
-
-        try:
-
-            # Make temp directory
-            local_asm_dir = tempfile.mkdtemp(
-                prefix=os.path.join(
-                    TEMP_DIR,
-                    'asm_{}_'.format(wildcards.group_id)
-                )
-            )
-
-            command = (
-                'run_assembly',
-                '--config',
-                'mapping_quality={}'.format(get_config_param('mapping_quality')),
-                'asm_alignment_parameters={}'.format(get_config_param('asm_alignment_parameters')),  # String is already quoted to prevent Snakemake from trying to interpret the command options
-                'group_id={}'.format(wildcards.group_id),
-                'local_asm_dir={}'.format(local_asm_dir)
-            )
-
-            # Run assembly
-            smrtsvrunner.run_snake_target('rules/assemble_group.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command)
-
-        finally:
-
-            # Clean up temp directory
-            if local_asm_dir is not None:
-                shutil.rmtree(local_asm_dir)
-
-
-######################################################################################################
-######################################################################################################
-######                                          OLD CODE                                        ######
-######################################################################################################
-######################################################################################################
+# For signature-based SV calling, the list of regions is based on signatures of
+# SVs. For the tiled-based SV calling, the regions are sliding windows across
+# the entire genome.
 
 # Load regions to assemble.
+INPUT_READS = config.get("reads", "input.fofn")
 REGIONS_TO_ASSEMBLE = config.get("regions_to_assemble", "filtered_assembly_candidates_with_coverage.bed")
-MAPPING_QUALITY = get_config_param('mapping_quality')
-ASM_ALIGNMENT_PARAMETERS = get_config_param('asm_alignment_parameters')
+LOCAL_ASSEMBLY_ALIGNMENTS = config.get("assembly_alignments", "local_assembly_alignments.bam")
+MAPPING_QUALITY = config.get("mapping_quality")
+ASM_ALIGNMENT_PARAMETERS = config.get("asm_alignment_parameters")
 
+#
+# Define internal constants.
+#
+SNAKEMAKE_DIR = os.path.dirname(workflow.snakefile)
+ASSEMBLY_DIR = "mhap_assembly"
+LOG_FILE = config.get("assembly_log", "assembly.log")
+REFERENCE = config["reference"]
 
-###################
-### Definitions ###
-###################
+# User-defined file of alignments with one absolute path to a BAM per line.
+ALIGNMENTS = config.get("alignments", "")
 
+#
+# Define helper functions.
+#
 def _get_assembly_alignments(wildcards):
     if os.path.exists(REGIONS_TO_ASSEMBLE) and not os.path.exists(LOCAL_ASSEMBLY_ALIGNMENTS):
         with open(REGIONS_TO_ASSEMBLE, "r") as fh:
@@ -143,9 +43,9 @@ def _get_assembly_alignments(wildcards):
     else:
         return []
 
-#############
-### Rules ###
-#############
+#
+# Define rules.
+#
 
 #
 # Collect assemblies.

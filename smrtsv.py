@@ -55,10 +55,11 @@ def detect(args):
     print('Detecting variant signatures')
 
     command = (
-        'detect_get_regions',
+        'detect_group_merge_regions',
         '--config',
         'assembly_window_size={}'.format(args.assembly_window_size),
         'assembly_window_slide={}'.format(args.assembly_window_slide),
+        'mapping_quality={}'.format(args.mapping_quality),
         'min_length={}'.format(args.min_length),
         'min_support={}'.format(args.min_support),
         'max_support={}'.format(args.max_support),
@@ -79,119 +80,108 @@ def assemble(args):
     Assemble candidate regions from raw reads aligned to regions.
     """
 
-    print('Starting local assemblies')
+    print('Running local assemblies')
 
     base_command = (
         'collect_assembly_alignments',
         '--config',
-        'reference={}'.format(args.reference),
-        'alignments={}'.format(args.alignments),
-        'reads={}'.format(args.reads),
         'tempdir={}'.format(args.tempdir),
         'asm_alignment_parameters="{}"'.format(args.asm_alignment_parameters),
         'mapping_quality="{}"'.format(args.mapping_quality),
-        'minutes_to_delay_jobs="{}"'.format(args.minutes_to_delay_jobs),
-        'assembly_log="{}"'.format(args.assembly_log)
+        'no_rm_temp="{}"'.format('no_rm_temp')
     )
 
-    if args.candidates:
-        # For each contig/chromosome in the candidates file, submit a separate
-        # Snakemake command. To do so, first split regions to assemble into one
-        # file per contig in a temporary directory.
-        tmpdir = os.path.join(os.getcwd(), 'regions_by_contig')
+    # For each contig/chromosome in the candidates file, submit a separate
+    # Snakemake command. To do so, first split regions to assemble into one
+    # file per contig in a temporary directory.
+    tmpdir = os.path.join(os.getcwd(), 'regions_by_contig')
 
-        rebuild_regions_by_contig = False
-        if not args.dryrun and (not os.path.exists(tmpdir) or args.rebuild_regions):
-            rebuild_regions_by_contig = True
+    rebuild_regions_by_contig = False
+    if not args.dryrun and (not os.path.exists(tmpdir) or args.rebuild_regions):
+        rebuild_regions_by_contig = True
 
-        if rebuild_regions_by_contig:
-            try:
-                os.mkdir(tmpdir)
-            except OSError:
-                pass
+    if rebuild_regions_by_contig:
+        try:
+            os.mkdir(tmpdir)
+        except OSError:
+            pass
 
-        previous_contig = None
-        contig_file = None
+    previous_contig = None
+    contig_file = None
 
-        with open(args.candidates, "r") as fh:
-            contigs = set()
-            for line in fh:
-                contig = line.strip().split()[0]
+    with open(args.candidates, "r") as fh:
+        contigs = set()
+        for line in fh:
+            contig = line.strip().split()[0]
 
-                if previous_contig != contig:
-                    if previous_contig is not None and rebuild_regions_by_contig:
-                        contig_file.close()
-                        contig_file = None
+            if previous_contig != contig:
+                if previous_contig is not None and rebuild_regions_by_contig:
+                    contig_file.close()
+                    contig_file = None
 
-                    previous_contig = contig
-                    contigs.add(contig)
-
-                    if rebuild_regions_by_contig:
-                        contig_file = open(os.path.join(tmpdir, '{}.bed'.format(contig)), 'w')
+                previous_contig = contig
+                contigs.add(contig)
 
                 if rebuild_regions_by_contig:
-                    contig_file.write(line)
+                    contig_file = open(os.path.join(tmpdir, '{}.bed'.format(contig)), 'w')
 
-        if rebuild_regions_by_contig:
-            if contig_file is not None:
-                contig_file.close()
+            if rebuild_regions_by_contig:
+                contig_file.write(line)
 
-        # Assemble regions per contig creating a single merged BAM for each contig.
-        local_assembly_basename = os.path.basename(args.assembly_alignments)
-        local_assemblies = set()
+    if rebuild_regions_by_contig:
+        if contig_file is not None:
+            contig_file.close()
 
-        return_code = 0
+    # Assemble regions per contig creating a single merged BAM for each contig.
+    local_assembly_basename = os.path.basename(args.assembly_alignments)
+    local_assemblies = set()
 
-        contig_count = 0  # Number of contigs assemblies were generated for
+    return_code = 0
 
-        for contig in contigs:
-            contig_local_assemblies = os.path.join(
-                'local_assemblies',
-                local_assembly_basename.replace('.bam', '.{}.bam'.format(contig))
-            )
+    contig_count = 0  # Number of contigs assemblies were generated for
 
-            local_assemblies.add(contig_local_assemblies)
+    for contig in contigs:
+        contig_local_assemblies = os.path.join(
+            'local_assemblies',
+            local_assembly_basename.replace('.bam', '.{}.bam'.format(contig))
+        )
 
-            if os.path.exists(contig_local_assemblies):
-                sys.stdout.write('Local assemblies already exist for %s\n' % contig)
-                continue
+        local_assemblies.add(contig_local_assemblies)
 
-            command = base_command + ('regions_to_assemble=%s' % os.path.join(tmpdir, '%s.bed' % contig),)
-            command = command + ('assembly_alignments={}'.format(contig_local_assemblies),)
-            sys.stdout.write('Starting local assemblies for {}\n'.format(contig))
-            logging.debug('Assembly command: %s', ' '.join(command))
+        if os.path.exists(contig_local_assemblies):
+            sys.stdout.write('Local assemblies already exist for %s\n' % contig)
+            continue
 
-            return_code = smrtsvrunner.run_snake_target(
-                'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command
-            )
+        command = base_command + ('regions_to_assemble=%s' % os.path.join(tmpdir, '%s.bed' % contig),)
+        command = command + ('assembly_alignments={}'.format(contig_local_assemblies),)
+        sys.stdout.write('Starting local assemblies for {}\n'.format(contig))
+        logging.debug('Assembly command: %s', ' '.join(command))
 
-            contig_count += 1
+        return_code = smrtsvrunner.run_snake_target(
+            'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command
+        )
 
-            if return_code != 0:
-                break
+        contig_count += 1
 
-        # If the last command executed successfully, try to merge all local
-        # assemblies per contig into a single file. Only build if at least one set of local assemblies was performed
-        # or the local assemblies file does not exist.
-        if not args.dryrun and return_code == 0 and (contig_count > 0 or not os.path.exists(args.assembly_alignments)):
-            if len(local_assemblies) > 1:
-                return_code = smrtsvrunner.run_cmd(['samtools', 'merge', args.assembly_alignments] +
-                                                   list(local_assemblies), PROCESS_ENV)
-            else:
-                return_code = smrtsvrunner.run_cmd(['samtools', 'view', '-b', '-o', args.assembly_alignments] +
-                                                   list(local_assemblies), PROCESS_ENV)
+        if return_code != 0:
+            break
 
-            if return_code == 0:
-                return_code = smrtsvrunner.run_cmd(['samtools', 'index', args.assembly_alignments], PROCESS_ENV)
+    # If the last command executed successfully, try to merge all local
+    # assemblies per contig into a single file. Only build if at least one set of local assemblies was performed
+    # or the local assemblies file does not exist.
+    if not args.dryrun and return_code == 0 and (contig_count > 0 or not os.path.exists(args.assembly_alignments)):
+        if len(local_assemblies) > 1:
+            return_code = smrtsvrunner.run_cmd(['samtools', 'merge', args.assembly_alignments] +
+                                               list(local_assemblies), PROCESS_ENV)
+        else:
+            return_code = smrtsvrunner.run_cmd(['samtools', 'view', '-b', '-o', args.assembly_alignments] +
+                                               list(local_assemblies), PROCESS_ENV)
 
-        # Return the last return code.
-        return return_code
-    else:
-        if args.assembly_alignments:
-            command = base_command + ('assembly_alignments={}'.format(args.assembly_alignments),)
+        if return_code == 0:
+            return_code = smrtsvrunner.run_cmd(['samtools', 'index', args.assembly_alignments], PROCESS_ENV)
 
-            logging.debug('Assembly command: %s', ' '.join(command))
-            return smrtsvrunner.run_cmd(command, PROCESS_ENV)
+    # Return the last return code.
+    return return_code
 
 
 def call(args):
@@ -331,33 +321,14 @@ if __name__ == '__main__':
 
     # Setup Parser
     parser = argparse.ArgumentParser()
-
-    parser.add_argument('--dryrun', '-n', action='store_true',
-                        help='Print commands that will run without running them')
-
-    parser.add_argument('--distribute', action='store_true',
-                        help='Distribute analysis to Grid Engine-style cluster')
-
-    parser.add_argument('--jobs', type=int, default=1,
-                        help='number of jobs to run simultaneously')
-
-    parser.add_argument('--tempdir', default=None,
-                        help='Temporary directory.'
-                        )
-
-    parser.add_argument('--verbose', '-v', action='store_true',
-                        help='print extra runtime information')
-
-    parser.add_argument('--cluster_config',
-                        help='JSON/YAML file specifying cluster configuration parameters to pass to Snakemake\'s'
-                             ' --cluster-config option'
-                        )
-
-    parser.add_argument('--drmaalib',
-                        help='For jobs that are distributed, this is the location to the DRMAA library (libdrmaa.so) '
-                             'installed with Grid Engine. If DRMAA_LIBRARY_PATH is already set in the environment, '
-                             'then this option is not required.'
-                        )
+    parser.add_argument('--dryrun', **args_dict['dryrun'])
+    parser.add_argument('--distribute', **args_dict['distribute'])
+    parser.add_argument('--jobs', **args_dict['jobs'])
+    parser.add_argument('--tempdir', **args_dict['tempdir'])
+    parser.add_argument('--verbose', '-v', **args_dict['verbose'])
+    parser.add_argument('--cluster_config', **args_dict['cluster_config'])
+    parser.add_argument('--drmaalib', **args_dict['drmaalib'])
+    parser.add_argument('--no_rm_temp', '--nt', **args_dict['no_rm_temp'])
     subparsers = parser.add_subparsers()
 
     # SMRTSV command: Index reference
@@ -395,7 +366,6 @@ if __name__ == '__main__':
     parser_assembler.add_argument('--rebuild_regions', **args_dict['rebuild_regions'])
     parser_assembler.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
     parser_assembler.add_argument('--mapping_quality', **args_dict['mapping_quality'])
-    parser_assembler.add_argument('--minutes_to_delay_jobs', **args_dict['minutes_to_delay_jobs'])
     parser_assembler.set_defaults(func=assemble)
 
     # SMRTSV command: Call variants

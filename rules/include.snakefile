@@ -2,6 +2,9 @@
 Sets up common constructs needed by Snakefile called by Snakemake.
 """
 
+import os
+import tempfile
+
 ############
 ### Init ###
 ############
@@ -25,18 +28,23 @@ sys.path.append(SMRTSV_DIR)
 
 
 #
-# Imports
+# Imports with modified system path
 #
 
 from smrtsvlib.args import args_dict
-
-import os
-import tempfile
 
 
 ###################
 ### Definitions ###
 ###################
+
+#
+# Snakemake directives
+#
+
+# Explicitly BASH safemode
+shell.prefix('set -euo pipefail; ')
+
 
 #
 # Universal functions
@@ -67,11 +75,6 @@ INSDEL= ['INS', 'DEL']
 
 
 #
-# Set dynamic constants
-#
-
-
-#
 # Load project configuration
 #
 
@@ -85,7 +88,9 @@ if os.path.exists(CONFIG_LOCAL):
 # Set environment
 #
 
-# Always set the environment
+# Get PATHs carried over from the caller. This ensures that PATH is not modified and that LD_LIBRARY_PATH
+# is not cleared when Snakemake jobs are distributed, which Grid Engine does for security reasons.
+
 LD_LIBRARY_PATH = config.get('ld_path', None)
 PATH = config.get('path', None)
 
@@ -95,8 +100,7 @@ if LD_LIBRARY_PATH is not None:
 if PATH is not None:
     os.environ['PATH'] = PATH
 
-# Explicitly BASH safemode
-shell.prefix('set -euo pipefail; ')
+PROCESS_ENV = os.environ.copy()
 
 
 #
@@ -108,7 +112,11 @@ TEMP_DIR = config.get('tempdir', None)
 if TEMP_DIR is None or TEMP_DIR == '':
     TEMP_DIR = tempfile.gettempdir()
 
-os.makedirs(TEMP_DIR, exist_ok=True)
+if os.path.samefile(TEMP_DIR, '.'):
+    # Defaults to local directory if a temp cannot be found. This
+    # should not occur on real systems, but don't clutter the working
+    # directory if it does.
+    TEMP_DIR = os.path.join(TEMP_DIR, 'temp')
 
 
 #
