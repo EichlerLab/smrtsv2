@@ -36,10 +36,9 @@ args_dict['jobs'] = {
     'help': 'Number of jobs to run simultaneously.'
 }
 
-args_dict['no_rm_temp'] = {
-    'type': bool,
-    'default': False,
+args_dict['nt'] = {
     'action': 'store_true',
+    'default': False,
     'help': 'Do not remove temporary files. This option may leave behind many unwanted files including all '
             'intermediate local assembly files.'
 }
@@ -54,13 +53,12 @@ args_dict['verbose'] = {
     'help': 'Print extra runtime information.'
 }
 
+
 #
 # Mulitple Component Options
 #
 
 # mapping_quality
-#
-#
 args_dict['mapping_quality'] = {
     'type': int,
     'default': 30,
@@ -229,18 +227,9 @@ args_dict['rebuild_regions'] = {
 }
 
 
-
-
-
 #
-# Uncategorized
+# Genotyper
 #
-
-
-# genotyped_variants
-args_dict['genotyped_variants'] = {
-    'help': 'VCF of SMRT SV variant genotypes for the given sample-level BAMs.'
-}
 
 # genotyper_config
 args_dict['genotyper_config'] = {
@@ -248,6 +237,23 @@ args_dict['genotyper_config'] = {
         'JSON configuration file with SV reference paths, samples to genotype as BAMs, '
         'and their corresponding references.'
 }
+
+args_dict['genotype_mapq'] = {
+    'type': int,
+    'default': 20,
+    'help': 'Minimum mapping quality of short reads against the reference and contigs.'
+}
+
+# genotyped_variants
+args_dict['genotyped_variants'] = {
+    'help': 'VCF of SMRT SV variant genotypes for the given sample-level BAMs.'
+}
+
+
+
+#
+# Uncategorized
+#
 
 # runjobs
 args_dict['runjobs'] = {

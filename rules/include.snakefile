@@ -3,7 +3,9 @@ Sets up common constructs needed by Snakefile called by Snakemake.
 """
 
 import os
+import sys
 import tempfile
+
 
 ############
 ### Init ###

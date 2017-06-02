@@ -22,20 +22,20 @@ def index(args):
     
     print('Preparing reference')
     
-    return smrtsvrunner.run_snake_target(
+    return smrtsvrunner.run_snake_target((
         'rules/reference.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'ref_all',
         '--config',
         'reference={}'.format(args.reference),
         'link_index={}'.format(args.link_index)
-    )
+    ))
 
 
 def align(args):
 
     print('Aligning sequence reads')
 
-    return smrtsvrunner.run_snake_target(
+    return smrtsvrunner.run_snake_target((
         'rules/align.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'aln_run',
         '--config',
@@ -44,7 +44,7 @@ def align(args):
         'threads={}'.format(args.threads),
         'tempdir={}'.format(args.tempdir if args.tempdir is not None else ''),
         'alignment_parameters="{}"'.format(args.alignment_parameters)
-    )
+    ))
 
 
 def detect(args):
@@ -72,7 +72,7 @@ def detect(args):
     if args.exclude:
         command = command + ('exclude={}'.format(args.exclude),)
 
-    return smrtsvrunner.run_snake_target('rules/detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command)
+    return smrtsvrunner.run_snake_target('rules/detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command)
 
 
 def assemble(args):
@@ -158,7 +158,7 @@ def assemble(args):
         logging.debug('Assembly command: %s', ' '.join(command))
 
         return_code = smrtsvrunner.run_snake_target(
-            'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command
+            'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command
         )
 
         contig_count += 1
@@ -188,7 +188,7 @@ def call(args):
     # Call SVs, indels, and inversions.
     sys.stdout.write("Calling variants\n")
 
-    return_code = smrtsvrunner.run_snake_target(
+    return_code = smrtsvrunner.run_snake_target((
         'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'call_variants',
         '--config',
@@ -198,7 +198,7 @@ def call(args):
         'variants={}'.format(args.variants),
         'species="{}"'.format(args.species),
         'sample="{}""'.format(args.sample)
-    )
+    ))
 
     if return_code != 0:
         sys.stderr.write('Failed to call variants\n')
@@ -301,14 +301,14 @@ def genotype(args):
 
     print('Genotyping SVs')
 
-    return_code = smrtsvrunner.run_snake_target(
+    return_code = smrtsvrunner.run_snake_target((
         'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         'convert_genotypes_to_vcf',
         '--config',
         'genotyper_config={}'.format(args.genotyper_config),
         'genotyped_variants={}'.format(args.genotyped_variants),
         'threads={}'.format(args.threads)
-    )
+    ))
 
     if return_code != 0:
         sys.stderr.write('Failed to genotype SVs\n')
@@ -328,7 +328,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', **args_dict['verbose'])
     parser.add_argument('--cluster_config', **args_dict['cluster_config'])
     parser.add_argument('--drmaalib', **args_dict['drmaalib'])
-    parser.add_argument('--no_rm_temp', '--nt', **args_dict['no_rm_temp'])
+    parser.add_argument('--nt', **args_dict['nt'])
     subparsers = parser.add_subparsers()
 
     # SMRTSV command: Index reference
@@ -398,7 +398,6 @@ if __name__ == '__main__':
     parser_runner.add_argument('--alignment_parameters', **args_dict['alignment_parameters'])
     parser_runner.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
     parser_runner.add_argument('--mapping_quality', **args_dict['mapping_quality'])
-    parser_runner.add_argument('--minutes_to_delay_jobs', **args_dict['minutes_to_delay_jobs'])
     parser_runner.add_argument('--min_hardstop_support', **args_dict['min_hardstop_support'])
     parser_runner.add_argument('--max_candidate_length', **args_dict['max_candidate_length'])
     parser_runner.set_defaults(func=run)
@@ -407,6 +406,7 @@ if __name__ == '__main__':
     parser_genotyper = subparsers.add_parser('genotype', help='Genotype SVs with Illumina reads')
     parser_genotyper.add_argument('genotyper_config', **args_dict['genotyper_config'])
     parser_genotyper.add_argument('genotyped_variants', **args_dict['genotyped_variants'])
+    parser_genotyper.add_argument('--genotype_mapq', '--mapq', **args_dict['genotype_mapq'])
     parser_genotyper.add_argument('--threads', **args_dict['threads'])
     parser_genotyper.set_defaults(func=genotype)
 

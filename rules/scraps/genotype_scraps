@@ -1,0 +1,14 @@
+
+### Removed: Getting INS sequences from the CONTIG sequence instead of the VCF ###
+
+# gt_svmap_ins_to_fasta
+#
+# Get a FASTA file of inserted sequences from the SV calls.
+rule gt_svmap_ins_to_fasta:
+    input:
+        sv_calls='sv_calls/sv_calls.bed'
+    output:
+        fasta='svmap/regions/contig_ins.fasta'
+    shell:
+        """awk '{{ if ($6 == "INS") {{ print ">"$1"_"$2"_"$3"_insertion"; print $8 }} }}' {input.sv_calls} """
+        """>{output.fasta}"""

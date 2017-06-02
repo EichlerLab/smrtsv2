@@ -46,7 +46,7 @@ if __name__ == '__main__':
     if snakefile == 'Snakefile':
         pass  # Do no further interpretation
 
-    elif re.match('[A-Za-z]+$', snakefile):
+    elif re.match('[A-Za-z_]+$', snakefile):
         snakefile_rules = os.path.join(smrtsv_dir, 'rules', snakefile + '.snakefile')
 
         if os.path.isfile(snakefile_rules):
@@ -121,5 +121,5 @@ if __name__ == '__main__':
 
     # Run snake target
     smrtsvrunner.run_snake_target(
-        snakefile, args, process_env, smrtsv_dir, *snake_command
+        snakefile, args, process_env, smrtsv_dir, snake_command
     )

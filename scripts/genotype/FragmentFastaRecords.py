@@ -2,7 +2,6 @@ import argparse
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-import math
 import operator
 import re
 
@@ -25,10 +24,11 @@ def make_windows(length, window, slide):
     >>> list(make_windows(7, 8, 0))
     [(0, 7)]
     """
+
     if slide == 0:
-        windows = xrange(0, length, window)
+        windows = range(0, length, window)
     else:
-        windows = xrange(0, length, slide)
+        windows = range(0, length, slide)
 
     for start in windows:
         yield (start, min(start + window, length))
@@ -67,6 +67,7 @@ def fragment_sequence(sequence, window, slide=0):
     >>> fragment_sequence("ACNNACTA", 4, 2)
     ['ACTA']
     """
+
     # Check sequence for gap bases and keep the longest of the non-gap pieces in
     # the sequence.
     sequences = []
@@ -89,18 +90,29 @@ def fragment_sequence(sequence, window, slide=0):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="FASTA sequences to fragment")
-    parser.add_argument("output", help="fragmented FASTA sequences")
-    parser.add_argument("window", type=int, help="length to fragment each FASTA sequence to")
-    parser.add_argument("--slide", type=int, default=0, help="length to fragment each FASTA sequence to")
+
+    # Parse arguments
+    parser = argparse.ArgumentParser(
+        description='Create sequence fragments with a sliding-window over input sequences.')
+
+    parser.add_argument('input', help='FASTA sequences to fragment.')
+    parser.add_argument('output', help='Fragmented FASTA sequences.')
+    parser.add_argument('window', type=int, help='Length to fragment each output fragment.')
+    parser.add_argument('--slide', type=int, default=0, help='Number of bases to move when sliding fragment windows.')
+
     args = parser.parse_args()
 
-    with open(args.output, "w") as oh:
-        for seq_record in SeqIO.parse(args.input, "fasta"):
+    with open(args.output, 'w') as oh:
+        for seq_record in SeqIO.parse(args.input, 'fasta'):
             sequences = fragment_sequence(str(seq_record.seq), args.window, args.slide)
-            records = []
-            for i in xrange(len(sequences)):
-                records.append(SeqRecord(Seq(sequences[i]), id="%s_%i" % (seq_record.id, i), description=""))
 
-            SeqIO.write(records, oh, "fasta")
+            records = []
+
+            for i in range(len(sequences)):
+                records.append(SeqRecord(
+                    Seq(sequences[i]),
+                    id='{:s}_{:d}'.format(seq_record.id, i),
+                    description=''
+                ))
+
+            SeqIO.write(records, oh, 'fasta')

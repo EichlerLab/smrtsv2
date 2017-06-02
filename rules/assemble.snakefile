@@ -4,6 +4,7 @@ Coordinates assembly of each group of regions and merges results from each group
 
 import pandas as pd
 import shutil
+import subprocess
 
 from smrtsvlib import smrtsvrunner
 
@@ -80,8 +81,9 @@ rule asm_merge_assembled_groups:
 rule asm_assemble_group:
     output:
         bam='assemble/group/{group_id}/contig.bam',
-        bai='assemble/group/{group_id}/contig.bam.bai',
-        log='assemble/group/{group_id}/contig.log'
+        bai='assemble/group/{group_id}/contig.bam.bai'
+    log:
+        'assemble/group/{group_id}/contig.log'
     run:
 
         # Setup assembly
@@ -109,7 +111,11 @@ rule asm_assemble_group:
             )
 
             # Run assembly
-            smrtsvrunner.run_snake_target('rules/assemble_group.snakefile', args, PROCESS_ENV, SMRTSV_DIR, *command)
+            with open(log, 'w') as log_file:
+                smrtsvrunner.run_snake_target(
+                    'rules/assemble_group.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command,
+                    stdout=log_file, stderr=subprocess.STDOUT
+                )
 
         finally:
 

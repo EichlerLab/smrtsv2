@@ -27,6 +27,10 @@ INSTALL_LD_PATH = [
 CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
 CLUSTER_FLAG = ('--drmaa', CLUSTER_SETTINGS, '-w', '120')
 
+# Empty arguments
+class EmptyArgs:
+    pass
+
 
 def get_env(install_dir):
     """
@@ -62,12 +66,14 @@ def get_env(install_dir):
     return process_env
 
 
-def run_cmd(args, process_env):
+def run_cmd(args, process_env, stdout=None, stderr=None):
     """
     Run a command with the proper environment set.
 
     :param args: A tuple of arguments starting with the command name.
     :param process_env: A dictionary of environment variables to be set for the process.
+    :param stdout: Specify the output stream. This argument is passed directly to `subprocess.Popen`.
+    :param stderr: Specify the error stream. This argument is passed directly to `subprocess.Popen`.
 
     :return: Return code. Negative numbers is the negation of a POSIX signal that killed the process. -1024 is returned
         if the subprocess module did not give a return code.
@@ -75,7 +81,7 @@ def run_cmd(args, process_env):
 
     sys.stdout.flush()
 
-    p = subprocess.Popen(args, env=process_env)
+    p = subprocess.Popen(args=args, env=process_env, stdout=stdout, stderr=stderr)
 
     p.wait()
 
@@ -84,21 +90,26 @@ def run_cmd(args, process_env):
     return ret_code if ret_code is not None else -1024
 
 
-def run_snake_target(snakefile, args, process_env, smrtsv_dir, *cmd):
+def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None, stderr=None):
     """
     Run a snakemake target.
 
     :param args: Arguments processed from the command line.
     :param cmd: The command to run as a tuple starting with the name of the snakemake target.
+    :param stdout: Specify the output stream. This argument is passed directly to `subprocess.Popen`.
+    :param stderr: Specify the error stream. This argument is passed directly to `subprocess.Popen`.
 
     :return: Return code from snakemake.
     """
 
     cmd = list(cmd)
 
+    if args is None:
+        args = EmptyArgs()
+
     # Use the user-defined cluster config path if one is given. Otherwise, use
     # an empty config that comes with the SMRT-SV distribution.
-    if args.cluster_config is not None:
+    if hasattr(args, 'cluster_config') and args.cluster_config is not None:
         cluster_config_path = args.cluster_config
     else:
         cluster_config_path = os.path.join(smrtsv_dir, 'cluster.template.json')
@@ -116,11 +127,14 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, *cmd):
         prefix.extend(['-j', str(args.jobs)])
 
     # Set dryrun
-    if args.dryrun:
-        prefix.append("-n")
+    if hasattr(args, 'dryrun') and args.dryrun:
+        prefix.append('-n')
+
+    if hasattr(args, 'nt') and args.nt:
+        prefix.append('--nt')
 
     # Set distribute
-    if args.distribute:
+    if hasattr(args, 'distribute') and args.distribute:
         prefix.extend(['--cluster-config', cluster_config_path])
         prefix.extend(CLUSTER_FLAG)
 
@@ -140,8 +154,8 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, *cmd):
     ])
 
     # Report (verbose)
-    if args.verbose:
+    if hasattr(args, 'verbose') and args.verbose:
         print('Running snakemake command: {}'.format(' '.join(prefix)))
 
     # Run snakemake command
-    return run_cmd(prefix, process_env)
+    return run_cmd(prefix, process_env, stdout=stdout, stderr=stderr)
