@@ -27,20 +27,20 @@ with open(CONFIG_FILE, "r") as CONFIG_FILE_FH:
 
 ### Find genotyping model ###
 
-GT_MODEL_FILE = CONFIG_GT.get('model', '')
-
-GT_MODEL_FILE = GT_MODEL_FILE.strip()
-
-if not GT_MODEL_FILE:
-    GT_MODEL_FILE = os.path.join(SMRTSV_DIR, 'files/gtmodel/model.pkl')
-
-    if not os.path.isfile(GT_MODEL_FILE):
-        raise RuntimeError('Cannot find default genotyper model: {}'.format(GT_MODEL_FILE))
-
-else:
-    if not os.path.isfile(GT_MODEL_FILE):
-        raise RuntimeError('Cannot find genotyper model: {}'.format(GT_MODEL_FILE))
-
+#GT_MODEL_FILE = CONFIG_GT.get('model', '')
+#cat
+#GT_MODEL_FILE = GT_MODEL_FILE.strip()
+#
+#if not GT_MODEL_FILE:
+#    GT_MODEL_FILE = os.path.join(SMRTSV_DIR, 'files/gtmodel/model.pkl')
+#
+#    if not os.path.isfile(GT_MODEL_FILE):
+#        raise RuntimeError('Cannot find default genotyper model: {}'.format(GT_MODEL_FILE))
+#
+#else:
+#    if not os.path.isfile(GT_MODEL_FILE):
+#        raise RuntimeError('Cannot find genotyper model: {}'.format(GT_MODEL_FILE))
+#
 
 ### Find bwa-postalt.js ###
 
