@@ -40,7 +40,7 @@
 
   "gt_altref_index": {"params": "-l mfree=8G -l h_rt=8:00:00 -R y -N gt_altref_index"},
   "gt_svmap_map_pseudoreads": {"params": "-l mfree=1G -pe serial 12 -l disk_free=2G -l h_rt=2:00:00 -R y -l ssd=FALSE -N gt_svmap_map_pseudoreads"},
-  "gt_map_sample_reads": {"params": "-l mfree=5G -pe serial 12 -l disk_free=50G -l h_rt=24:00:00 -R y -l ssd=FALSE -N gt_map_sample_reads"},
+  "gt_map_sample_reads": {"params": "-l mfree=5G -pe serial 12 -l disk_free=50G -l h_rt=48:00:00 -R y -l ssd=FALSE -N gt_map_sample_reads"},
   "gt_call_calc_depth": {"params": "-l h_rt=06:00:00 -l mfree=4G -N gt_call_calc_depth"},
   "gt_call_genotype_merged_samples": {"params": "-l h_rt=00:30:00 -l mfree=2G -N gt_call_genotype_merged_samples"},
   "gt_call_to_vcf": {"params": "-l h_rt=00:30:00 -l mfree=4G -N gt_call_to_vcf"},

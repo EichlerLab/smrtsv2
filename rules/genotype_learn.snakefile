@@ -56,21 +56,12 @@ with open(config.get('learn_config', 'gt_learn.json'), 'r') as config_in:
 ### Declarations ###
 ####################
 
-# Genotype labels
-GT_LABELS = {'HOM_REF', 'HET', 'HOM_ALT'}
-
-# Genotype labels to integer map
-GT_SVTYPE_TO_NUMERIC = {
-    'INS': 0.0,
-    'DEL': 1.0
-}
-
 # Number of cross-validation folds
 FOLDS_K = int(CONFIG_LEARN.get('folds', '4'))
 
 # Callable threshold a a sum of depth over ref and alt breakpoints. This is a typical cutoff for choosing NO_CALL
 # variants.
-CALLABLE_THRESHOLD = int(CONFIG_LEARN.get('callable_threshold', '5'))
+CALLABLE_THRESHOLD = int(CONFIG_LEARN.get('callable_threshold', '4'))
 
 # Hyper-parameter grid for grid-search CV
 PARAM_GRID = [
@@ -90,11 +81,13 @@ localrules: gt_learn
 
 # gt_learn
 #
-# Evaluate the model by cross-validation and train on all data.
+# Train predictor and scaler, and get CV stats.
 rule gt_learn:
     input:
-        model='model/model.pkl',
+        predictor='model/predictor.pkl',
+        scaler='model/scaler.pkl',
         tab='cv/stats.tab'
+
 
 #
 # Train model
@@ -109,7 +102,8 @@ rule gt_learn_model_train:
         y_npy='model/y.npy',
         feat_tab='model/features.tab'
     output:
-        model_cv='model/model_cv.pkl'
+        predictor='model/predictor.pkl',
+        tab='model/predictor_stats.tab'
     params:
         k=FOLDS_K,
         threads=4
@@ -125,21 +119,24 @@ rule gt_learn_model_train:
         clf = GridSearchCV(
             estimator=SVC(C=1),
             param_grid=PARAM_GRID,
-            scoring='f1_macro',
+            scoring='accuracy',
             cv=ml.cv_set_iter(ml.stratify_folds(features['STRATIFIED'], params.k)),
-            refit=True,
+            refit=False,
             error_score=0,
             n_jobs=params.threads
         )
 
-        clf.fit(X[selection_indices, :], y[selection_indices])
+        clf.fit(X, y)
+
+        # Train final model
+        predictor = SVC(probability=True, **clf.best_params_)
+        predictor.fit(X, y)
 
         # Write model
-        model = clf.best_estimator_
-        model_cv = clf
+        joblib.dump(predictor, output.predictor)
 
-        joblib.dump(model, output.model)
-        joblib.dump(model_cv, output.model_cv)
+        # Write stats
+        ml.get_cv_score_table(clf).to_csv(output.tab, sep='\t', index=False)
 
 
 #
@@ -215,7 +212,7 @@ rule gt_learn_cv_run:
         clf = GridSearchCV(
             estimator=SVC(C=1),
             param_grid=PARAM_GRID,
-            scoring='f1_macro',
+            scoring='accuracy',
             cv=ml.cv_set_iter(ml.stratify_folds(selection_labels, params.k)),
             refit=True,
             error_score=0,
@@ -315,18 +312,12 @@ rule gt_learn_model_scale:
     run:
 
         # Read
-        features = pd.read_table(input.tab, header=0, index_col='INDEX')
+        features = pd.read_table(input.tab, header=0)
 
-        X = features[list(ml.GT_FEATURES)].copy()
+        X = features_to_unscaled_matrix(features)
         y = features['CALL'].copy()
 
-        # SVTYPE labels to number
-        X['SVTYPE'] = X['SVTYPE'].apply(lambda label: GT_SVTYPE_TO_NUMERIC[label])
-
-        # Cast all columns to np.float64
-        X = X.astype(np.float64)
-
-        # Scale values
+        # Scale X
         scaler = StandardScaler().fit(X)
         X = scaler.transform(X)
 
@@ -368,9 +359,9 @@ rule gt_learn_model_annotate:
                 ).format(input.features, df.shape[0], input.labels, labels.shape[0])
             )
 
-        if any([label not in GT_LABELS for label in labels]):
+        if any([label not in ml.GT_LABELS for label in labels]):
             raise RuntimeError(
-                'Found unrecognized labels in {}: Valid labels are "{}"'.format(input.labels, ', '.join(GT_LABELS))
+                'Found unrecognized labels in {}: Valid labels are "{}"'.format(input.labels, ', '.join(ml.GT_LABELS))
             )
 
         # Merge labels (actual calls)

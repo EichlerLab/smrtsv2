@@ -10,7 +10,11 @@ import subprocess
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
 
+from smrtsvlib import genotype
+from smrtsvlib import ml
 from smrtsvlib import smrtsvrunner
+
+localrules: gt_vcf_write
 
 
 ###################
@@ -27,20 +31,12 @@ with open(CONFIG_FILE, "r") as CONFIG_FILE_FH:
 
 ### Find genotyping model ###
 
-#GT_MODEL_FILE = CONFIG_GT.get('model', '')
-#cat
-#GT_MODEL_FILE = GT_MODEL_FILE.strip()
-#
-#if not GT_MODEL_FILE:
-#    GT_MODEL_FILE = os.path.join(SMRTSV_DIR, 'files/gtmodel/model.pkl')
-#
-#    if not os.path.isfile(GT_MODEL_FILE):
-#        raise RuntimeError('Cannot find default genotyper model: {}'.format(GT_MODEL_FILE))
-#
-#else:
-#    if not os.path.isfile(GT_MODEL_FILE):
-#        raise RuntimeError('Cannot find genotyper model: {}'.format(GT_MODEL_FILE))
-#
+# Scaler: Scales feature matrix for model prediction.
+GT_SCALER = (CONFIG_GT.get('model', {})).get('scaler', 'files/gtmodel/scaler.pkl')
+
+# Predictor: Predicts genotype from scaled features.
+GT_PREDICTOR = (CONFIG_GT.get('model', {})).get('predictor', 'files/gtmodel/predictor.pkl')
+
 
 ### Find bwa-postalt.js ###
 
@@ -63,6 +59,9 @@ FINAL_GENOTYPES = config["genotyped_variants"]
 SAMPLES = sorted(CONFIG_GT["samples"].keys())
 SVMAP_REF_WINDOW = 5000
 SVMAP_CONTIG_WINDOW = 500
+MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', 4)
+
+SAMPLES = sorted(CONFIG_GT['samples'].keys())
 
 
 ### Utility Functions ###
@@ -102,91 +101,108 @@ def _get_reference_for_sample(wildcards):
 ### Rules ###
 #############
 
-## gt_call_to_vcf
-##
-## Write VCF of genotype calls.
-#rule gt_call_to_vcf:
-#    input:
-#        genotypes='genotypes_by_all_samples.tab',
-#        calls='sv_calls.vcf.gz',
-#        reference=CONFIG_GT['sv_reference']
-#    output:
-#        FINAL_GENOTYPES
-#    shell:
-#        """python {SNAKEMAKE_DIR}/scripts/genotype/genotypes_to_vcf.py {input.genotypes} {input.calls} {input.reference} /dev/stdout | """
-#        """vcffixup - | """
-#        """bgzip -c > {output}; """
-#        """tabix -p vcf {output}"""
-#
-## gt_call_genotype_merged_samples
-##
-## Genotype over samples.
-#rule gt_call_genotype_merged_samples:
-#    input:
-#        'gt/genotypes.tab',
-#        CONFIG_GT['sample_manifest']
-#    output:
-#        'gt/genotypes_by_all_samples.tab'
-#    shell:
-#        """python {SNAKEMAKE_DIR}/scripts/genotype/regenotype.py --homozygous_binomial_probability={HOMOZYGOUS_BINOMIAL_PROBABILITY} --heterozygous_binomial_probability={HETEROZYGOUS_BINOMIAL_PROBABILITY} {input} {output}"""
-#
-## gt_call_merge_samples
-##
-## Merge genotypes from each sample.
-#rule gt_call_merge_samples:
-#    input:
-#        expand('samples/{sample}/genotypes.tab', sample=SAMPLES)
-#    output:
-#        'gt/genotypes.tab'
-#    shell:
-#        """head -n 1 {input[0]} > {output}; """
-#        """for file in {input}; do sed 1d $file; done >>{output}"""
-#
-## gt_call_genotype_sample
-##
-## Call genotypes in sample.
-#rule gt_call_genotype_sample:
-#    input:
-#        tab_depth='samples/{sample}/breakpoint_read_depth.tab',
-#        manifest=CONFIG_GT['sample_manifest']
-#    output:
-#        tab='samples/{sample}/genotypes.tab'
-#    shell:
-#        """python {SNAKEMAKE_DIR}/scripts/genotype/regenotype.py {input.tab_depth} {input.manifest} {output.tab}"""
-#
-## gt_call_calc_depth
-##
-## Get depths over the SV breakpoints.
-#rule gt_call_calc_depth:
-#    input:
-#        sv_calls='sv_calls/sv_calls.vcf.gz',
-#        alignments='samples/{sample}/alignments.bam'
-#    output:
-#        tab='samples/{sample}/breakpoint_read_depth.tab'
-#    log:
-#        'samples/{sample}/log/breakpoint_read_depth.log'
-#    benchmark:
-#        'benchmarks/concordant_support/{sample}.txt'
-#    shell:
-#        """python {SNAKEMAKE_DIR}/scripts/genotype.py {input.sv_calls} {input.alignments} """
-#        """>{output.tab} """
-#        """2>{log}"""
-
 
 #
-# Call variants (apply learned model to features)
+# Format VCF output
 #
 
-rule gt_call_apply_model:
+# gt_vcf_write
+#
+# Write final VCF.
+rule gt_vcf_write:
     input:
-        tab='samples/{sample}/gt_features.tab'
+       vcf='gt/temp/variants_fixup.vcf'
+    output:
+        vcf=FINAL_GENOTYPES
+    run:
+
+        if FINAL_GENOTYPES.lower.endswith('.vcf.gz'):
+            shell("""bgzip -c {input.vcf} > {output.vcf}; tabix {output.vcf}""")
+
+        elif FINAL_GENOTYPES.lower.endswith('.vcf'):
+            shell("""cp {input.vcf} {output.vcf}""")
+
+        else:
+            raise ValueError('Unknown output file format: Expected output file with ".vcf" or ".vcf.gz" extension')
+
+# gt_vcf_fixup
+#
+# Annotate INFO fields with genotype information.
+rule gt_vcf_fixup:
+    input:
+        vcf='gt/temp/variants_genotyped.vcf'
+    output:
+        vcf=temp('gt/temp/variants_fixup.vcf')
+    shell:
+        """vcffixup {input.vcf} > {output.vcf}"""
+
+# gt_vcf_merge
+#
+# Merge genotype calls with the original VCF file.
+rule gt_vcf_merge:
+    input:
+        vcf='sv_calls/sv_calls.bed',
+        genotype=expand('samples/{sample}/genotype.tab', sample=SAMPLES)
+    output:
+        vcf=temp('gt/temp/variants_genotyped.vcf')
+    run:
+
+        # Get VCF header lines and body dataframe (body contains all columns fields before samples)
+        header_line_list = genotype.vcf_header_lines(input.vcf)
+        vcf_body = genotype.vcf_table(input.vcf)
+
+        # Merge samples into VCF
+        vcf_df = pd.concat(
+            [vcf_body] + [genotype.get_sample_column('samples/{}/genotype.tab'.format(sample), sample) for sample in SAMPLES],
+            axis=1
+        )
+
+        # Write headers and VCF
+        with open(output.vcf, 'w') as out_file:
+            out_file.write(''.join(header_line_list))
+            vcf_df.to_csv(out_file, sep='\t', index=False)
+
+#
+# Call genotypes (apply learned model to features)
+#
+
+# gt_call_predict
+#
+# Predict genotype
+rule gt_call_predict:
+    input:
+        tab='samples/{sample}/gt_features.tab',
+        predictor=GT_PREDICTOR,
+        scaler=GT_SCALER
+    output:
+        tab='samples/{sample}/genotype.tab'
+    params:
+        min_depth=MIN_CALL_DEPTH
     run:
 
         # Read features
-        df = pd.read_table(input.tab, header=0)
+        features = pd.read_table(input.tab, header=0)
 
-        model = GT_MODEL_FILE
+        # Predict genotype and estimate density
+        model = ml.GtModel(input.predictor, input.scaler)
 
+        genotype, density = model.genotype_and_density(features)
+
+        # Annotate genotypes
+        features['GENOTYPE'] = genotype
+
+        # Annotate density
+        density.columns = ['DEN_' + col for col in density.columns]
+        features = pd.concat([features, density], axis=1)
+
+        # Apply no-call criteria
+        features['GENOTYPE'] = features.apply(
+            lambda row: row['GENOTYPE'] if row['REF_COUNT'] + row['ALT_COUNT'] >= params.min_depth else 'NO_CALL',
+            axis=1
+        )
+
+        # Write
+        features.to_csv(output.tab, sep='\t', index=False)
 
 # gt_call_sample_merge
 #

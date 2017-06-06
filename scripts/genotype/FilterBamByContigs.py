@@ -5,6 +5,7 @@ if __name__ == '__main__':
 
     # Parse arguments
     parser = argparse.ArgumentParser(description='Extract contigs from a BAM file.')
+
     parser.add_argument('input_bam', help='BAM to filter')
     parser.add_argument('queries_to_keep', help='Read names to extract (one per line)')
     parser.add_argument('output_bam', help='filtered BAM')

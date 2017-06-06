@@ -4,8 +4,14 @@ Routines to support machine learning for genotyping.
 
 
 import numpy as np
+import pandas as pd
 
+from sklearn.externals import joblib
 from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import StandardScaler
+
+from sklearn.svm import SVC
+
 
 # Labels of features used in training
 GT_FEATURES = (
@@ -14,17 +20,204 @@ GT_FEATURES = (
     'N_INSERT', 'INSERT_LOWER', 'INSERT_UPPER'
 )
 
+# Genotype labels to integer map
+GT_SVTYPE_TO_NUMERIC = {
+    'INS': 0.0,
+    'DEL': 1.0
+}
+
+# Genotype labels
+GT_LABELS = ['HOM_REF', 'HET', 'HOM_ALT']
+
 
 class GtModel:
-    def __init__(self, model, scaler):
-        self.model = model
+    """
+    Makes predictions on data with a trained model.
+    """
+
+    def __init__(self, predictor, scaler):
+        """
+        Create an object for genotype predictions.
+
+        :param predictor: Trained predictor. If string, then it must be a path to a `joblib` file containing the
+            predictor object.
+        :param scaler: Scaler fit to the data used for training. If string, then it must be a path to a `joblib` file
+            containing the scaler object.
+        """
+
+        # Check arguments
+        if predictor is None:
+            raise ValueError('Cannot load genotyper predictor `None`')
+
+        if scaler is None:
+            raise ValueError('Cannot load feature scaler `None`')
+
+        if isinstance(predictor, str):
+            predictor = joblib.load(predictor)
+
+        if isinstance(scaler, str):
+            scaler = joblib.load(scaler)
+
+        if not isinstance(predictor, SVC):
+            raise ValueError('Predictor must be class sklearn.svm.SVC: Found "{}"'.format(type(predictor)))
+
+        if not isinstance(scaler, StandardScaler):
+            raise ValueError(
+                'Scaler must be class sklearn.preprocessing.StandardScaler: Found "{}"'.format(type(scaler))
+            )
+
+        # Set fields
+        self.predictor = predictor
         self.scaler = scaler
 
-    def genotype(self, features):
-        pass
+    def genotype(self, features_table):
+        """
+        Get genotype labels for each variant.
 
-def features_table_to_unscaled_array(features_table):
-    pass
+        :param features_table: A name to the features table, a table of loaded features from the features table, or
+            genotype features extracted and scaled.
+
+        :return: An array with a genotype calls for each variant.
+        """
+
+        # Get features
+        if type(features_table) != np.ndarray:
+            X = features_to_array(features_table, self.scaler)
+        else:
+            X = features_table
+
+        # Predict
+        return self.predictor.predict(X)
+
+    def density(self, features_table):
+        """
+        Get density esitmation for each variant.
+
+        :param features_table: A name to the features table, a table of loaded features from the features table, or
+            genotype features extracted and scaled.
+
+        :return: A DataFrame with one row for each variant and a column with a density estimation for each genotype
+            call. Columns are labeled by genotype call.
+        """
+
+        # Get features
+        if type(features_table) != np.ndarray:
+            X = features_to_array(features_table, self.scaler)
+        else:
+            X = features_table
+
+        # Predict
+        df_density = pd.DataFrame(self.predictor.predict_proba(X), columns=self.predictor.classes_)
+        df_density = df_density.loc[:, GT_LABELS]
+
+        return df_density
+
+    def genotype_and_density(self, features_table):
+        """
+        Predict genotype and get density esitmation for each variant.
+
+        :param features_table: A name to the features table, a table of loaded features from the features table, or
+            genotype features extracted and scaled.
+
+        :return: A tuple of genotype calls and density estimations (in that order). These elements are the result of
+            calling `genotype()` and `density()` on this object, respectively.
+        """
+
+        if type(features_table) != np.ndarray:
+            X = features_to_array(features_table, self.scaler)
+        else:
+            X = features_table
+
+        return self.genotype(X), self.density(X)
+
+
+def get_cv_score_table(clf):
+    """
+    Get a table (DataFrame) of CV parameters and scores for each combination.
+
+    :param clf: Cross-validation object (GridSearchCV)
+    :return:
+    """
+
+    # Create data frame
+    df = pd.DataFrame(list(clf.cv_results_['params']))
+
+    # Add test scores
+    df['rank'] = clf.cv_results_['rank_test_score']
+    df['test_mean'] = clf.cv_results_['mean_test_score']
+    df['test_sd'] = clf.cv_results_['std_test_score']
+
+    # Add scores over training data
+    df['train_mean'] = clf.cv_results_['mean_train_score']
+    df['train_sd'] = clf.cv_results_['std_train_score']
+
+    # Add time metrics (s)
+    df['fit_time_mean'] = clf.cv_results_['mean_fit_time']
+    df['fit_time_sd'] = clf.cv_results_['std_fit_time']
+
+    df['score_time_mean'] = clf.cv_results_['mean_score_time']
+    df['score_time_sd'] = clf.cv_results_['std_score_time']
+
+    return df
+
+
+def features_to_array(features_table, scaler):
+    """
+    Get a scaled feature array and a scaler object as a two element tuple (in that order).
+
+    The input DataFrame must contain columns in list `GT_FEATURES`. All other columns are ignored.
+
+    `scaler` must be `None` when features are being prepared for training. The scaler returned by this function when
+    setting up for training must be given to the function to transform data for analysis by the model. Therefore,
+    this scaler should be serialized along with the model to predict labels for the genotyper.
+
+    :param features_table: Pandas DataFrame of a feature table or a string path of where the feature table can be
+        loaded from.
+    :param scaler: Scaler object if one already exists. If `None`, a scaler is created.
+
+    :return: A tuple of the scaled feature array ready for model training or evaluation (first element) and the scaler
+        used to scale the data (second element). If the `scaler` argument is not `None`, then the secord element is this
+        scaler, and if it is `None`, then the second argument is the scaler that was fit to this set of features.
+    """
+
+    # Check arguments
+    X = features_to_unscaled_matrix(features_table)
+    return scaler.transform(X)
+
+
+def features_to_unscaled_matrix(features_table):
+    """
+    Read features and transform to a matrix of features with the correct columns and in the correct order. This
+    function does not scale the features, which must be done before training or predicting.
+
+    :param features_table: Pandas DataFrame of a feature table or a string path of where the feature table can be
+        loaded from.
+
+    :return: Numeric feature matrix, unscaled.
+    """
+
+    # Check arguments
+    if features_table is None:
+        raise ValueError('Cannot convert features table: None')
+
+    if isinstance(features_table, str):
+        features_table = pd.read_table(features_table, header=0)
+
+    if not isinstance(features_table, pd.DataFrame):
+        raise ValueError(
+            'Argument "features_table" must be a Pandas DataFrame or a string path to a features file that can be '
+            'loaded into a DataFrame: Found type "{}"'.format(type(features_table)))
+
+    # Load
+    X = features_table[list(GT_FEATURES)].copy()
+
+    # Cast all features to float64
+    X['SVTYPE'] = X['SVTYPE'].apply(lambda label: GT_SVTYPE_TO_NUMERIC[label])  # SVTYPE label numeric representation
+    X = X.astype(np.float64)
+
+    # Return feature matrix
+    return X
+
 
 def stratify_folds(labels, k):
     """

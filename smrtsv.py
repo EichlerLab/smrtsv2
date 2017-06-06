@@ -302,8 +302,8 @@ def genotype(args):
     print('Genotyping SVs')
 
     return_code = smrtsvrunner.run_snake_target((
-        'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
-        'convert_genotypes_to_vcf',
+        'rules/genotype.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
+        'gt_vcf_write',
         '--config',
         'genotyper_config={}'.format(args.genotyper_config),
         'genotyped_variants={}'.format(args.genotyped_variants),
