@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Functions to support genotyping.
 """
@@ -7,6 +9,7 @@ import math
 import pysam
 import time
 
+import numpy as np
 import pandas as pd
 
 import smrtsvlib
@@ -21,12 +24,14 @@ GENOTYPE_TO_GT = {
 }
 
 
-def get_sample_column(table_file_name, sample_name):
+def get_sample_column(table_file_name, sample_name, sex='U'):
     """
     Get a VCF column as a Pandas Series for one sample.
 
     :param table_file_name: Name of genotyped features table file output by the genotyper after applying the genotyping
         model and annotating the genotype for no-call variants.
+    :param sex: "M", "F", or "U" depending on if the sample is male, female, or unknown. For males, chrX is never het.
+        for females, chrY is absent. For males or unknown, chrY is never het.
 
     :param sample_name: Name of the sample. This is saved to the name of the returned Series object.
 
@@ -35,26 +40,85 @@ def get_sample_column(table_file_name, sample_name):
 
     df_gt = pd.read_table(
         table_file_name, header=0,
-        usecols=('GENOTYPE', 'REF_COUNT', 'REF_COUNT', 'DEN_HOM_REF', 'DEN_HET', 'DEN_HOM_ALT'),
-        names=('GENOTYPE', 'REF_COUNT', 'REF_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')
+        usecols=('#CHROM', 'CALLABLE', 'REF_COUNT', 'ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')
     )
 
-    # Set genotype (GT), genotype quality (GQ), and genotype likelihood (GL)
-    df_gt['GT'] = df_gt['GENOTYPE'].apply(lambda genotype: GENOTYPE_TO_GT[genotype])
+    df_gt = df_gt.loc[:, ('#CHROM', 'CALLABLE', 'REF_COUNT', 'ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')]
 
-    df_gt['GQ'] = df_gt.apply(
-        lambda row: int(10 * -math.log10(1 - row[row['GENOTYPE']])) if df_gt['GENOTYPE'] != 'NO_CALL' else '.',
+    # Adjust density estimates on sex
+    if sex == 'M':
+        adjust_chrx_for_males(df_gt)
+        adjust_chry(df_gt, False)
+
+    elif sex == 'F':
+        adjust_chry(df_gt, True)
+
+    elif sex == 'U':
+        adjust_chry(df_gt, False)
+
+    # Set genotype (GT), genotype quality (GQ), and genotype likelihood (GL)
+    df_gt['CLASS'] = df_gt.apply(
+        lambda row: str(np.argmax(row[['HOM_REF', 'HET', 'HOM_ALT']])) if row['CALLABLE'] else 'NO_CALL',
         axis=1
     )
 
-    df_gt['GL'] = df_gt.apply(lambda row: '{HOM_REF},{HET},{HOM_ALT}'.format(**row), axis=1)
+    df_gt['GT'] = df_gt['CLASS'].apply(lambda gt_class: GENOTYPE_TO_GT[gt_class])
+
+    df_gt['GQ'] = df_gt.apply(
+        lambda row: int(10 * -math.log10(1 - row[row['CLASS']])) if row['CALLABLE'] else '.',
+        axis=1
+    )
+
+    df_gt['GL'] = df_gt.apply(lambda row: '{HOM_REF:.4f},{HET:.4f},{HOM_ALT:.4f}'.format(**row), axis=1)
 
     # Get a series representing the column to be added to the VCF
-    sample_column = df_gt.apply(lambda row: '{GT}:{GQ}:{GS}:{REF_COUNT}:{ALT_COUNT}'.format(**row), axis=1)
+    sample_column = df_gt.apply(lambda row: '{GT}:{GQ}:{GL}:{REF_COUNT:.1f}:{ALT_COUNT:.1f}'.format(**row), axis=1)
     sample_column.name = sample_name
 
     # Return
     return sample_column
+
+
+def adjust_chrx_for_males(df_gt):
+    """
+    Adjust class densities on chrX variants to only hom-ref or hom-alt calls.
+
+    :param df_gt: Genotype table.
+    """
+
+    for index in df_gt.index:
+        if df_gt.loc[index, '#CHROM'] in {'chrX', 'X'}:
+            df_gt.loc[index, 'HET'] = 0.0
+
+            density_norm = sum(df_gt.loc[index, ['HOM_REF', 'HOM_ALT']])
+            df_gt.loc[index, 'HOM_REF'] /= density_norm
+            df_gt.loc[index, 'HOM_ALT'] /= density_norm
+
+
+def adjust_chry(df_gt, is_female):
+    """
+    Adjust the chrY densities.
+
+    :param df_gt: Genotype table.
+    :param is_female: `True` if sample is female and chrY calls are always hom-ref, and `False` if samples are male
+        or unknown and chrY calls are hom-ref or hom-alt (never het).
+    """
+
+    if is_female:
+        for index in df_gt.index:
+            if df_gt.loc[index, '#CHROM'] in {'chrY', 'Y'}:
+                df_gt.loc[index, 'HOM_REF'] = 1.0
+                df_gt.loc[index, 'HET'] = 0.0
+                df_gt.loc[index, 'HOM_ALT'] = 0.0
+
+    else:
+        for index in df_gt.index:
+            if df_gt.loc[index, '#CHROM'] in {'chrY', 'Y'}:
+                df_gt.loc[index, 'HET'] = 0.0
+
+                density_norm = sum(df_gt.loc[index, ['HOM_REF', 'HOM_ALT']])
+                df_gt.loc[index, 'HOM_REF'] /= density_norm
+                df_gt.loc[index, 'HOM_ALT'] /= density_norm
 
 
 def vcf_table(vcf_file_name):
@@ -176,3 +240,55 @@ def vcf_get_format_tags():
         '##FORMAT=<ID=DPR,Number=1,Type=Float,Description="Average read depth over reference allele breakpoints">\n',
         '##FORMAT=<ID=DPA,Number=1,Type=Float,Description="Average read depth over alternate allele breakpoints">\n'
     ]
+
+
+def preprocess_manifest(manifest_file_name, samples):
+    """
+    Pre-process the sample manifest and normalize all sex columns.
+
+    :param manifest_file_name: File name to read or `None` to create a set of default sexes (all unknown).
+    :param samples: List of sample names.
+
+    :return: A Series of sexes indexed by the sample.
+    """
+
+    # Make default manifest if none exist
+    if manifest_file_name is None:
+        df = pd.DataFrame(data=['U'] * len(samples), index=samples, columns=('sex',))
+        df.index.name = 'sample'
+
+        return df
+
+    # Read manifest
+    df = pd.read_table(manifest_file_name, header=0)
+
+    if 'sample' not in df.columns:
+        raise RuntimeError(
+            'Sample manifest "{}" does not contain a column with the label "sample"'.format(manifest_file_name)
+        )
+
+    if 'sex' not in df.columns:
+        raise RuntimeError(
+            'Sample manifest "{}" does not contain a column with the label "sex"'.format(manifest_file_name)
+        )
+
+    # Normalize sex
+    df['sex'] = df['sex'].apply(lambda sex: 'U' if sex is None else sex.upper())
+
+    if any(df['sex'].apply(lambda sex: sex not in {'M', 'F', 'U'})):
+        raise RuntimeError(
+            'Sample manifest "{}" contains sexes that are not "M", "F", or "U"'.format(manifest_file_name)
+        )
+
+    # Add any missing samples
+    for sample in samples:
+        if sample not in df['sample']:
+            raise RuntimeWarning('Missing sample "{}" in manifest "{}"'.format(sample, manifest_file_name))
+
+        df = df.append(pd.Series({'sample': sample, 'sex': 'U'}), ignore_index=True)
+
+    # Order by samples and drop unused samples
+    df.index = df['sample']
+
+    # Return
+    return df['sex']

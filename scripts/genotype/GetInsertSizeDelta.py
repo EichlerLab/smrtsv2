@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Get insert size differences over SV breakpoints on the reference.
 """
@@ -76,7 +78,7 @@ def get_insert_size_distribution(bam_file_name, sample_size=5e6, size_min=100, s
         )
 
     # Return
-    return pd.Series((n_records, np.mean(size_list), np.std(size_list)),index=('N', 'MEAN', 'STDEV'))
+    return pd.Series((n_records, np.mean(size_list), np.std(size_list)), index=('N', 'MEAN', 'STDEV'))
 
 # Main
 if __name__ == '__main__':

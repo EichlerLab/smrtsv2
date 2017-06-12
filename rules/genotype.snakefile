@@ -32,11 +32,16 @@ with open(CONFIG_FILE, "r") as CONFIG_FILE_FH:
 ### Find genotyping model ###
 
 # Scaler: Scales feature matrix for model prediction.
-GT_SCALER = (CONFIG_GT.get('model', {})).get('scaler', 'files/gtmodel/scaler.pkl')
+GT_SCALER = CONFIG_GT.get('model', {}).get('scaler', None)
+
+if GT_SCALER is None:
+    GT_SCALER = os.path.join(SMRTSV_DIR, 'files/gtmodel/scaler.pkl')
 
 # Predictor: Predicts genotype from scaled features.
-GT_PREDICTOR = (CONFIG_GT.get('model', {})).get('predictor', 'files/gtmodel/predictor.pkl')
+GT_PREDICTOR = CONFIG_GT.get('model', {}).get('predictor', None)
 
+if GT_PREDICTOR is None:
+    GT_PREDICTOR = os.path.join(SMRTSV_DIR, 'files/gtmodel/predictor.pkl')
 
 ### Find bwa-postalt.js ###
 
@@ -116,10 +121,10 @@ rule gt_vcf_write:
         vcf=FINAL_GENOTYPES
     run:
 
-        if FINAL_GENOTYPES.lower.endswith('.vcf.gz'):
+        if output.vcf.lower().endswith('.vcf.gz'):
             shell("""bgzip -c {input.vcf} > {output.vcf}; tabix {output.vcf}""")
 
-        elif FINAL_GENOTYPES.lower.endswith('.vcf'):
+        elif output.vcf.lower().endswith('.vcf'):
             shell("""cp {input.vcf} {output.vcf}""")
 
         else:
@@ -141,7 +146,8 @@ rule gt_vcf_fixup:
 # Merge genotype calls with the original VCF file.
 rule gt_vcf_merge:
     input:
-        vcf='sv_calls/sv_calls.bed',
+        vcf='sv_calls/sv_calls.vcf.gz',
+        sexes='sv_calls/sexes.tab',
         genotype=expand('samples/{sample}/genotype.tab', sample=SAMPLES)
     output:
         vcf=temp('gt/temp/variants_genotyped.vcf')
@@ -151,9 +157,12 @@ rule gt_vcf_merge:
         header_line_list = genotype.vcf_header_lines(input.vcf)
         vcf_body = genotype.vcf_table(input.vcf)
 
+        # Get sexes from the sample manifest
+        sexes = pd.read_table(input.sexes, header=0, index_col=0, squeeze=True)
+
         # Merge samples into VCF
         vcf_df = pd.concat(
-            [vcf_body] + [genotype.get_sample_column('samples/{}/genotype.tab'.format(sample), sample) for sample in SAMPLES],
+            [vcf_body] + [genotype.get_sample_column('samples/{}/genotype.tab'.format(sample), sample, sexes[sample]) for sample in SAMPLES],
             axis=1
         )
 
@@ -171,7 +180,7 @@ rule gt_vcf_merge:
 # Predict genotype
 rule gt_call_predict:
     input:
-        tab='samples/{sample}/gt_features.tab',
+        tab='samples/{sample}/temp/gt_features.tab',
         predictor=GT_PREDICTOR,
         scaler=GT_SCALER
     output:
@@ -183,23 +192,20 @@ rule gt_call_predict:
         # Read features
         features = pd.read_table(input.tab, header=0)
 
+        # Annotate no-calls
+        features['CALLABLE'] = features.apply(
+            lambda row: True if row['REF_COUNT'] + row['ALT_COUNT'] >= params.min_depth else False,
+            axis=1
+        )
+
         # Predict genotype and estimate density
         model = ml.GtModel(input.predictor, input.scaler)
 
-        genotype, density = model.genotype_and_density(features)
+        genotype, class_density = model.genotype_and_density(features)
 
-        # Annotate genotypes
-        features['GENOTYPE'] = genotype
+        features['CLASS'] = genotype
 
-        # Annotate density
-        density.columns = ['DEN_' + col for col in density.columns]
-        features = pd.concat([features, density], axis=1)
-
-        # Apply no-call criteria
-        features['GENOTYPE'] = features.apply(
-            lambda row: row['GENOTYPE'] if row['REF_COUNT'] + row['ALT_COUNT'] >= params.min_depth else 'NO_CALL',
-            axis=1
-        )
+        features = pd.concat([features, class_density], axis=1)
 
         # Write
         features.to_csv(output.tab, sep='\t', index=False)
@@ -213,7 +219,7 @@ rule gt_call_sample_merge:
         bp_tab='samples/{sample}/temp/breakpoint_depth.tab',
         insert_tab='samples/{sample}/temp/insert_delta.tab'
     output:
-        tab='samples/{sample}/gt_features.tab'
+        tab=temp('samples/{sample}/temp/gt_features.tab')
     run:
 
         # Read input tables (SVs, breakpoint  depths, and insert size deltas)
@@ -396,7 +402,7 @@ rule gt_altref_alt_info_bed:
     input:
         sv_ref_fai=CONFIG_GT['sv_reference_fai'],
         altref_fai='altref/ref.fasta.fai',
-        altref_alt='altref/ref.fasta.alt'
+        contig_chr='temp/altref/alt_to_primary.tab'
     output:
         bed='altref/alt_info.bed'
     run:
@@ -415,7 +421,7 @@ rule gt_altref_alt_info_bed:
         primary_seqs = set(pd.read_table(input.sv_ref_fai, header=None, usecols=(0, ))[0].tolist())
 
         # Get the alternates file (a SAM file of ALT contigs aligned to a primary contig)
-        alt_to_primary = pd.read_table(input.altref_alt, header=None, usecols=(0, 2), index_col=0, squeeze=True, comment='@')
+        alt_to_primary = pd.read_table(input.contig_chr, header=None, index_col=0, squeeze=True)
 
         # Make BED of all contigs as a dataframe
         df_bed = pd.DataFrame(
@@ -439,6 +445,16 @@ rule gt_altref_alt_info_bed:
         # Write
         df_bed.to_csv(output.bed, sep='\t', header=True, index=False)
 
+# gt_altref_alt_info_lengths
+#
+# Get a table of contigs (col 1) and the chromosome they map to (col 2).
+rule gt_altref_alt_contig_to_chr:
+    input:
+        altref_alt='altref/ref.fasta.alt'
+    output:
+        tab=temp('temp/altref/alt_to_primary.tab')
+    shell:
+        """awk -vOFS="\t" '($1 !~ /^@/) {{print $1, $3}}' {input.altref_alt} >{output.tab}"""
 
 # gt_altref_make_alts
 #
@@ -728,6 +744,21 @@ rule gt_contig_list:
             with open(output.txt, 'w') as oh:
                 for contig in sorted(set([record.info['CONTIG'] for record in vcf])):
                     oh.write('%s\n' % contig)
+
+
+#
+# Get sexes from the manifest
+#
+
+rule gt_sv_sexes:
+    output:
+        tab='sv_calls/sexes.tab'
+    run:
+
+        # Pre-process manifest or write a default manifest
+        genotype.preprocess_manifest(
+            config.get('manifest_file_name', None), SAMPLES
+        ).to_csv('sv_calls/sexes.tab', sep='\t', header=True)
 
 
 #

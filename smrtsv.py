@@ -1,4 +1,5 @@
-#!/bin/env python
+#!/bin/env python3
+
 import argparse
 import logging
 import sys
@@ -301,14 +302,16 @@ def genotype(args):
 
     print('Genotyping SVs')
 
-    return_code = smrtsvrunner.run_snake_target((
+    return_code = smrtsvrunner.run_snake_target(
         'rules/genotype.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
-        'gt_vcf_write',
-        '--config',
-        'genotyper_config={}'.format(args.genotyper_config),
-        'genotyped_variants={}'.format(args.genotyped_variants),
-        'threads={}'.format(args.threads)
-    ))
+        (
+            'gt_vcf_write',
+            '--config',
+            'genotyper_config={}'.format(args.genotyper_config),
+            'genotyped_variants={}'.format(args.genotyped_variants),
+            'threads={}'.format(args.threads)
+         )
+    )
 
     if return_code != 0:
         sys.stderr.write('Failed to genotype SVs\n')

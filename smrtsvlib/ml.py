@@ -91,7 +91,7 @@ class GtModel:
 
     def density(self, features_table):
         """
-        Get density esitmation for each variant.
+        Get density estimation for each variant.
 
         :param features_table: A name to the features table, a table of loaded features from the features table, or
             genotype features extracted and scaled.
@@ -114,20 +114,21 @@ class GtModel:
 
     def genotype_and_density(self, features_table):
         """
-        Predict genotype and get density esitmation for each variant.
+        Get most likely genotype calls and density esitmation for each variant.
 
         :param features_table: A name to the features table, a table of loaded features from the features table, or
             genotype features extracted and scaled.
 
-        :return: A tuple of genotype calls and density estimations (in that order). These elements are the result of
-            calling `genotype()` and `density()` on this object, respectively.
+        :return: A tuple of genotypes (first element) and densities (second element).
         """
 
+        # Get features
         if type(features_table) != np.ndarray:
             X = features_to_array(features_table, self.scaler)
         else:
             X = features_table
 
+        # Return genotype and density
         return self.genotype(X), self.density(X)
 
 

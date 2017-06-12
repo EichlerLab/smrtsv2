@@ -314,7 +314,7 @@ rule gt_learn_model_scale:
         # Read
         features = pd.read_table(input.tab, header=0)
 
-        X = features_to_unscaled_matrix(features)
+        X = ml.features_to_unscaled_matrix(features)
         y = features['CALL'].copy()
 
         # Scale X
