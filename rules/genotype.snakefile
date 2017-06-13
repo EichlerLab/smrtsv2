@@ -5,7 +5,10 @@ import pandas as pd
 import pysam
 import shutil
 import tempfile
+import time
+import random
 import subprocess
+
 
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
@@ -68,6 +71,7 @@ MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', 4)
 
 SAMPLES = sorted(CONFIG_GT['samples'].keys())
 
+SLEEP_MAX = 10  # Sleep for a max of SLEEP_MAX seconds while spawning assembly jobs
 
 ### Utility Functions ###
 
@@ -361,6 +365,9 @@ rule gt_map_sample_reads:
                 'smrtsv_dir={}'.format(SMRTSV_DIR),
                 'postalt_path={}'.format(POSTALT_PATH)
             )
+
+            # Sleep to avoid race-conditions in Snakemake
+            time.sleep(random.random() * SLEEP_MAX)
 
             # Run mapping step
             with open(log.align, 'w') as log_file:
