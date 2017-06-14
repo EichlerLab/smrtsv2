@@ -23,29 +23,33 @@ def index(args):
     
     print('Preparing reference')
     
-    return smrtsvrunner.run_snake_target((
+    return smrtsvrunner.run_snake_target(
         'rules/reference.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
-        'ref_all',
-        '--config',
-        'reference={}'.format(args.reference),
-        'link_index={}'.format(args.link_index)
-    ))
+        (
+            'ref_all',
+            '--config',
+            'reference={}'.format(args.reference),
+            'link_index={}'.format(args.link_index)
+        )
+    )
 
 
 def align(args):
 
     print('Aligning sequence reads')
 
-    return smrtsvrunner.run_snake_target((
+    return smrtsvrunner.run_snake_target(
         'rules/align.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
-        'aln_run',
-        '--config',
-        'reads={}'.format(args.reads),
-        'batches={}'.format(args.batches),
-        'threads={}'.format(args.threads),
-        'tempdir={}'.format(args.tempdir if args.tempdir is not None else ''),
-        'alignment_parameters="{}"'.format(args.alignment_parameters)
-    ))
+        (
+            'aln_run',
+            '--config',
+            'reads={}'.format(args.reads),
+            'batches={}'.format(args.batches),
+            'threads={}'.format(args.threads),
+            'tempdir={}'.format(args.tempdir if args.tempdir is not None else ''),
+            'alignment_parameters="{}"'.format(args.alignment_parameters)
+        )
+    )
 
 
 def detect(args):
@@ -189,17 +193,19 @@ def call(args):
     # Call SVs, indels, and inversions.
     sys.stdout.write("Calling variants\n")
 
-    return_code = smrtsvrunner.run_snake_target((
+    return_code = smrtsvrunner.run_snake_target(
         'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
-        'call_variants',
-        '--config',
-        'reference={}'.format(args.reference),
-        'alignments={}'.format(args.alignments),
-        'local_assembly_alignments={}'.format(args.assembly_alignments),
-        'variants={}'.format(args.variants),
-        'species="{}"'.format(args.species),
-        'sample="{}""'.format(args.sample)
-    ))
+        (
+            'call_variants',
+            '--config',
+            'reference={}'.format(args.reference),
+            'alignments={}'.format(args.alignments),
+            'local_assembly_alignments={}'.format(args.assembly_alignments),
+            'variants={}'.format(args.variants),
+            'species="{}"'.format(args.species),
+            'sample="{}""'.format(args.sample)
+        )
+    )
 
     if return_code != 0:
         sys.stderr.write('Failed to call variants\n')
@@ -350,6 +356,7 @@ if __name__ == '__main__':
 
     # SMRTSV command: Detect windows
     parser_detector = subparsers.add_parser('detect', help='Detect SV signatures in aligned reads')
+    parser_detector.add_argument('--mapping_quality', **args_dict['mapping_quality'])
     parser_detector.add_argument('--exclude', **args_dict['exclude'])
     parser_detector.add_argument('--assembly_window_size', **args_dict['assembly_window_size'])
     parser_detector.add_argument('--assembly_window_slide', **args_dict['assembly_window_slide'])

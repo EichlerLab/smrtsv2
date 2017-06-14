@@ -146,6 +146,9 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
         if not hasattr(args, 'jobs'):
             prefix.extend(['-j', '1'])
 
+        # Set job name
+        prefix.extend(['--jobname', '{rulename}.{jobid}'])
+
     # Append command
     prefix.extend(cmd)
 
