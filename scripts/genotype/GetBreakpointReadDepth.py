@@ -328,13 +328,16 @@ def get_bp_depth(sv_record, bam_file, minclip=4):
     records_s = collections.defaultdict(list)
 
     for record in bam_file.fetch(bp_lr_chr, bp_l, bp_l + 1):
-        records_l[record.query_name].append(AlignRecord(record))
+        if record.is_proper_pair:
+            records_l[record.query_name].append(AlignRecord(record))
 
     for record in bam_file.fetch(bp_lr_chr, bp_r, bp_r + 1):
-        records_r[record.query_name].append(AlignRecord(record))
+        if record.is_proper_pair:
+            records_r[record.query_name].append(AlignRecord(record))
 
     for record in bam_file.fetch(bp_s_chr, bp_s, bp_s + 1):
-        records_s[record.query_name].append(AlignRecord(record))
+        if record.is_proper_pair:
+            records_s[record.query_name].append(AlignRecord(record))
 
     # Get best representation for each read over each breakpoint
     for key in records_l.keys():

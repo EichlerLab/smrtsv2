@@ -92,7 +92,7 @@ rule gt_map_postalt_remap:
         """echo "Post-ALT processing {wildcards.primary_contig}"; """
         """samtools view -hL {input.bed} {input.bam} | """
         """k8 {POSTALT_PATH} {input.alt} | """
-        """samtools view -f 0x2 -hq {MAPQ} | """
+        """samtools view -hq {MAPQ} | """
         """samtools sort -T {POSTALT_TEMP}/bam/temp/{wildcards.primary_contig} -O bam -o {output.bam}; """
 
 # gt_map_postalt_alt_sam
