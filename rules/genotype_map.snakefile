@@ -5,6 +5,7 @@ output BAM file aligns reads to the primary contigs (reference the SVs were call
 """
 
 import pandas as pd
+import socket
 
 
 ###################
@@ -50,6 +51,9 @@ os.makedirs(os.path.join(POSTALT_TEMP, 'bam', 'temp'), exist_ok=True)
 FILE_CONTIG_BED = POSTALT_TEMP + '/{primary_contig}.bed'
 FILE_CONTIG_ALT = POSTALT_TEMP + '/{primary_contig}.alt'
 FILE_CONTIG_BAM = POSTALT_TEMP + '/bam/{primary_contig}.bam'
+
+# Get hostname
+HOSTNAME = socket.gethostname()
 
 
 #############
@@ -123,12 +127,14 @@ rule gt_map_primary_alignment:
     output:
         primary_bam=PRIMARY_BAM
     log:
-        'samples/{}/log/primary_alignment.log'.format(SAMPLE)
+        'log/primary_alignment.log'.format(SAMPLE)
     shell:
         """echo "Running primary alignment for sample {SAMPLE}"; """
         """echo "Input BAM: {SAMPLE_BAM}"; """
         """echo "Input BAM reference: {SAMPLE_REF}"; """
         """echo "Log: {log}"; """
+        """echo "Temp: {MAPPING_TEMP}"; """
+        """echo "Host: {HOSTNAME}"; """
         """>{log}; """
         """{{ \n"""
         """    while read line; \n"""

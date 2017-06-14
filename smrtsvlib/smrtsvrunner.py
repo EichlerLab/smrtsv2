@@ -29,6 +29,7 @@ INSTALL_LD_PATH = [
 CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
 CLUSTER_FLAG = ('--drmaa', CLUSTER_SETTINGS, '-w', '120')
 
+
 # Empty arguments
 class EmptyArgs:
     pass
@@ -68,7 +69,7 @@ def get_env(install_dir):
     return process_env
 
 
-def run_cmd(args, process_env, stdout=None, stderr=None):
+def run_cmd(args, process_env, stdout=None, stderr=None, cwd=None):
     """
     Run a command with the proper environment set.
 
@@ -76,6 +77,7 @@ def run_cmd(args, process_env, stdout=None, stderr=None):
     :param process_env: A dictionary of environment variables to be set for the process.
     :param stdout: Specify the output stream. This argument is passed directly to `subprocess.Popen`.
     :param stderr: Specify the error stream. This argument is passed directly to `subprocess.Popen`.
+    :param cwd: Switch to this directory before executing the command. If `None`, uses current working directory.
 
     :return: Return code. Negative numbers is the negation of a POSIX signal that killed the process. -1024 is returned
         if the subprocess module did not give a return code.
@@ -83,7 +85,7 @@ def run_cmd(args, process_env, stdout=None, stderr=None):
 
     sys.stdout.flush()
 
-    p = subprocess.Popen(args=args, env=process_env, stdout=stdout, stderr=stderr)
+    p = subprocess.Popen(args=args, env=process_env, stdout=stdout, stderr=stderr, cwd=cwd)
 
     p.wait()
 
@@ -92,7 +94,7 @@ def run_cmd(args, process_env, stdout=None, stderr=None):
     return ret_code if ret_code is not None else -1024
 
 
-def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None, stderr=None):
+def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None, stderr=None, cwd=None):
     """
     Run a snakemake target.
 
@@ -100,6 +102,7 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     :param cmd: The command to run as a tuple starting with the name of the snakemake target.
     :param stdout: Specify the output stream. This argument is passed directly to `subprocess.Popen`.
     :param stderr: Specify the error stream. This argument is passed directly to `subprocess.Popen`.
+    :param cwd: Switch to this directory before executing the command. If `None`, uses current working directory.
 
     :return: Return code from snakemake.
     """
@@ -160,4 +163,4 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
         print('Running snakemake command: {}'.format(' '.join(prefix)))
 
     # Run snakemake command
-    return run_cmd(prefix, process_env, stdout=stdout, stderr=stderr)
+    return run_cmd(prefix, process_env, stdout=stdout, stderr=stderr, cwd=cwd)

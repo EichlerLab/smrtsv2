@@ -5,8 +5,6 @@ import pandas as pd
 import pysam
 import shutil
 import tempfile
-import time
-import random
 import subprocess
 
 
@@ -71,7 +69,6 @@ MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', 4)
 
 SAMPLES = sorted(CONFIG_GT['samples'].keys())
 
-SLEEP_MAX = 10  # Sleep for a max of SLEEP_MAX seconds while spawning assembly jobs
 
 ### Utility Functions ###
 
@@ -328,13 +325,6 @@ rule gt_map_sample_reads:
         # Set mapping_temp (will be deleted if not None)
         mapping_temp = None
 
-        # Set a different output name for the BAM file. Generating the BAM is done by another call to snakemake, and
-        # if this invocation and that invocation both try to create the same file (even though this one is delegating
-        # to that one), Snakemake will fail because two processes are trying to create the same file (locking conflict).
-
-        output_bam_temp = 'samples/{sample}/alignments_temp.bam'.format(**wildcards)
-        output_bai_temp = 'samples/{sample}/alignments_temp.bam.bai'.format(**wildcards)
-
         try:
 
             # Create temporary directories
@@ -345,20 +335,24 @@ rule gt_map_sample_reads:
                 )
             )
 
+            # Separate BAM directory and file. Snakemake will run in "working_dir" and write "output_file"
+            working_dir = os.path.dirname(output.bam)
+            output_file = os.path.basename(output.bam)
+
             # Setup sub-Snake command
             command = (
-                'gt_map_postalt_merge',
+                output_file,
                 '-f',
                 '--jobs', str(params.threads),
                 '--config',
                 'sample={}'.format(wildcards.sample),
-                'sample_bam={}'.format(input.sample_bam),
-                'sample_ref={}'.format(input.sample_ref),
-                'sample_regions={}'.format(input.sample_regions),
-                'sv_ref={}'.format(input.sv_ref),
-                'sv_ref_alt_info={}'.format(input.sv_ref_alt_info),
-                'contig_bam={}'.format(input.contig_bam),
-                'output_bam={}'.format(output_bam_temp),
+                'sample_bam={}'.format(os.path.abspath(input.sample_bam)),
+                'sample_ref={}'.format(os.path.abspath(input.sample_ref)),
+                'sample_regions={}'.format(os.path.abspath(input.sample_regions)),
+                'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
+                'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
+                'contig_bam={}'.format(os.path.abspath(input.contig_bam)),
+                'output_bam={}'.format(output_file),
                 'mapq={}'.format(params.mapq),
                 'threads={}'.format(params.threads),
                 'mapping_temp={}'.format(mapping_temp),
@@ -366,14 +360,11 @@ rule gt_map_sample_reads:
                 'postalt_path={}'.format(POSTALT_PATH)
             )
 
-            # Sleep to avoid race-conditions in Snakemake
-            time.sleep(random.random() * SLEEP_MAX)
-
             # Run mapping step
             with open(log.align, 'w') as log_file:
                 return_code = smrtsvrunner.run_snake_target(
                     'rules/genotype_map.snakefile', None, PROCESS_ENV, SMRTSV_DIR, command,
-                    stdout=log_file, stderr=subprocess.STDOUT
+                    stdout=log_file, stderr=subprocess.STDOUT, cwd=working_dir
                 )
 
             # Check return code
@@ -382,18 +373,11 @@ rule gt_map_sample_reads:
                     'Alignment step failed with return code {}: See {} for errors.'.format(return_code, log.align)
                 )
 
-            # Move output BAM temporary file
-            shell(
-                """mv {output_bam_temp} {output.bam}; """
-                """mv {output_bai_temp} {output.bai}"""
-            )
-
         finally:
 
             # Clean up temp directory
             if mapping_temp is not None:
                 shutil.rmtree(mapping_temp)
-
 
 
 #
