@@ -181,7 +181,7 @@ rule gt_vcf_merge:
 # Predict genotype
 rule gt_call_predict:
     input:
-        tab='samples/{sample}/temp/gt_features.tab',
+        tab='samples/{sample}/gt_features.tab',
         predictor=GT_PREDICTOR,
         scaler=GT_SCALER
     output:
@@ -220,7 +220,7 @@ rule gt_call_sample_merge:
         bp_tab='samples/{sample}/temp/breakpoint_depth.tab',
         insert_tab='samples/{sample}/temp/insert_delta.tab'
     output:
-        tab=temp('samples/{sample}/temp/gt_features.tab')
+        tab='samples/{sample}/gt_features.tab'
     run:
 
         # Read input tables (SVs, breakpoint  depths, and insert size deltas)
