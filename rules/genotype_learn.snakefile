@@ -33,11 +33,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-from sklearn.metrics import f1_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import accuracy_score
-
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
 
@@ -68,12 +63,16 @@ PARAM_GRID = [
     {'kernel': ['rbf'], 'gamma': [1e-1, 5.5e-2, 1e-2, 5.5e-3, 1e-3, 1e-4, 1e-5, 1e-6], 'C': [1, 10, 50, 100, 500, 1000, 5000]}
 ]
 
+# Get a list of samples and the training sample
+FEATURE_SAMPLES = sorted(CONFIG_LEARN.get('features').keys())
+FEATURE_SAMPLE_TRAIN = CONFIG_LEARN.get('train_feature')
+
 
 #############
 ### Rules ###
 #############
 
-localrules: gt_learn
+localrules: gt_learn, gt_learn_link_stats, gt_learn_model_link_features, gt_learn_model_link_train_array
 
 #
 # Evaluate and train
@@ -143,14 +142,25 @@ rule gt_learn_model_train:
 # Test model by statified K-fold cross-validation
 #
 
+# gt_learn_link_stats
+#
+# Link the stats array for the main sample.
+rule gt_learn_link_stats:
+    input:
+        tab='cv/samples/{}/stats.tab'.format(FEATURE_SAMPLE_TRAIN)
+    output:
+        tab='cv/stats.tab'
+    shell:
+        """ln -sf samples/{FEATURE_SAMPLE_TRAIN}/stats.tab stats.tab"""
+
 # gt_learn_cv_merge_stats
 #
 # Merge stats
 rule gt_learn_cv_merge_stats:
     input:
-        tab=expand('cv/folds/cv_{cv_set}.tab', cv_set=range(FOLDS_K))
+        tab=expand('cv/samples/{{sample}}/folds/cv_{cv_set}.tab', cv_set=range(FOLDS_K))
     output:
-        tab='cv/stats.tab'
+        tab='cv/samples/{sample}/stats.tab'
     run:
 
         n_folds = len(input.tab)
@@ -176,10 +186,12 @@ rule gt_learn_cv_run:
     input:
         X_npy='model/X.npy',
         y_npy='model/y.npy',
+        scaler='model/scaler.pkl',
         cv_tab='cv/test_sets.tab',
-        feat_tab='model/features.tab'
+        feat_tab='model/features.tab',
+        X_sample=expand('model/samples/{sample}/X.npy', sample=FEATURE_SAMPLES)
     output:
-        tab='cv/folds/cv_{cv_set}.tab'
+        tab=expand('cv/samples/{sample}/folds/cv_{{cv_set}}.tab', sample=FEATURE_SAMPLES)
     params:
         k=FOLDS_K,
         threads=4
@@ -187,13 +199,23 @@ rule gt_learn_cv_run:
 
         cv_set = int(wildcards.cv_set)
 
-        # Load data
+        # Load data for model
         X = np.load(input.X_npy)
         y = np.load(input.y_npy)
+
+        scaler = joblib.load(input.scaler)
 
         fold_array = np.loadtxt(input.cv_tab, np.int32, skiprows=1)
 
         features = pd.read_table(input.feat_tab, header=0)
+
+        # Load data for samples to CV against
+        # sample_list is a list of tuples with one list entry for each sample. The first element of each tuple
+        # is the sample name, and the second is the scaled X matrix for that sample.
+        sample_list = list()
+
+        for sample in FEATURE_SAMPLES:
+            sample_list.append((sample, np.load('model/samples/{}/X.npy'.format(sample))))
 
         # Get set of callable indices
         callable_set = set(features.index[features['CALLABLE']])
@@ -221,56 +243,14 @@ rule gt_learn_cv_run:
 
         clf.fit(X[selection_indices, :], y[selection_indices])
 
-        # Test - All
-        model_predict = clf.best_estimator_.predict(X[test_indices, :])
+        # Write scores for each sample
+        for sample, X_sample in sample_list:
+            ml.get_cv_test_scores(
+                clf.best_estimator_, X_sample, y,
+                test_indices, test_callable_indices, test_nocall_indices
+            ).to_csv('cv/samples/{}/folds/cv_{}.tab'.format(sample, wildcards.cv_set), sep='\t', index_label='subset')
 
-        scores_all = pd.Series(
-            [
-                f1_score(y[test_indices], model_predict, average='weighted'),
-                precision_score(y[test_indices], model_predict, average='weighted'),
-                recall_score(y[test_indices], model_predict, average='weighted'),
-                accuracy_score(y[test_indices], model_predict)
-            ],
-            index = ('f1', 'precision', 'recall', 'accuracy')
-        )
 
-        scores_all.name = 'all'
-
-        # Test - Callable
-        model_predict = clf.best_estimator_.predict(X[test_callable_indices, :])
-
-        scores_callable = pd.Series(
-            [
-                f1_score(y[test_callable_indices], model_predict, average='weighted'),
-                precision_score(y[test_callable_indices], model_predict, average='weighted'),
-                recall_score(y[test_callable_indices], model_predict, average='weighted'),
-                accuracy_score(y[test_callable_indices], model_predict)
-            ],
-            index = ('f1', 'precision', 'recall', 'accuracy')
-        )
-
-        scores_callable.name = 'callable'
-
-        # Test - NoCall
-        model_predict = clf.best_estimator_.predict(X[test_nocall_indices, :])
-
-        scores_nocall = pd.Series(
-            [
-                f1_score(y[test_nocall_indices], model_predict, average='weighted'),
-                precision_score(y[test_nocall_indices], model_predict, average='weighted'),
-                recall_score(y[test_nocall_indices], model_predict, average='weighted'),
-                accuracy_score(y[test_nocall_indices], model_predict)
-            ],
-            index = ('f1', 'precision', 'recall', 'accuracy')
-        )
-
-        scores_nocall.name='nocall'
-
-        # Save CV stats
-        pd.concat(
-            [scores_all, scores_callable, scores_nocall]
-            , axis=1
-        ).T.to_csv(output.tab, sep='\t', index_label='subset')
 
 # gt_learn_cv_statify_k
 #
@@ -299,14 +279,44 @@ rule gt_learn_cv_statify_k:
 # Model features
 #
 
+# gt_learn_model_link_train_array
+#
+# Get the features
+rule gt_learn_model_link_train_array:
+    input:
+        X_npy='model/samples/{}/X.npy'.format(FEATURE_SAMPLE_TRAIN)
+    output:
+        X_npy='model/X.npy'
+    shell:
+        """ln -sf samples/{FEATURE_SAMPLE_TRAIN}/X.npy model/X.npy"""
+
 # gt_learn_model_scale
 #
 # Scale features.
 rule gt_learn_model_scale:
     input:
+        tab='model/samples/{sample}/features.tab',
+        scaler='model/scaler.pkl'
+    output:
+        X_npy='model/samples/{sample}/X.npy'
+    run:
+
+        # Read
+        features = pd.read_table(input.tab, header=0)
+        scaler = joblib.load(input.scaler)
+
+        X = ml.features_to_array(features, scaler)
+
+        # Save feature array
+        np.save(output.X_npy, X)
+
+# gt_learn_model_scale
+#
+# Scale features.
+rule gt_learn_model_get_scaler:
+    input:
         tab='model/features.tab'
     output:
-        X_npy='model/X.npy',
         y_npy='model/y.npy',
         scaler='model/scaler.pkl'
     run:
@@ -317,27 +327,35 @@ rule gt_learn_model_scale:
         X = ml.features_to_unscaled_matrix(features)
         y = features['CALL'].copy()
 
-        # Scale X
+        # Fit scaler
         scaler = StandardScaler().fit(X)
-        X = scaler.transform(X)
 
         # Save scaler
         joblib.dump(scaler, output.scaler)
 
-        # Save data
-        np.save(output.X_npy, X)
+        # Save y
         np.save(output.y_npy, y)
 
+# gt_learn_model_link_features
+#
+# Link the main features table.
+rule gt_learn_model_link_features:
+    input:
+        tab='model/samples/{}/features.tab'.format(FEATURE_SAMPLE_TRAIN)
+    output:
+        tab='model/features.tab'
+    shell:
+        """ln -sf samples/{FEATURE_SAMPLE_TRAIN}/features.tab model/features.tab"""
 
 # gt_learn_model_annotate
 #
 # Merge all training information into one table and annotate.
 rule gt_learn_model_annotate:
     input:
-        features=CONFIG_LEARN['features'],
+        features=lambda wildcards: CONFIG_LEARN['features'][wildcards.sample],
         labels=CONFIG_LEARN['labels']
     output:
-        tab='model/features.tab'
+        tab='model/samples/{sample}/features.tab'
     params:
         call_thresh=CALLABLE_THRESHOLD
     run:

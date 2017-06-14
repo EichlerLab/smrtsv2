@@ -10,6 +10,11 @@ from sklearn.externals import joblib
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
+from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import accuracy_score
+
 from sklearn.svm import SVC
 
 
@@ -162,23 +167,86 @@ def get_cv_score_table(clf):
     return df
 
 
+def get_cv_test_scores(model, X, y, test_indices, test_callable_indices, test_nocall_indices):
+    """
+    Get CV test scores over multiple sets.
+
+    :param model: Model to test.
+    :param X: Scaled features.
+    :param y: Labels for each row in `X`.
+    :param test_indices: Indices for the whole set of test data.
+    :param test_callable_indices: Indices for all test rows where the genotype is likely callable.
+    :param test_nocall_indices: Indices for all test rows where the genotype is not likely callable.
+
+    :return: A dataframe with one row for all, callable, and not-callable and statistics in columns.
+    """
+
+    # Test - All
+    model_predict = model.predict(X[test_indices, :])
+
+    scores_all = pd.Series(
+        [
+            f1_score(y[test_indices], model_predict, average='weighted'),
+            precision_score(y[test_indices], model_predict, average='weighted'),
+            recall_score(y[test_indices], model_predict, average='weighted'),
+            accuracy_score(y[test_indices], model_predict),
+            len(test_indices)
+        ],
+        index=('f1', 'precision', 'recall', 'accuracy', 'n')
+    )
+
+    scores_all.name = 'all'
+
+    # Test - Callable
+    model_predict = model.predict(X[test_callable_indices, :])
+
+    scores_callable = pd.Series(
+        [
+            f1_score(y[test_callable_indices], model_predict, average='weighted'),
+            precision_score(y[test_callable_indices], model_predict, average='weighted'),
+            recall_score(y[test_callable_indices], model_predict, average='weighted'),
+            accuracy_score(y[test_callable_indices], model_predict),
+            len(test_callable_indices)
+        ],
+        index=('f1', 'precision', 'recall', 'accuracy', 'n')
+    )
+
+    scores_callable.name = 'callable'
+
+    # Test - NoCall
+    model_predict = model.predict(X[test_nocall_indices, :])
+
+    scores_nocall = pd.Series(
+        [
+            f1_score(y[test_nocall_indices], model_predict, average='weighted'),
+            precision_score(y[test_nocall_indices], model_predict, average='weighted'),
+            recall_score(y[test_nocall_indices], model_predict, average='weighted'),
+            accuracy_score(y[test_nocall_indices], model_predict),
+            len(test_nocall_indices)
+        ],
+        index=('f1', 'precision', 'recall', 'accuracy', 'n')
+    )
+
+    scores_nocall.name = 'nocall'
+
+    # Return CV stats
+    return pd.concat(
+        [scores_all, scores_callable, scores_nocall]
+        , axis=1
+    ).T
+
+
 def features_to_array(features_table, scaler):
     """
     Get a scaled feature array and a scaler object as a two element tuple (in that order).
 
     The input DataFrame must contain columns in list `GT_FEATURES`. All other columns are ignored.
 
-    `scaler` must be `None` when features are being prepared for training. The scaler returned by this function when
-    setting up for training must be given to the function to transform data for analysis by the model. Therefore,
-    this scaler should be serialized along with the model to predict labels for the genotyper.
-
     :param features_table: Pandas DataFrame of a feature table or a string path of where the feature table can be
         loaded from.
-    :param scaler: Scaler object if one already exists. If `None`, a scaler is created.
+    :param scaler: Scaler object.
 
-    :return: A tuple of the scaled feature array ready for model training or evaluation (first element) and the scaler
-        used to scale the data (second element). If the `scaler` argument is not `None`, then the secord element is this
-        scaler, and if it is `None`, then the second argument is the scaler that was fit to this set of features.
+    :return: Scaled feature array ready for model training or evaluation.
     """
 
     # Check arguments
