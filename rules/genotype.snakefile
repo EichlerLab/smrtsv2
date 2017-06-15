@@ -247,6 +247,23 @@ rule gt_call_sample_merge:
         # Write
         df.to_csv(output.tab, sep='\t', index=False)
 
+rule gt_call_sample_variant_depth:
+    input:
+        bed='sv_calls/sv_calls.bed',
+        bam='samples/{sample}/alignments.bam',
+        alt_info='altref/alt_info.bed'
+    output:
+        tab=temp('samples/{sample}/temp/depth_delta.tab'),
+        stats='samples/{sample}/depth_delta.tab'
+    params:
+        mapq=get_config_param('genotype_mapq'),
+        flank=100
+    shell:
+        """python {SMRTSV_DIR}/scripts/genotype/GetReadDepthDiff.py """
+            """{input.bam} {input.bed} {input.alt_info} {output.tab} """
+            """--out_stats {output.stats} """
+            """--mapq {params.mapq} """
+            """--flank {params.flank}"""
 
 # gt_call_sample_insert_delta
 #

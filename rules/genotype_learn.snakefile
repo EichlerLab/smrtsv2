@@ -74,6 +74,7 @@ FEATURE_SAMPLE_TRAIN = CONFIG_LEARN.get('train_feature')
 
 localrules: gt_learn, gt_learn_link_stats, gt_learn_model_link_features, gt_learn_model_link_train_array
 
+
 #
 # Evaluate and train
 #
@@ -147,11 +148,11 @@ rule gt_learn_model_train:
 # Link the stats array for the main sample.
 rule gt_learn_link_stats:
     input:
-        tab='cv/samples/{}/stats.tab'.format(FEATURE_SAMPLE_TRAIN)
+        tab=expand('cv/samples/{sample}/stats.tab', sample=FEATURE_SAMPLES)
     output:
         tab='cv/stats.tab'
     shell:
-        """ln -sf samples/{FEATURE_SAMPLE_TRAIN}/stats.tab stats.tab"""
+        """ln -sf {FEATURE_SAMPLE_TRAIN}/stats.tab cv/samples/stats.tab"""
 
 # gt_learn_cv_merge_stats
 #
