@@ -60,7 +60,7 @@ CALLABLE_THRESHOLD = int(CONFIG_LEARN.get('callable_threshold', '4'))
 
 # Hyper-parameter grid for grid-search CV
 PARAM_GRID = [
-    {'kernel': ['rbf'], 'gamma': [1e-1, 5.5e-2, 1e-2, 5.5e-3, 1e-3, 1e-4, 1e-5, 1e-6], 'C': [1, 10, 50, 100, 500, 1000, 5000]}
+    {'kernel': ['rbf'], 'gamma': [1e-1, 5.5e-2, 1e-2, 5.5e-3, 1e-3, 1e-4, 1e-5], 'C': [1, 10, 100, 500, 1000, 5000, 5500, 10000, 20000]}
 ]
 
 # Get a list of samples and the training sample
@@ -151,12 +151,26 @@ rule gt_learn_link_stats:
         tab=expand('cv/samples/{sample}/stats.tab', sample=FEATURE_SAMPLES)
     output:
         tab='cv/stats.tab'
-    shell:
-        """ln -sf {FEATURE_SAMPLE_TRAIN}/stats.tab cv/samples/stats.tab"""
+    run:
+
+        # Read accuracy for each sample
+        accuracy_list = list()
+
+        for sample in FEATURE_SAMPLES:
+            acc = pd.read_table('cv/samples/{}/stats.tab'.format(sample), header=0, usecols=('accuracy', 'subset'), index_col='subset', squeeze=True)
+            acc.name = sample
+
+            accuracy_list.append(acc)
+
+        # Merge and write
+        df = pd.concat(accuracy_list, axis=1).T
+        df.index.name = 'sample'
+        df.columns.name = None
+        df.to_csv(output.tab, sep='\t', index=True, float_format='%.4f')
 
 # gt_learn_cv_merge_stats
 #
-# Merge stats
+# Merge stats.
 rule gt_learn_cv_merge_stats:
     input:
         tab=expand('cv/samples/{{sample}}/folds/cv_{cv_set}.tab', cv_set=range(FOLDS_K))
@@ -192,7 +206,8 @@ rule gt_learn_cv_run:
         feat_tab='model/features.tab',
         X_sample=expand('model/samples/{sample}/X.npy', sample=FEATURE_SAMPLES)
     output:
-        tab=expand('cv/samples/{sample}/folds/cv_{{cv_set}}.tab', sample=FEATURE_SAMPLES)
+        tab=expand('cv/samples/{sample}/folds/cv_{{cv_set}}.tab', sample=FEATURE_SAMPLES),
+        tab_pred='cv/run/fold_{cv_set}_pred.tab'
     params:
         k=FOLDS_K,
         threads=4
@@ -233,7 +248,7 @@ rule gt_learn_cv_run:
         selection_labels = np.asarray(features['STRATIFIED'].loc[selection_indices])
 
         clf = GridSearchCV(
-            estimator=SVC(C=1),
+            estimator=SVC(),
             param_grid=PARAM_GRID,
             scoring='accuracy',
             cv=ml.cv_set_iter(ml.stratify_folds(selection_labels, params.k)),
@@ -251,6 +266,13 @@ rule gt_learn_cv_run:
                 test_indices, test_callable_indices, test_nocall_indices
             ).to_csv('cv/samples/{}/folds/cv_{}.tab'.format(sample, wildcards.cv_set), sep='\t', index_label='subset')
 
+        # Get calls for each variant
+        y_test = pd.Series(clf.best_estimator_.predict(X[test_indices, :]), index=test_indices)
+
+        y_test.name = 'predicted'
+        y_test.index.name = 'index'
+
+        y_test.to_csv(output.tab_pred, sep='\t', header=True)
 
 
 # gt_learn_cv_statify_k
@@ -387,7 +409,7 @@ rule gt_learn_model_annotate:
         df['CALL'] = labels
 
         # Label as callable
-        df['CALLABLE'] = df.apply(lambda row: row['REF_COUNT'] + row['ALT_COUNT'] >= params.call_thresh, axis=1)
+        df['CALLABLE'] = df.apply(lambda row: row['BP_REF_COUNT'] + row['BP_ALT_COUNT'] >= params.call_thresh, axis=1)
 
         # Add statified labels
         # Get feature labels (augmented with TRF annotation for stratification)

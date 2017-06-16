@@ -20,9 +20,12 @@ from sklearn.svm import SVC
 
 # Labels of features used in training
 GT_FEATURES = (
-    'SVTYPE', 'SVLEN', 'REF_COUNT', 'ALT_COUNT',
-    'REF_CLIP', 'ALT_CLIP', 'PRIMARY_CLIP',
-    'N_INSERT', 'INSERT_LOWER', 'INSERT_UPPER'
+    'SVTYPE', 'SVLEN',
+    'BP_REF_REL', 'BP_ALT_REL',
+    'BP_PROB_HOMREF', 'BP_PROB_HET', 'BP_PROB_HOMALT',
+    'BP_REF_CLIP', 'BP_ALT_CLIP', 'BP_PRIMARY_CLIP',
+    'INSERT_LOWER', 'INSERT_UPPER',
+    'DP_VAR_REF', 'DP_VAR_CTG', 'DP_VAR_GLOBAL'
 )
 
 # Genotype labels to integer map
@@ -190,7 +193,7 @@ def get_cv_test_scores(model, X, y, test_indices, test_callable_indices, test_no
             precision_score(y[test_indices], model_predict, average='weighted'),
             recall_score(y[test_indices], model_predict, average='weighted'),
             accuracy_score(y[test_indices], model_predict),
-            len(test_indices)
+            test_indices.shape[0]
         ],
         index=('f1', 'precision', 'recall', 'accuracy', 'n')
     )
@@ -206,7 +209,7 @@ def get_cv_test_scores(model, X, y, test_indices, test_callable_indices, test_no
             precision_score(y[test_callable_indices], model_predict, average='weighted'),
             recall_score(y[test_callable_indices], model_predict, average='weighted'),
             accuracy_score(y[test_callable_indices], model_predict),
-            len(test_callable_indices)
+            test_callable_indices.shape[0]
         ],
         index=('f1', 'precision', 'recall', 'accuracy', 'n')
     )
@@ -222,7 +225,7 @@ def get_cv_test_scores(model, X, y, test_indices, test_callable_indices, test_no
             precision_score(y[test_nocall_indices], model_predict, average='weighted'),
             recall_score(y[test_nocall_indices], model_predict, average='weighted'),
             accuracy_score(y[test_nocall_indices], model_predict),
-            len(test_nocall_indices)
+            test_nocall_indices.shape[0]
         ],
         index=('f1', 'precision', 'recall', 'accuracy', 'n')
     )

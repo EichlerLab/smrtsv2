@@ -20,6 +20,8 @@ import os
 import pandas as pd
 import pysam
 
+from scipy.stats import binom
+
 # CIGAR operations
 BAM_CMATCH = 0
 BAM_CINS = 1
@@ -358,8 +360,8 @@ def get_bp_depth(sv_record, bam_file, minclip=4):
     # Get the best records after comparing alignments over the breakpoints
     records_lr, records_s = choose_best_records(records_lr, records_s)
 
-    clip_lr = len([record for record in records_lr if record.clip_lr > 9]) / 2
-    clip_s = len([record for record in records_s if record.clip_lr > 9])
+    clip_lr = sum([record.read_count for record in records_lr if record.clip_lr >= minclip]) / 2
+    clip_s = float(sum([record.read_count for record in records_s if record.clip_lr >= minclip]))
 
     # Return the depths over the breakpoints
     if is_ins:
@@ -405,6 +407,15 @@ if __name__ == '__main__':
     arg_parser.add_argument('--force', '-f', action='store_true',
                             help='Force overwrite the output file if it exists.')
 
+    arg_parser.add_argument('--phom', type=float, default=0.05,
+                            help='Probability of a read aligning better to the alternate breakpoint(s) assuming the '
+                                 'genotype is homozygous-reference (no actual alt allele present). The probability of '
+                                 'homozygous-alternate is calculated by subtracting this value from 1.')
+
+    arg_parser.add_argument('--phet', type=float, default=0.5,
+                            help='Probability of a read aligning better to the alternate breakpoint(s) assuming the '
+                                 'genotype is heterozygous.')
+
     args = arg_parser.parse_args()
 
     # Check arguments
@@ -426,26 +437,75 @@ if __name__ == '__main__':
         if not args.force and os.path.exists(args.out):
             raise RuntimeError('Output file exists and --force was not set: {}'.format(args.out))
 
+    if args.phet > 1 or args.phet < 0:
+        raise RuntimeError('ALT-probability given HET must be in [0, 1]: {}'.format(args.phet))
+
+    if args.phom > 1 or args.phom < 0:
+        raise RuntimeError('ALT-probability given HOM-REF must be in [0, 1]: {}'.format(args.phom))
+
+    # Save arguments that are reused often
+    phet = args.phet
+    phomref = args.phom
+    phomalt = 1 - phomref
+
     # Get variant info
     df_bed = pd.read_table(args.bed, header=0)
 
     # Open files and process
     with pysam.AlignmentFile(args.bam, 'r') as bam_file_in:
         with open(args.out, 'w') as out_file:
-            out_file.write('INDEX\tREF_COUNT\tALT_COUNT\tREF_CLIP\tALT_CLIP\tPRIMARY_CLIP\n')
+            out_file.write(
+                'INDEX\tBP_REF_COUNT\tBP_ALT_COUNT\t'
+                'BP_REF_REL\tBP_ALT_REL\t'
+                'BP_PROB_HOMREF\tBP_PROB_HET\tBP_PROB_HOMALT\t'
+                'BP_REF_CLIP\tBP_ALT_CLIP\tBP_PRIMARY_CLIP\n'
+            )
 
             for sv_rec in df_bed.iterrows():
                 sv_rec = sv_rec[1]
 
+                # Get counts
                 ref_count, alt_count, ref_clip, alt_clip, primary_clip = get_bp_depth(sv_rec, bam_file_in, args.minclip)
 
-                sv_rec['REF_COUNT'] = ref_count
-                sv_rec['ALT_COUNT'] = alt_count
-                sv_rec['REF_CLIP'] = ref_clip
-                sv_rec['ALT_CLIP'] = alt_clip
-                sv_rec['PRIMARY_CLIP'] = primary_clip
+                # Normalize to ratios of depth and get binomial probability of HOM-REF and HET given read depth
+                total_depth = ref_count + alt_count
 
+                if total_depth > 0:
+                    ref_rel = ref_count / total_depth
+                    alt_rel = alt_count / total_depth
+                    ref_clip /= total_depth
+                    alt_clip /= total_depth
+
+                    prob_homref = binom(total_depth, phomref).pmf(alt_count)
+                    prob_het = binom(total_depth, phet).pmf(alt_count)
+                    prob_homalt = binom(total_depth, phomalt).pmf(alt_count)
+
+                else:
+                    ref_rel = 0
+                    alt_rel = 0
+                    ref_clip = 0
+                    alt_clip = 0
+
+                    prob_homref = 0
+                    prob_het = 0
+                    prob_homalt = 0
+
+                # Update Series
+                sv_rec['BP_REF_COUNT'] = ref_count
+                sv_rec['BP_ALT_COUNT'] = alt_count
+                sv_rec['BP_REF_REL'] = ref_rel
+                sv_rec['BP_ALT_REL'] = alt_rel
+                sv_rec['BP_PROB_HOMREF'] = prob_homref
+                sv_rec['BP_PROB_HET'] = prob_het
+                sv_rec['BP_PROB_HOMALT'] = prob_homalt
+                sv_rec['BP_REF_CLIP'] = ref_clip
+                sv_rec['BP_ALT_CLIP'] = alt_clip
+                sv_rec['BP_PRIMARY_CLIP'] = primary_clip
+
+                # Write
                 out_file.write(
-                    '{INDEX}\t{REF_COUNT}\t{ALT_COUNT}\t'
-                    '{REF_CLIP}\t{ALT_CLIP}\t{PRIMARY_CLIP:.4f}\n'.format(**sv_rec)
+                    '{INDEX}\t{BP_REF_COUNT}\t{BP_ALT_COUNT}\t'
+                    '{BP_REF_REL}\t{BP_ALT_REL}\t'
+                    '{BP_PROB_HOMREF}\t{BP_PROB_HET}\t{BP_PROB_HOMALT}\t'
+                    '{BP_REF_CLIP}\t{BP_ALT_CLIP}\t{BP_PRIMARY_CLIP}\n'.format(**sv_rec)
                 )

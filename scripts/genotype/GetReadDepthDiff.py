@@ -146,9 +146,6 @@ if __name__ == '__main__':
     if not args.out:
         raise RuntimeError('Output file name is empty.')
 
-    if not args.force and os.path.exists(args.out):
-        raise RuntimeError('Output file exists and --force was not set: {}'.format(args.out))
-
     # Get variant info
     df_bed = pd.read_table(args.bed, header=0)
 

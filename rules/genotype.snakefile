@@ -218,7 +218,8 @@ rule gt_call_sample_merge:
     input:
         sv_bed='sv_calls/sv_calls.bed',
         bp_tab='samples/{sample}/temp/breakpoint_depth.tab',
-        insert_tab='samples/{sample}/temp/insert_delta.tab'
+        insert_tab='samples/{sample}/temp/insert_delta.tab',
+        depth_tab='samples/{sample}/temp/depth_delta.tab'
     output:
         tab='samples/{sample}/gt_features.tab'
     run:
@@ -238,23 +239,30 @@ rule gt_call_sample_merge:
         df_ins.index = df_ins['INDEX']
         del(df_ins['INDEX'])
 
+        df_depth = pd.read_table(input.depth_tab, header=0)
+        df_depth.index = df_depth['INDEX']
+        del(df_depth['INDEX'])
+
         # Merge
         df = pd.concat(
-            [df_sv, df_bp, df_ins],
+            [df_sv, df_bp, df_ins, df_depth],
             axis=1
         )
 
         # Write
         df.to_csv(output.tab, sep='\t', index=False)
 
-rule gt_call_sample_variant_depth:
+# gt_call_sample_read_depth
+#
+# Get read depths in and around altered bases.
+rule gt_call_sample_read_depth:
     input:
         bed='sv_calls/sv_calls.bed',
         bam='samples/{sample}/alignments.bam',
         alt_info='altref/alt_info.bed'
     output:
         tab=temp('samples/{sample}/temp/depth_delta.tab'),
-        stats='samples/{sample}/depth_delta.tab'
+        stats='samples/{sample}/depth_delta_stats.tab'
     params:
         mapq=get_config_param('genotype_mapq'),
         flank=100
