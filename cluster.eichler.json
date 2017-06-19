@@ -45,6 +45,6 @@
   "gt_call_to_vcf": {"params": "-l h_rt=00:30:00 -l mfree=4G"},
   "gt_altref_alt_info_bed": {"params": "-l h_rt=2:00:00 -l mfree=8G"},
 
-  "gt_learn_cv_run": {"params": "-l h_rt=10:00:00 -pe serial 4 -l mfree=2G"},
-  "gt_learn_model_train": {"params": "-l h_rt=10:00:00 -pe serial 4 -l mfree=2G"}
+  "gt_learn_cv_run": {"params": "-l h_rt=24:00:00 -pe serial 4 -l mfree=2G"},
+  "gt_learn_model_train": {"params": "-l h_rt=24:00:00 -pe serial 4 -l mfree=2G"}
 }

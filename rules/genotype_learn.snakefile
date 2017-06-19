@@ -60,7 +60,7 @@ CALLABLE_THRESHOLD = int(CONFIG_LEARN.get('callable_threshold', '4'))
 
 # Hyper-parameter grid for grid-search CV
 PARAM_GRID = [
-    {'kernel': ['rbf'], 'gamma': [1e-1, 5.5e-2, 1e-2, 5.5e-3, 1e-3, 1e-4, 1e-5], 'C': [1, 10, 100, 500, 1000, 5000, 5500, 10000, 20000]}
+    {'kernel': ['rbf'], 'gamma': [1e-1, 5.5e-2, 1e-2, 5.5e-3, 1e-3], 'C': [10, 100, 500, 1000, 5000, 5500]}
 ]
 
 # Get a list of samples and the training sample
