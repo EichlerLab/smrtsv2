@@ -748,7 +748,7 @@ rule gt_contig_mask_fasta:
     input:
         fasta='temp/contigs/hardmask/contigs_nomask.fasta',
         fai='temp/contigs/hardmask/contigs_nomask.fasta.fai',
-        bed='contig/hardmask/regions.bed'
+        bed='contigs/hardmask/regions.bed'
     output:
         fasta='contigs/contigs.fasta',
         fai='contigs/contigs.fasta.fai'
@@ -777,10 +777,10 @@ rule gt_contig_bam_to_fasta:
 # Get a BED of regions to be masked.
 rule gt_contig_hardmask_bed:
     input:
-        bed='temp/contig/hardmask/regions.bed',
+        bed='temp/contigs/hardmask/regions.bed',
         sizes='contigs/contigs.sizes'
     output:
-        bed='contig/hardmask/regions.bed'
+        bed='contigs/hardmask/regions.bed'
     shell:
         """awk -vOFS="\\t" '{{print $1, "0", $2}}' {input.sizes} | """
         """bedtools subtract -a stdin -b {input.bed} """
@@ -791,10 +791,10 @@ rule gt_contig_hardmask_bed:
 # Add flank to variant locations.
 rule gt_contig_hardmask_flank:
     input:
-        bed='temp/contig/hardmask/regions_noslop.bed',
+        bed='temp/contigs/hardmask/regions_noslop.bed',
         sizes='contigs/contigs.sizes'
     output:
-        bed=temp('temp/contig/hardmask/regions.bed')
+        bed=temp('temp/contigs/hardmask/regions.bed')
     params:
         flank=int(CONFIG_GT['sv_contig_flank'])
     shell:
@@ -808,7 +808,7 @@ rule gt_contig_hardmask_regions:
     input:
         bed='sv_calls/sv_calls.bed'
     output:
-        bed=temp('temp/contig/hardmask/regions_noslop.bed')
+        bed=temp('temp/contigs/hardmask/regions_noslop.bed')
     run:
 
         # Read table

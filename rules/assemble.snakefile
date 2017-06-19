@@ -82,8 +82,6 @@ rule asm_assemble_group:
     output:
         bam='assemble/group/{group_id}/contig.bam',
         bai='assemble/group/{group_id}/contig.bam.bai'
-    log:
-        'assemble/group/{group_id}/contig.log'
     run:
 
         # Setup assembly
