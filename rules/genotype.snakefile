@@ -7,6 +7,9 @@ import shutil
 import tempfile
 import subprocess
 
+from Bio import SeqIO
+from Bio import Seq
+from Bio import SeqRecord
 
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
@@ -195,7 +198,7 @@ rule gt_call_predict:
 
         # Annotate no-calls
         features['CALLABLE'] = features.apply(
-            lambda row: True if row['REF_COUNT'] + row['ALT_COUNT'] >= params.min_depth else False,
+            lambda row: True if row['BP_REF_COUNT'] + row['BP_ALT_COUNT'] >= params.min_depth else False,
             axis=1
         )
 
@@ -334,7 +337,7 @@ rule gt_map_sample_reads:
         sv_ref_bwt='altref/ref.fasta.bwt',
         sv_ref_alts='altref/ref.fasta.alt',
         sv_ref_alt_info='altref/alt_info.bed',
-        contig_bam='contigs/contigs.bam'
+        contig_sam='contigs/contigs.sam'
     output:
         bam='samples/{sample}/alignments.bam',
         bai='samples/{sample}/alignments.bam.bai'
@@ -376,7 +379,7 @@ rule gt_map_sample_reads:
                 'sample_regions={}'.format(os.path.abspath(input.sample_regions)),
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
-                'contig_bam={}'.format(os.path.abspath(input.contig_bam)),
+                'contig_sam={}'.format(os.path.abspath(input.contig_sam)),
                 'output_bam={}'.format(output_file),
                 'mapq={}'.format(params.mapq),
                 'threads={}'.format(params.threads),
@@ -384,6 +387,9 @@ rule gt_map_sample_reads:
                 'smrtsv_dir={}'.format(SMRTSV_DIR),
                 'postalt_path={}'.format(POSTALT_PATH)
             )
+
+            # Clear locks
+            shell("""rm -f {working_dir}/.snakemake/locks/*""")
 
             # Run mapping step
             with open(log.align, 'w') as log_file:
@@ -479,12 +485,11 @@ rule gt_altref_alt_contig_to_chr:
 # adjust alignment scores.
 rule gt_altref_make_alts:
     input:
-        bam='contigs/contigs.bam'
+        bam='contigs/contigs.sam'
     output:
         alt='altref/ref.fasta.alt'
     shell:
-        """samtools view -h {input.bam} """
-        """>{output.alt}"""
+        """ln -sf ../contigs/contigs.sam {output.alt}"""
 
 # gt_altref_index
 #
@@ -717,125 +722,54 @@ rule gt_svmap_ref_del_positions:
 # Get Contigs
 #
 
-# gt_contig_bam
-#
-# Replace BAM query sequences with their masked version.
-rule gt_contig_bam:
-    input:
-        bam='temp/contigs/contigs.bam',
-        fasta='contigs/contigs.fasta',
-        fai='contigs/contigs.fasta.fai'
-    output:
-        bam='contigs/contigs.bam',
-        bai='contigs/contigs.bam.bai'
-    run:
-
-        # Read from input BAM, change query sequence to the masked version, and write to output BAM
-        with pysam.AlignmentFile(input.bam, 'r') as in_bam:
-            with pysam.FastaFile(input.fasta) as in_fa:
-                with pysam.AlignmentFile(output.bam, 'wb', in_bam) as out_bam:
-                    for record in in_bam.fetch():
-                        record.query_sequence = in_fa.fetch(record.query_name)
-                        out_bam.write(record)
-
-        # Index
-        shell("""samtools index {output.bam}""")
-
-# gt_contig_mask_fasta
-#
-# Hard-mask contig sequences.
-rule gt_contig_mask_fasta:
-    input:
-        fasta='temp/contigs/hardmask/contigs_nomask.fasta',
-        fai='temp/contigs/hardmask/contigs_nomask.fasta.fai',
-        bed='contigs/hardmask/regions.bed'
-    output:
-        fasta='contigs/contigs.fasta',
-        fai='contigs/contigs.fasta.fai'
-    shell:
-        """bedtools maskfasta -fi {input.fasta} -bed {input.bed} -fo {output.fasta}; """
-        """samtools faidx {output.fasta}"""
-
 # gt_contig_bam_to_fasta
 #
 # Get a FASTA file of local assemblies.
 rule gt_contig_bam_to_fasta:
     input:
-        bam='temp/contigs/contigs.bam'
+        sam='contigs/contigs.sam'
     output:
-        fasta=temp('temp/contigs/hardmask/contigs_nomask.fasta'),
-        fai=temp('temp/contigs/hardmask/contigs_nomask.fasta.fai')
+        fasta='contigs/contigs.fasta',
+        fai='contigs/contigs.fasta.fai'
     log:
         'contigs/log/gt_contig_bam_to_fasta.log'
-    shell:
-        """samtools bam2fq {input.bam} 2>{log} | """
-        """seqtk seq -A - > {output.fasta}; """
-        """samtools faidx {output.fasta}"""
-
-# gt_contig_hardmask_bed
-#
-# Get a BED of regions to be masked.
-rule gt_contig_hardmask_bed:
-    input:
-        bed='temp/contigs/hardmask/regions.bed',
-        sizes='contigs/contigs.sizes'
-    output:
-        bed='contigs/hardmask/regions.bed'
-    shell:
-        """awk -vOFS="\\t" '{{print $1, "0", $2}}' {input.sizes} | """
-        """bedtools subtract -a stdin -b {input.bed} """
-        """>{output.bed}"""
-
-# gt_contig_hardmask_flank
-#
-# Add flank to variant locations.
-rule gt_contig_hardmask_flank:
-    input:
-        bed='temp/contigs/hardmask/regions_noslop.bed',
-        sizes='contigs/contigs.sizes'
-    output:
-        bed=temp('temp/contigs/hardmask/regions.bed')
-    params:
-        flank=int(CONFIG_GT['sv_contig_flank'])
-    shell:
-        """bedtools slop -i {input.bed} -g {input.sizes} -b {params.flank} """
-        """>{output.bed}"""
-
-# gt_contig_hardmask_regions
-#
-# Get contig regions using SV breakpoints.
-rule gt_contig_hardmask_regions:
-    input:
-        bed='sv_calls/sv_calls.bed'
-    output:
-        bed=temp('temp/contigs/hardmask/regions_noslop.bed')
     run:
 
-        # Read table
-        df = pd.read_table(input.bed, header=0, usecols=('CONTIG', 'CONTIG_START', 'CONTIG_END'))
-        df = df.loc[:, ('CONTIG', 'CONTIG_START', 'CONTIG_END')]
-        df.columns = ('#CHROM', 'POS', 'END')
+        seq_list = list()
 
-        # Sort
-        df.sort_values(['#CHROM', 'POS'], inplace=True)
+        # Get SAM Records as FASTA records
+        with open(input.sam, 'r') as in_file:
+            for line in in_file:
 
-        # Write
-        df.to_csv(output.bed, sep='\t', index=False)
+                line = line.strip()
+
+                if not line or line.startswith('@'):
+                    continue
+
+                tok = line.split('\t')
+
+                seq_list.append(SeqRecord.SeqRecord(Seq.Seq(tok[9]), id=tok[0], description=''))
+
+        # Write FASTA Records
+        with open(output.fasta, 'w') as out_file:
+            SeqIO.write(seq_list, out_file, 'fasta')
+
+        # Index FASTA
+        shell("""samtools faidx {output.fasta}""")
+
 
 # gt_contig_filter
 #
 # Retrieve all contigs with at least one structural variant.
 rule gt_contig_filter:
     input:
-        bam=CONFIG_GT['sv_contigs'],
+        contigs=CONFIG_GT['sv_contigs'],
         list='contigs/contig_list.txt'
     output:
-        bam=temp('temp/contigs/contigs.bam'),
-        bai=temp('temp/contigs/contigs.bam.bai'),
+        sam='contigs/contigs.sam',
         sizes='contigs/contigs.sizes'
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/FilterBamByContigs.py {input.bam} {input.list} {output.bam} {output.sizes}; """
-        """samtools index {output.bam}"""
+        """python {SMRTSV_DIR}/scripts/genotype/FilterContigs.py {input.contigs} {input.list} {output.sam} {output.sizes}"""
 
 # gt_contig_list
 #

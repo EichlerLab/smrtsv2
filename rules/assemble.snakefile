@@ -16,20 +16,6 @@ if not 'INCLUDE_SNAKEFILE' in globals():
 ### Definitions ###
 ###################
 
-class _AsmArguments:
-    """
-    Assembly arguments for recursive calls to snakemake (calling assemble_group.snakefile).
-    """
-
-    def __init__(self, config):
-        self.drmaalib = config.get('drmaalib', None)
-        self.verbose = config.get('verbose', False)
-        self.dryrun = False
-
-        # These jobs are never distributed (run in a temp directory on the local machine)
-        self.distribute = False
-        self.cluster_config = None
-
 def _get_group_bams(wildcards):
     """
     Return a list of all BAM files produced by running local assemblies on each group. There is one BAM file per
@@ -79,40 +65,64 @@ rule asm_merge_assembled_groups:
 #
 # Assemble one group of regions.
 rule asm_assemble_group:
+    input:
+        align_fofn='align/alignments.fofn',
+        bed_grp='detect/candidate_groups.bed',
+        bed_can='detect/candidates.bed'
     output:
         bam='assemble/group/{group_id}/contig.bam',
         bai='assemble/group/{group_id}/contig.bam.bai'
+    params:
+        mapq=get_config_param('mapping_quality'),
+        align_params=get_config_param('asm_alignment_parameters')
+    log:
+        'assemble/group/{group_id}/contig.log'
     run:
 
-        # Setup assembly
-        args = _AsmArguments(config, wildcards.group_id)
-
-        local_asm_dir = None
+        # Set assemble_temp (will be deleted if not None)
+        assemble_temp = None
 
         try:
 
-            # Make temp directory
-            local_asm_dir = tempfile.mkdtemp(
+            # Create temporary directories
+            assemble_temp = tempfile.mkdtemp(
                 prefix=os.path.join(
                     TEMP_DIR,
-                    'asm_{}_'.format(wildcards.group_id)
+                    'asm_assemble_group_{}_'.format(wildcards.group_id)
                 )
             )
 
+            # Separate BAM directory and file. Snakemake will run in "working_dir" and write "output_file"
+            working_dir = os.path.dirname(output.bam)
+            output_file = os.path.basename(output.bam)
+
+            # Get paths to input data
+            align_fofn = os.path.abspath(input.align_fofn)
+            bed_groups = os.path.abspath(input.bed_grp)
+            bed_candidates = os.path.abspath(input.bed_can)
+
+            # Setup sub-Snake command
             command = (
-                'run_assembly',
+                output_file,
+                '-f',
                 '--config',
-                'mapping_quality={}'.format(get_config_param('mapping_quality')),
-                'asm_alignment_parameters={}'.format(get_config_param('asm_alignment_parameters')),  # String is already quoted to prevent Snakemake from trying to interpret the command options
+                'mapping_quality={}'.format(params.mapq),
+                'asm_alignment_parameters={}'.format(params.align_params),  # String is already quoted to prevent Snakemake from trying to interpret the command options
                 'group_id={}'.format(wildcards.group_id),
-                'local_asm_dir={}'.format(local_asm_dir)
+                'align_fofn={}'.format(align_fofn),
+                'bed_groups={}'.format(bed_groups),
+                'bed_candidates={}'.format(bed_candidates),
+                'assemble_temp={}'.format(assemble_temp)
             )
+
+            # Clear locks
+            shell("""rm -f {working_dir}/.snakemake/locks/*""")
 
             # Run assembly
             with open(log, 'w') as log_file:
                 smrtsvrunner.run_snake_target(
-                    'rules/assemble_group.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command,
-                    stdout=log_file, stderr=subprocess.STDOUT
+                    'rules/assemble_group.snakefile', None, PROCESS_ENV, SMRTSV_DIR, command,
+                    stdout=log_file, stderr=subprocess.STDOUT, cwd=working_dir
                 )
 
         finally:

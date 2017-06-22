@@ -19,7 +19,7 @@
   "detect_coverage_per_batch": {"params": "-l mfree=4G -l h_rt=04:00:00"},
 
   "collect_assembly_alignments": {"params": "-l mfree=30G -l disk_free=10G -l h_rt=01:00:00"},
-  "assemble_group": {"params": "-l mfree=12G -pe serial 1 -l disk_free=10G -l h_rt=02:00:00"},
+  "asm_assemble_group": {"params": "-l mfree=12G -pe serial 1 -l disk_free=10G -l h_rt=02:00:00"},
 
   "find_inversions": {"params": "-pe serial 8 -l mfree=4G -l h_rt=05:00:00"},
   "tile_contigs_from_alignments": {"params": "-l h_rt=01:00:00"},
@@ -38,6 +38,7 @@
   "merge_reference_and_local_assemblies": {"params": "-l h_rt=01:00:00"},
   "bwa_index_combined_reference": {"params": "-l mfree=10G -l h_rt=06:00:00"},
 
+  "gt_contig_bam_to_fasta": {"params": "-l mfree=24G -l h_rt=2:00:00"},
   "gt_altref_index": {"params": "-l mfree=16G -l h_rt=48:00:00 -R y"},
   "gt_svmap_map_pseudoreads": {"params": "-l mfree=1G -pe serial 12 -l disk_free=2G -l h_rt=2:00:00 -R y -l ssd=FALSE"},
   "gt_map_sample_reads": {"params": "-l mfree=5G -pe serial 12 -l disk_free=50G -l h_rt=48:00:00 -R y -l ssd=FALSE"},

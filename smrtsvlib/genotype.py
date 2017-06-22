@@ -40,10 +40,10 @@ def get_sample_column(table_file_name, sample_name, sex='U'):
 
     df_gt = pd.read_table(
         table_file_name, header=0,
-        usecols=('#CHROM', 'CALLABLE', 'REF_COUNT', 'ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')
+        usecols=('#CHROM', 'CALLABLE', 'BP_REF_COUNT', 'BP_ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')
     )
 
-    df_gt = df_gt.loc[:, ('#CHROM', 'CALLABLE', 'REF_COUNT', 'ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')]
+    df_gt = df_gt.loc[:, ('#CHROM', 'CALLABLE', 'BP_REF_COUNT', 'BP_ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')]
 
     # Adjust density estimates on sex
     if sex == 'M':
@@ -72,7 +72,7 @@ def get_sample_column(table_file_name, sample_name, sex='U'):
     df_gt['GL'] = df_gt.apply(lambda row: '{HOM_REF:.4f},{HET:.4f},{HOM_ALT:.4f}'.format(**row), axis=1)
 
     # Get a series representing the column to be added to the VCF
-    sample_column = df_gt.apply(lambda row: '{GT}:{GQ}:{GL}:{REF_COUNT:.1f}:{ALT_COUNT:.1f}'.format(**row), axis=1)
+    sample_column = df_gt.apply(lambda row: '{GT}:{GQ}:{GL}:{BP_REF_COUNT:.1f}:{BP_ALT_COUNT:.1f}'.format(**row), axis=1)
     sample_column.name = sample_name
 
     # Return

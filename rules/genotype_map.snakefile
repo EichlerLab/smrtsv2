@@ -20,7 +20,7 @@ SAMPLE_REF_FAI = SAMPLE_REF + '.fai'         # Sample reference FASTA index.
 SAMPLE_REGIONS = config['sample_regions']    # BED file describing where mapped reads in the sample BAM should be extracted from.
 SV_REF = config['sv_ref']                    # Augmented reference with local assemblies as alternate contigs.
 SV_REF_ALT_INFO = config['sv_ref_alt_info']  # BED file of all contigs. Gives lengths, whether or not they are primary, and which primary contig the alternates belong to.
-CONTIG_BAM = config['contig_bam']            # BAM file of local-assembly contigs aligned to the reference.
+CONTIG_SAM = config['contig_sam']            # BAM file of local-assembly contigs aligned to the reference.
 OUTPUT_BAM = config['output_bam']            # Output BAM file with reads mapped to the primary contigs and alternate contigs.
 OUTPUT_BAI = OUTPUT_BAM + '.bai'             # Output BAM file index.
 
@@ -104,8 +104,28 @@ rule gt_map_postalt_alt_sam:
         primary_bam=PRIMARY_BAM
     output:
         alt=temp(FILE_CONTIG_ALT)
-    shell:
-        """samtools view -hL {input.bed} {CONTIG_BAM} >{output.alt}"""
+    run:
+
+        # Get contigs
+        contig_set = set()
+
+        with open(input.bed, 'r') as bed_file:
+            for line in bed_file:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                contig_set.add(line.split('\t')[0])
+
+        # Filter alts
+        with open(CONTIG_SAM, 'r') as in_file:
+            with open(output.alt, 'w') as out_file:
+                for line in in_file:
+                    if line.startswith('@') or line.split('\t')[0] in contig_set:
+                        out_file.write(line)
+
+        #"""samtools view -hL {input.bed} {CONTIG_SAM} >{output.alt}"""
 
 # gt_map_postalt_contig_bed
 #
