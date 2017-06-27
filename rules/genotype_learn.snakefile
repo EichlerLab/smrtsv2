@@ -67,6 +67,12 @@ PARAM_GRID = [
 FEATURE_SAMPLES = sorted(CONFIG_LEARN.get('features').keys())
 FEATURE_SAMPLE_TRAIN = CONFIG_LEARN.get('train_feature')
 
+# Get other parameters
+CONFIG_LEARN_PARAMS = CONFIG_LEARN.get('params', {})
+
+PARAM_RETAIN_NOCALL = CONFIG_LEARN_PARAMS.get('retain_nocall', 'False').lower() in ('true', 't', '1')
+
+
 
 #############
 ### Rules ###
@@ -106,7 +112,8 @@ rule gt_learn_model_train:
         tab='model/predictor_stats.tab'
     params:
         k=FOLDS_K,
-        threads=4
+        threads=4,
+        retain_nocall=PARAM_RETAIN_NOCALL
     run:
 
         # Load data
@@ -115,12 +122,20 @@ rule gt_learn_model_train:
 
         features = pd.read_table(input.feat_tab, header=0)
 
+        # Get set of callable indices
+        callable_indices = np.asarray(features.index[features['CALLABLE']])
+
+        # Filter no-call if set
+        if not params.retain_nocall:
+            X = X[callable_indices, :]
+            y = y[callable_indices]
+
         # Optimize hyper-parameters and fit the best model
         clf = GridSearchCV(
             estimator=SVC(C=1),
             param_grid=PARAM_GRID,
             scoring='accuracy',
-            cv=ml.cv_set_iter(ml.stratify_folds(features['STRATIFIED'], params.k)),
+            cv=ml.cv_set_iter(ml.stratify_folds(features['STRATIFIED'][callable_indices], params.k)),
             refit=False,
             error_score=0,
             n_jobs=params.threads
@@ -148,7 +163,8 @@ rule gt_learn_model_train:
 # Link the stats array for the main sample.
 rule gt_learn_link_stats:
     input:
-        tab=expand('cv/samples/{sample}/stats.tab', sample=FEATURE_SAMPLES)
+        tab=expand('cv/samples/{sample}/stats.tab', sample=FEATURE_SAMPLES),
+        tab_pred=expand('cv/samples/{sample}/model_predict.tab', sample=FEATURE_SAMPLES)
     output:
         tab='cv/stats.tab'
     run:
@@ -167,6 +183,47 @@ rule gt_learn_link_stats:
         df.index.name = 'sample'
         df.columns.name = None
         df.to_csv(output.tab, sep='\t', index=True, float_format='%.4f')
+
+# gt_learn_cv_merge_predictions
+#
+# Merge predictions from CV with features.
+rule gt_learn_cv_merge_predictions:
+    input:
+        tab_features='model/samples/{sample}/features.tab',
+        tab_pred=expand('cv/samples/{{sample}}/folds/predict_{cv_set}.tab', cv_set=range(FOLDS_K))
+    output:
+        tab_pred='cv/samples/{sample}/model_predict.tab',
+        tab_cross='cv/samples/{sample}/predict_prop.tab'
+    run:
+
+        # Read features
+        df_features = pd.read_table(input.tab_features, header=0)
+
+        # Merge CV predictions
+        df_pred = pd.concat(
+            [
+                pd.read_table(
+                    'cv/samples/{}/folds/predict_{}.tab'.format(wildcards.sample, cv_set),
+                    header=0,
+                    index_col='INDEX'
+                ) for cv_set in range(FOLDS_K)
+            ],
+            axis=0
+        )
+
+        df = pd.concat([df_features, df_pred], axis=1)
+        df.sort_index(axis=0, inplace=True)
+
+        # Write table
+        df.to_csv(output.tab_pred, sep='\t', index=False)
+
+        # Get crosstab
+        df_cross = pd.crosstab(df['PREDICTION'], df['CALL'])
+
+        for col in df_cross.columns:
+            df_cross[col] /= sum(df_cross[col])
+
+        df_cross.to_csv(output.tab_cross, sep='\t', float_format='%.2f')
 
 # gt_learn_cv_merge_stats
 #
@@ -206,11 +263,12 @@ rule gt_learn_cv_run:
         feat_tab='model/features.tab',
         X_sample=expand('model/samples/{sample}/X.npy', sample=FEATURE_SAMPLES)
     output:
-        tab=expand('cv/samples/{sample}/folds/cv_{{cv_set}}.tab', sample=FEATURE_SAMPLES),
-        tab_pred='cv/run/fold_{cv_set}_pred.tab'
+        tab_cv=expand('cv/samples/{sample}/folds/cv_{{cv_set}}.tab', sample=FEATURE_SAMPLES),
+        tab_pred=expand('cv/samples/{sample}/folds/predict_{{cv_set}}.tab', sample=FEATURE_SAMPLES)
     params:
         k=FOLDS_K,
-        threads=4
+        threads=4,
+        retain_nocall=PARAM_RETAIN_NOCALL
     run:
 
         cv_set = int(wildcards.cv_set)
@@ -238,42 +296,62 @@ rule gt_learn_cv_run:
 
         # Subset data for this fold
         test_indices = fold_array[fold_array[:, 1] == cv_set, 0]
-        selection_indices = fold_array[fold_array[:, 1] != cv_set, 0]
+        train_indices = fold_array[fold_array[:, 1] != cv_set, 0]
+
+        if not params.retain_nocall:
+            train_indices = np.array([x for x in train_indices if x in callable_set])
 
         # Subset test indices into variants that would be callable and those that would not be
         test_callable_indices = np.array([x for x in test_indices if x in callable_set])
         test_nocall_indices = np.array([x for x in test_indices if x not in callable_set])
 
         # Get an array of stratified labels and callable flag for each variant in this fold
-        selection_labels = np.asarray(features['STRATIFIED'].loc[selection_indices])
+        selection_labels = np.asarray(features['STRATIFIED'].loc[train_indices])
 
         clf = GridSearchCV(
             estimator=SVC(),
             param_grid=PARAM_GRID,
             scoring='accuracy',
             cv=ml.cv_set_iter(ml.stratify_folds(selection_labels, params.k)),
-            refit=True,
+            refit=False,
             error_score=0,
             n_jobs=params.threads
         )
 
-        clf.fit(X[selection_indices, :], y[selection_indices])
+        clf.fit(X[train_indices, :], y[train_indices])
 
-        # Write scores for each sample
+        # Refit model with density estimation enabled
+        predictor = SVC(probability=True, **clf.best_params_)
+        predictor.fit(X[train_indices, :], y[train_indices])
+
+        # Write scores and predictions for each sample
         for sample, X_sample in sample_list:
+
+            # Write CV scores
             ml.get_cv_test_scores(
-                clf.best_estimator_, X_sample, y,
+                predictor, X_sample, y,
                 test_indices, test_callable_indices, test_nocall_indices
             ).to_csv('cv/samples/{}/folds/cv_{}.tab'.format(sample, wildcards.cv_set), sep='\t', index_label='subset')
 
-        # Get calls for each variant
-        y_test = pd.Series(clf.best_estimator_.predict(X[test_indices, :]), index=test_indices)
+            # Write predictions
+            y_pred = pd.Series(predictor.predict(X_sample[test_indices]), index=test_indices)
+            y_pred.name = 'PREDICTION'
 
-        y_test.name = 'predicted'
-        y_test.index.name = 'index'
+            df_density = pd.DataFrame(
+                predictor.predict_proba(X_sample[test_indices]),
+                columns=predictor.classes_,
+                index=test_indices
+            )
 
-        y_test.to_csv(output.tab_pred, sep='\t', header=True)
+            df_density = df_density.loc[:, ml.GT_LABELS]
 
+            df_density = pd.concat([df_density, y_pred], axis=1)
+
+            df_density.to_csv(
+                'cv/samples/{}/folds/predict_{}.tab'.format(sample, wildcards.cv_set),
+                sep='\t',
+                index_label='INDEX'
+            )
 
 # gt_learn_cv_statify_k
 #
@@ -380,7 +458,8 @@ rule gt_learn_model_annotate:
     output:
         tab='model/samples/{sample}/features.tab'
     params:
-        call_thresh=CALLABLE_THRESHOLD
+        call_thresh=CALLABLE_THRESHOLD,
+        retain_nocall=PARAM_RETAIN_NOCALL
     run:
 
         # Read features
