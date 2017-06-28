@@ -38,6 +38,9 @@
   "merge_reference_and_local_assemblies": {"params": "-l h_rt=01:00:00"},
   "bwa_index_combined_reference": {"params": "-l mfree=10G -l h_rt=06:00:00"},
 
+  "gt_call_sample_breakpoint_depth": {"params": "-l mfree=4G -l h_rt=2:00:00"},
+  "gt_call_sample_insert_delta": {"params": "-l mfree=4G -l h_rt=2:00:00"},
+  "gt_call_sample_read_depth": {"params": "-l mfree=4G -l h_rt=2:00:00"},
   "gt_contig_bam_to_fasta": {"params": "-l mfree=24G -l h_rt=2:00:00"},
   "gt_altref_index": {"params": "-l mfree=16G -l h_rt=48:00:00 -R y"},
   "gt_svmap_map_pseudoreads": {"params": "-l mfree=1G -pe serial 12 -l disk_free=2G -l h_rt=2:00:00 -R y -l ssd=FALSE"},

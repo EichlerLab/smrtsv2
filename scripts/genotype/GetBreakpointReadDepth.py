@@ -250,7 +250,7 @@ def choose_best_records(records_lr, records_s):
     return best_lr, best_s
 
 
-def get_clipped_count(records_l, records_r, records_s, minclip=4):
+def get_clipped_freq(records_l, records_r, records_s, minclip=4):
     """
     Get the number of reads that are clipped over the breakpoints in a meaningful way. For the left and right
     breakpoints, look for clipping in the SV. For the single breakpoint, look for clipping on either side of the read.
@@ -283,13 +283,14 @@ def get_clipped_count(records_l, records_r, records_s, minclip=4):
     return clipped_lr, clipped_s
 
 
-def get_bp_depth(sv_record, bam_file, minclip=4):
+def get_bp_depth(sv_record, bam_file, minclip=4, mapq=20):
     """
     Get the average depth over reference and alternate contigs.
 
     :param sv_record: SV record from the input BED file.
     :param bam_file: Pysam opened BAM file.
     :param minclip: The minimum number of bases clipped on one end to count that end of the read as clipped.
+    :param mapq: Minimum mapping quality of reads to be counted.
 
     :return: A 5-element tuple: Depth over the reference, depth over the alternate contig, number of clipped reads over
         over the reference reads counted toward the read depth, number of clipped reads over the alternate contig reads
@@ -330,15 +331,15 @@ def get_bp_depth(sv_record, bam_file, minclip=4):
     records_s = collections.defaultdict(list)
 
     for record in bam_file.fetch(bp_lr_chr, bp_l, bp_l + 1):
-        if record.is_proper_pair:
+        if record.mapping_quality >= mapq and record.is_proper_pair:
             records_l[record.query_name].append(AlignRecord(record))
 
     for record in bam_file.fetch(bp_lr_chr, bp_r, bp_r + 1):
-        if record.is_proper_pair:
+        if record.mapping_quality >= mapq and record.is_proper_pair:
             records_r[record.query_name].append(AlignRecord(record))
 
     for record in bam_file.fetch(bp_s_chr, bp_s, bp_s + 1):
-        if record.is_proper_pair:
+        if record.mapping_quality >= mapq and record.is_proper_pair:
             records_s[record.query_name].append(AlignRecord(record))
 
     # Get best representation for each read over each breakpoint
@@ -352,7 +353,7 @@ def get_bp_depth(sv_record, bam_file, minclip=4):
         records_s[key] = get_best_alignment(records_s[key])
 
     # Get clipped count
-    ref_clipped_lr, ref_clipped_s = get_clipped_count(records_l, records_r, records_s, minclip)
+    ref_clipped_lr, ref_clipped_s = get_clipped_freq(records_l, records_r, records_s, minclip)
 
     # Merge records in l and r breakpoints.
     records_lr = merge_breakpoint_records(records_l, records_r)
@@ -465,7 +466,8 @@ if __name__ == '__main__':
                 sv_rec = sv_rec[1]
 
                 # Get counts
-                ref_count, alt_count, ref_clip, alt_clip, primary_clip = get_bp_depth(sv_rec, bam_file_in, args.minclip)
+                ref_count, alt_count, ref_clip, alt_clip, primary_clip = \
+                    get_bp_depth(sv_rec, bam_file_in, args.minclip, args.mapq)
 
                 # Normalize to ratios of depth and get binomial probability of HOM-REF and HET given read depth
                 total_depth = ref_count + alt_count
@@ -473,8 +475,6 @@ if __name__ == '__main__':
                 if total_depth > 0:
                     ref_rel = ref_count / total_depth
                     alt_rel = alt_count / total_depth
-                    ref_clip /= total_depth
-                    alt_clip /= total_depth
 
                     prob_homref = binom(total_depth, phomref).pmf(alt_count)
                     prob_het = binom(total_depth, phet).pmf(alt_count)
@@ -483,12 +483,21 @@ if __name__ == '__main__':
                 else:
                     ref_rel = 0
                     alt_rel = 0
-                    ref_clip = 0
-                    alt_clip = 0
 
                     prob_homref = 0
                     prob_het = 0
                     prob_homalt = 0
+
+                # Normalize clipping counts
+                if ref_count > 0:
+                    ref_clip /= ref_count
+                else:
+                    ref_clip = 0
+
+                if alt_count > 0:
+                    alt_clip /= alt_count
+                else:
+                    alt_clip = 0
 
                 # Update Series
                 sv_rec['BP_REF_COUNT'] = ref_count

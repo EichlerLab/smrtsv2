@@ -37,23 +37,30 @@ ALT_BED.index = ALT_BED['#CHROM']
 # Get list of primary contigs (reference assembly without local assembly contigs).
 PRIMARY_CONTIG_LIST = sorted(ALT_BED.loc[ALT_BED['IS_PRIMARY']]['#CHROM'].tolist())
 
-# Set primary BAM location (initial alignment before post-alt processing).
-PRIMARY_BAM = os.path.join(MAPPING_TEMP, 'primary.bam')
+# Get hostname
+HOSTNAME = socket.gethostname()
+
+### Utility Functions ###
+
+def _mapping_temp(file_name):
+    """
+    Get a path relative to the temporary directory `MAPPING_TEMP`.
+
+    :param temp_file: Relative path to 'MAPPING_TEMP`.
+
+    :return: Full path in `MAPPING_TEMP`.
+    """
+    return os.path.join(MAPPING_TEMP, file_name)
+
+
+### Temp directories ###
 
 # Create subdirectories of the temp directories
-PRIMARY_TEMP = os.path.join(MAPPING_TEMP, 'primary')
-POSTALT_TEMP = os.path.join(MAPPING_TEMP, 'postalt')
+PRIMARY_TEMP = _mapping_temp('primary')
+POSTALT_TEMP = _mapping_temp('postalt')
 
 os.makedirs(PRIMARY_TEMP, exist_ok=True)
 os.makedirs(os.path.join(POSTALT_TEMP, 'bam', 'temp'), exist_ok=True)
-
-# Setup filename patterns to avoid re-computing them in the rules.
-FILE_CONTIG_BED = POSTALT_TEMP + '/{primary_contig}.bed'
-FILE_CONTIG_ALT = POSTALT_TEMP + '/{primary_contig}.alt'
-FILE_CONTIG_BAM = POSTALT_TEMP + '/bam/{primary_contig}.bam'
-
-# Get hostname
-HOSTNAME = socket.gethostname()
 
 
 #############
@@ -65,7 +72,7 @@ HOSTNAME = socket.gethostname()
 # Merge alignments for each primary contig.
 rule gt_map_postalt_merge:
     input:
-        bam=expand(FILE_CONTIG_BAM, primary_contig=PRIMARY_CONTIG_LIST)
+        bam=expand(_mapping_temp('postalt/bam/{primary_contig}.bam'), primary_contig=PRIMARY_CONTIG_LIST)
     output:
         bam=OUTPUT_BAM,
         bai=OUTPUT_BAI
@@ -83,11 +90,11 @@ rule gt_map_postalt_merge:
 # Remap reads to alternate contigs for one primary contig and adjust quality scores.
 rule gt_map_postalt_remap:
     input:
-        bam=PRIMARY_BAM,
-        alt=FILE_CONTIG_ALT,
-        bed=FILE_CONTIG_BED
+        bam=_mapping_temp('primary.bam'),
+        alt=_mapping_temp('postalt/{primary_contig}.alt'),
+        bed=_mapping_temp('postalt/{primary_contig}.bed')
     output:
-        bam=FILE_CONTIG_BAM
+        bam=_mapping_temp('postalt/bam/{primary_contig}.bam')
     shell:
         """echo "Post-ALT processing {wildcards.primary_contig}"; """
         """samtools view -hL {input.bed} {input.bam} | """
@@ -100,10 +107,10 @@ rule gt_map_postalt_remap:
 # Get a SAM file (as .alt) of the alternate contigs of one primary contig.
 rule gt_map_postalt_alt_sam:
     input:
-        bed=FILE_CONTIG_BED,
-        primary_bam=PRIMARY_BAM
+        bed=_mapping_temp('postalt/{primary_contig}.bed'),
+        primary_bam=_mapping_temp('primary.bam')
     output:
-        alt=temp(FILE_CONTIG_ALT)
+        alt=temp(_mapping_temp('postalt/{primary_contig}.alt'))
     run:
 
         # Get contigs
@@ -132,9 +139,9 @@ rule gt_map_postalt_alt_sam:
 # Get a BED file covering a primary contig and all its alternate contigs.
 rule gt_map_postalt_contig_bed:
     input:
-        primary_bam=PRIMARY_BAM
+        primary_bam=_mapping_temp('primary.bam')
     output:
-        bed=temp(FILE_CONTIG_BED)
+        bed=temp(_mapping_temp('postalt/{primary_contig}.bed'))
     run:
         ALT_BED.loc[ALT_BED['PRIMARY'] == wildcards.primary_contig].to_csv(
             output.bed, sep='\t', header=True, index=False
@@ -145,7 +152,7 @@ rule gt_map_postalt_contig_bed:
 # Map reads to the augmented reference (primary + local-assembly-contigs).
 rule gt_map_primary_alignment:
     output:
-        primary_bam=PRIMARY_BAM
+        primary_bam=_mapping_temp('primary.bam')
     log:
         'log/primary_alignment.log'.format(SAMPLE)
     shell:

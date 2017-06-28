@@ -43,7 +43,7 @@ def get_read_depth(df_subset, bam_file, mapq):
             pos = df_subset.iloc[row_index, subset_index]
 
             for segment in bam_file.fetch(contig, pos, pos + 1):
-                if segment.mapping_quality >= mapq:
+                if segment.mapping_quality >= mapq and segment.is_proper_pair:
                     n_reads += 1
 
             df_subset.iloc[row_index, n_index] += n_reads
