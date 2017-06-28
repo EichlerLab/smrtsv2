@@ -5,21 +5,9 @@ Translate a SAM file to a .alt file for BWA alt-aware mapping.
 """
 
 import argparse
-import pysam
+import re
 
-# Declarations
-CIGAR_DICT = {
-    0: 'M',
-    1: 'I',
-    2: 'D',
-    3: 'N',
-    4: 'S',
-    5: 'H',
-    6: 'P',
-    7: '=',
-    8: 'X',
-    9: 'B',
-}
+CIGAR_MATCH_SET = {'M', '=', 'X'}
 
 
 def cigar_seq_to_aln(in_file, out_file):
@@ -27,22 +15,47 @@ def cigar_seq_to_aln(in_file, out_file):
     Translate sequence match operations (=, X) to alignment match operations (M). Neighboring match operations are
     coalesced.
 
-    :param in_file: Open input pysam alignment file.
-    :param out_file: Open output pysam alignment file.
+    :param in_file: Open input file.
+    :param out_file: Open output file.
     """
 
-    # Process each record
-    for record in in_file.fetch():
+    line_count = 0
 
+    # Process each record
+    for line in in_file:
+
+        line_count += 1
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if line.startswith('@'):
+            out_file.write(line)
+            out_file.write('\n')
+            continue
+
+        # Initialize CIGAR transformation
         match_len = 0
         cigar_string = ''
 
-        # Process each CIGAR operation in the record
-        for cigar_record in record.cigartuples:
+        tok = line.split('\t')
 
-            if cigar_record[0] in (0, 7, 8):
+        if len(tok) < 11:
+            raise RuntimeError('Truncated SAM record on line {} ({}): Found {} fields (min = 11)'.format(
+                line_count, tok[0], len(tok)
+            ))
+
+        # Process each CIGAR operation in the record
+        for cigar_match in re.finditer('(\d+)([MIDNSHP=X])', tok[5]):
+
+            cigar_count = cigar_match.group(1)
+            cigar_op = cigar_match.group(2)
+
+            if cigar_op in CIGAR_MATCH_SET:
                 # Save match operations to be coalesced
-                match_len += cigar_record[1]
+                match_len += int(cigar_count)
 
             else:
                 # Non-match operation, first output coalesced matches
@@ -51,15 +64,17 @@ def cigar_seq_to_aln(in_file, out_file):
                     match_len = 0
 
                 # Output current operation
-                cigar_string += '{}{}'.format(cigar_record[1], CIGAR_DICT[cigar_record[0]])
+                cigar_string += '{}{}'.format(cigar_count, cigar_op)
 
         # Output matches at the ends
         if match_len > 0:
             cigar_string += '{}M'.format(match_len)
 
         # Set new CIGAR and write
-        record.cigarstring = cigar_string
-        out_file.write(record)
+        tok[5] = cigar_string
+
+        out_file.write('\t'.join(tok))
+        out_file.write('\n')
 
 
 # Main
@@ -69,26 +84,14 @@ if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(description='SAM to ALT (.alt) file for BWA alt-aware mapping.')
 
     arg_parser.add_argument('input',
-                            help='SAM or BAM file of read alignments.')
+                            help='SAM file of read alignments.')
 
     arg_parser.add_argument('output',
-                            help='Output SAM or BAM file.')
+                            help='Output SAM file.')
 
     args = arg_parser.parse_args()
 
-    # Get input and output file types
-    if args.input.endswith('bam'):
-        in_file_type = 'rb'
-    else:
-        in_file_type = 'r'
-
-    # Get output file and type
-    if args.output.endswith('bam'):
-        out_file_type = 'wb'
-    else:
-        out_file_type = 'w'
-
     # Open input and output files
-    with pysam.AlignmentFile(args.input, in_file_type) as in_file:
-        with pysam.AlignmentFile(args.output, out_file_type, in_file) as out_file:
+    with open(args.input, 'r') as in_file:
+        with open(args.output, 'w') as out_file:
             cigar_seq_to_aln(in_file, out_file)

@@ -27,9 +27,9 @@ localrules: gt_vcf_write
 
 ### Read Genotyper Config File ###
 
-CONFIG_FILE = config["genotyper_config"]
+CONFIG_FILE = config['genotyper_config']
 
-with open(CONFIG_FILE, "r") as CONFIG_FILE_FH:
+with open(CONFIG_FILE, 'r') as CONFIG_FILE_FH:
     CONFIG_GT = json.load(CONFIG_FILE_FH)
 
 
@@ -346,7 +346,8 @@ rule gt_map_sample_reads:
     benchmark:
         'samples/{sample}/bm/alignments.txt'
     log:
-        align='samples/{sample}/alignments.log'
+        align='samples/{sample}/alignments.log',
+        map='samples/{sample}/primary_mapping.log'
     run:
 
         # Set mapping_temp (will be deleted if not None)
@@ -363,12 +364,11 @@ rule gt_map_sample_reads:
             )
 
             # Separate BAM directory and file. Snakemake will run in "working_dir" and write "output_file"
-            working_dir = os.path.dirname(output.bam)
-            output_file = os.path.basename(output.bam)
+            output_file = os.path.abspath(output.bam)
 
             # Setup sub-Snake command
             command = (
-                output_file,
+                'gt_map_postalt_merge',
                 '-f',
                 '--jobs', str(params.threads),
                 '--config',
@@ -377,24 +377,21 @@ rule gt_map_sample_reads:
                 'sample_ref={}'.format(os.path.abspath(input.sample_ref)),
                 'sample_regions={}'.format(os.path.abspath(input.sample_regions)),
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
-                'sv_ref_alts={}'.format(os.path.abspath(input.sv_ref_alts)),
+                'sv_ref_alt={}'.format(os.path.abspath(input.sv_ref_alts)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
                 'output_bam={}'.format(output_file),
+                'primary_map_log={}'.format(log.map),
                 'mapq={}'.format(params.mapq),
                 'threads={}'.format(params.threads),
-                'mapping_temp={}'.format(mapping_temp),
                 'smrtsv_dir={}'.format(SMRTSV_DIR),
                 'postalt_path={}'.format(POSTALT_PATH)
             )
-
-            # Clear locks
-            shell("""rm -f {working_dir}/.snakemake/locks/*""")
 
             # Run mapping step
             with open(log.align, 'w') as log_file:
                 return_code = smrtsvrunner.run_snake_target(
                     'rules/genotype_map.snakefile', None, PROCESS_ENV, SMRTSV_DIR, command,
-                    stdout=log_file, stderr=subprocess.STDOUT, cwd=working_dir
+                    stdout=log_file, stderr=subprocess.STDOUT, cwd=mapping_temp
                 )
 
             # Check return code

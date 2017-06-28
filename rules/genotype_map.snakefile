@@ -23,14 +23,12 @@ SV_REF_ALT = config['sv_ref_alt']            # Reference ALT file (.alt); aligns
 SV_REF_ALT_INFO = config['sv_ref_alt_info']  # BED file of all contigs. Gives lengths, whether or not they are primary, and which primary contig the alternates belong to.
 OUTPUT_BAM = config['output_bam']            # Output BAM file with reads mapped to the primary contigs and alternate contigs.
 OUTPUT_BAI = OUTPUT_BAM + '.bai'             # Output BAM file index.
+MAPPING_LOG = config['primary_map_log']      # Log file for the primary mapping step
 
 THREADS = config['threads']                  # Number of alignment threads
 MAPQ = config['mapq']                        # Minimum mapping quality of reads once re-aligned to the augmented reference.
-MAPPING_TEMP = config['mapping_temp']        # Directory where local temporary files are located.
 SMRTSV_DIR = config['smrtsv_dir']            # Directory where SMRTSV is installed.
 POSTALT_PATH = config['postalt_path']        # Full path to bwa-postalt.js
-
-MAPPING_TEMP = MAPPING_TEMP.strip()
 
 # Read alternate info BED and primary contig names
 ALT_BED = pd.read_table(SV_REF_ALT_INFO, header=0)
@@ -42,46 +40,10 @@ PRIMARY_CONTIG_LIST = sorted(ALT_BED.loc[ALT_BED['IS_PRIMARY']]['#CHROM'].tolist
 # Get hostname
 HOSTNAME = socket.gethostname()
 
-### Utility Functions ###
-
-def _mapping_temp(file_name):
-    """
-    Get a path relative to the temporary directory `MAPPING_TEMP`.
-
-    :param temp_file: Relative path to 'MAPPING_TEMP`.
-
-    :return: Full path in `MAPPING_TEMP`.
-    """
-
-    return os.path.join(MAPPING_TEMP, file_name.strip())
-
-
-### Temp directories ###
-
 # Create subdirectories of the temp directories
-PRIMARY_TEMP = _mapping_temp('primary')
-POSTALT_TEMP = _mapping_temp('postalt')
 
-os.makedirs(PRIMARY_TEMP, exist_ok=True)
-os.makedirs(os.path.join(POSTALT_TEMP, 'bam', 'temp'), exist_ok=True)
-
-
-
-
-
-
-###############
-### DBGTMP ####
-###############
-
-print('')
-print('MAPPING_TEMP: "{}"'.format(MAPPING_TEMP))
-print('BED:          "{}"'.format(_mapping_temp('postalt/{primary_contig}.bed')))
-print('')
-
-
-
-
+os.makedirs('primary', exist_ok=True)
+os.makedirs('postalt/bam/temp', exist_ok=True)
 
 
 #############
@@ -93,7 +55,7 @@ print('')
 # Merge alignments for each primary contig.
 rule gt_map_postalt_merge:
     input:
-        bam=expand(_mapping_temp('postalt/bam/{primary_contig}.bam'), primary_contig=PRIMARY_CONTIG_LIST)
+        bam=expand('postalt/bam/{primary_contig}.bam', primary_contig=PRIMARY_CONTIG_LIST)
     output:
         bam=OUTPUT_BAM,
         bai=OUTPUT_BAI
@@ -113,17 +75,17 @@ rule gt_map_postalt_merge:
 # Note: The primary BAM is required to avoid over-requesting resources (disk and CPU).
 rule gt_map_postalt_remap:
     input:
-        bam=_mapping_temp('primary.bam'),
-        alt=_mapping_temp('postalt/{primary_contig}.alt'),
-        bed=_mapping_temp('postalt/{primary_contig}.bed')
+        bam='primary.bam',
+        alt='postalt/{primary_contig}.alt',
+        bed='postalt/{primary_contig}.bed'
     output:
-        bam=_mapping_temp('postalt/bam/{primary_contig}.bam')
+        bam='postalt/bam/{primary_contig}.bam'
     shell:
         """echo "Post-ALT processing {wildcards.primary_contig}"; """
         """samtools view -hL {input.bed} {input.bam} | """
         """k8 {POSTALT_PATH} {input.alt} | """
         """samtools view -hq {MAPQ} | """
-        """samtools sort -T {POSTALT_TEMP}/bam/temp/{wildcards.primary_contig} -O bam -o {output.bam}; """
+        """samtools sort -T postalt/bam/temp/{wildcards.primary_contig} -O bam -o {output.bam}; """
 
 # gt_map_postalt_alt_sam
 #
@@ -133,20 +95,20 @@ rule gt_map_postalt_remap:
 rule gt_map_postalt_alt_sam:
     input:
         alt=SV_REF_ALT,
-        primary_bam=_mapping_temp('primary.bam')
+        primary_bam='primary.bam'
     output:
-        alt=temp(_mapping_temp('postalt/{primary_contig}.alt'))
+        alt=temp('postalt/{primary_contig}.alt')
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/FilterAltByPrimary.py {input.alt} {output.alt}"""
+        """python {SMRTSV_DIR}/scripts/genotype/FilterAltByPrimary.py {input.alt} {output.alt} {wildcards.primary_contig}"""
 
 # gt_map_postalt_contig_bed
 #
 # Get a BED file covering a primary contig and all its alternate contigs.
 rule gt_map_postalt_contig_bed:
     input:
-        primary_bam=_mapping_temp('primary.bam')
+        primary_bam='primary.bam'
     output:
-        bed=temp(_mapping_temp('postalt/{primary_contig}.bed'))
+        bed=temp('postalt/{primary_contig}.bed')
     run:
         ALT_BED.loc[ALT_BED['PRIMARY'] == wildcards.primary_contig].to_csv(
             output.bed, sep='\t', header=True, index=False
@@ -157,15 +119,15 @@ rule gt_map_postalt_contig_bed:
 # Map reads to the augmented reference (primary + local-assembly-contigs).
 rule gt_map_primary_alignment:
     output:
-        primary_bam=_mapping_temp('primary.bam')
+        primary_bam='primary.bam'
     log:
-        'log/primary_alignment.log'.format(SAMPLE)
+        MAPPING_LOG
     shell:
         """echo "Running primary alignment for sample {SAMPLE}"; """
         """echo "Input BAM: {SAMPLE_BAM}"; """
         """echo "Input BAM reference: {SAMPLE_REF}"; """
         """echo "Log: {log}"; """
-        """echo "Temp: {MAPPING_TEMP}"; """
+        """echo "Temp: $(pwd)"; """
         """echo "Host: {HOSTNAME}"; """
         """>{log}; """
         """{{ \n"""
@@ -174,7 +136,7 @@ rule gt_map_primary_alignment:
         """        samtools view {SAMPLE_BAM} $1:$2-$3; \n"""
         """    done <{SAMPLE_REGIONS} | \n"""
         """    samtools view -S -t {SAMPLE_REF_FAI} -u -b - 2>>{log} | \n"""
-        """    samtools collate -n 32 -O - {PRIMARY_TEMP}/primary_bam 2>>{log} | \n"""
+        """    samtools collate -n 32 -O - primary/primary_bam 2>>{log} | \n"""
         """    samtools bam2fq - 2>>{log} | \n"""
         """    seqtk dropse - 2>>{log}; \n"""
         """    samtools view {SAMPLE_BAM} '*' 2>>{log} | \n"""
