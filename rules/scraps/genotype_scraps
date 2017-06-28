@@ -12,3 +12,40 @@ rule gt_svmap_ins_to_fasta:
     shell:
         """awk '{{ if ($6 == "INS") {{ print ">"$1"_"$2"_"$3"_insertion"; print $8 }} }}' {input.sv_calls} """
         """>{output.fasta}"""
+
+
+##################
+### MAP Scraps ###
+##################
+
+# gt_map_postalt_alt_sam
+#
+# Get a SAM file (as .alt) of the alternate contigs of one primary contig.
+rule gt_map_postalt_alt_sam:
+    input:
+        bed=_mapping_temp('postalt/{primary_contig}.bed'),
+        primary_bam=_mapping_temp('primary.bam')
+    output:
+        alt=temp(_mapping_temp('postalt/{primary_contig}.alt'))
+    run:
+
+        # Get contigs
+        contig_set = set()
+
+        with open(input.bed, 'r') as bed_file:
+            for line in bed_file:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                contig_set.add(line.split('\t')[0])
+
+        # Filter alts
+        with open(CONTIG_SAM, 'r') as in_file:
+            with open(output.alt, 'w') as out_file:
+                for line in in_file:
+                    if line.startswith('@') or line.split('\t')[0] in contig_set:
+                        out_file.write(line)
+
+        #"""samtools view -hL {input.bed} {CONTIG_SAM} >{output.alt}"""

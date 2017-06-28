@@ -19,8 +19,8 @@ SAMPLE_REF = config['sample_ref']            # Reference sample reads are mapped
 SAMPLE_REF_FAI = SAMPLE_REF + '.fai'         # Sample reference FASTA index.
 SAMPLE_REGIONS = config['sample_regions']    # BED file describing where mapped reads in the sample BAM should be extracted from.
 SV_REF = config['sv_ref']                    # Augmented reference with local assemblies as alternate contigs.
+SV_REF_ALT = config['sv_ref_alt']            # Reference ALT file (.alt); aligns alternate to primary contigs.
 SV_REF_ALT_INFO = config['sv_ref_alt_info']  # BED file of all contigs. Gives lengths, whether or not they are primary, and which primary contig the alternates belong to.
-CONTIG_SAM = config['contig_sam']            # BAM file of local-assembly contigs aligned to the reference.
 OUTPUT_BAM = config['output_bam']            # Output BAM file with reads mapped to the primary contigs and alternate contigs.
 OUTPUT_BAI = OUTPUT_BAM + '.bai'             # Output BAM file index.
 
@@ -29,6 +29,8 @@ MAPQ = config['mapq']                        # Minimum mapping quality of reads 
 MAPPING_TEMP = config['mapping_temp']        # Directory where local temporary files are located.
 SMRTSV_DIR = config['smrtsv_dir']            # Directory where SMRTSV is installed.
 POSTALT_PATH = config['postalt_path']        # Full path to bwa-postalt.js
+
+MAPPING_TEMP = MAPPING_TEMP.strip()
 
 # Read alternate info BED and primary contig names
 ALT_BED = pd.read_table(SV_REF_ALT_INFO, header=0)
@@ -50,7 +52,8 @@ def _mapping_temp(file_name):
 
     :return: Full path in `MAPPING_TEMP`.
     """
-    return os.path.join(MAPPING_TEMP, file_name)
+
+    return os.path.join(MAPPING_TEMP, file_name.strip())
 
 
 ### Temp directories ###
@@ -61,6 +64,24 @@ POSTALT_TEMP = _mapping_temp('postalt')
 
 os.makedirs(PRIMARY_TEMP, exist_ok=True)
 os.makedirs(os.path.join(POSTALT_TEMP, 'bam', 'temp'), exist_ok=True)
+
+
+
+
+
+
+###############
+### DBGTMP ####
+###############
+
+print('')
+print('MAPPING_TEMP: "{}"'.format(MAPPING_TEMP))
+print('BED:          "{}"'.format(_mapping_temp('postalt/{primary_contig}.bed')))
+print('')
+
+
+
+
 
 
 #############
@@ -88,6 +109,8 @@ rule gt_map_postalt_merge:
 # gt_map_postalt_realign
 #
 # Remap reads to alternate contigs for one primary contig and adjust quality scores.
+#
+# Note: The primary BAM is required to avoid over-requesting resources (disk and CPU).
 rule gt_map_postalt_remap:
     input:
         bam=_mapping_temp('primary.bam'),
@@ -105,34 +128,16 @@ rule gt_map_postalt_remap:
 # gt_map_postalt_alt_sam
 #
 # Get a SAM file (as .alt) of the alternate contigs of one primary contig.
+#
+# Note: The primary BAM is required to avoid over-requesting resources (disk and CPU).
 rule gt_map_postalt_alt_sam:
     input:
-        bed=_mapping_temp('postalt/{primary_contig}.bed'),
+        alt=SV_REF_ALT,
         primary_bam=_mapping_temp('primary.bam')
     output:
         alt=temp(_mapping_temp('postalt/{primary_contig}.alt'))
-    run:
-
-        # Get contigs
-        contig_set = set()
-
-        with open(input.bed, 'r') as bed_file:
-            for line in bed_file:
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                contig_set.add(line.split('\t')[0])
-
-        # Filter alts
-        with open(CONTIG_SAM, 'r') as in_file:
-            with open(output.alt, 'w') as out_file:
-                for line in in_file:
-                    if line.startswith('@') or line.split('\t')[0] in contig_set:
-                        out_file.write(line)
-
-        #"""samtools view -hL {input.bed} {CONTIG_SAM} >{output.alt}"""
+    shell:
+        """python {SMRTSV_DIR}/scripts/genotype/FilterAltByPrimary.py {input.alt} {output.alt}"""
 
 # gt_map_postalt_contig_bed
 #

@@ -336,8 +336,7 @@ rule gt_map_sample_reads:
         sv_ref='altref/ref.fasta',
         sv_ref_bwt='altref/ref.fasta.bwt',
         sv_ref_alts='altref/ref.fasta.alt',
-        sv_ref_alt_info='altref/alt_info.bed',
-        contig_sam='contigs/contigs.sam'
+        sv_ref_alt_info='altref/alt_info.bed'
     output:
         bam='samples/{sample}/alignments.bam',
         bai='samples/{sample}/alignments.bam.bai'
@@ -378,8 +377,8 @@ rule gt_map_sample_reads:
                 'sample_ref={}'.format(os.path.abspath(input.sample_ref)),
                 'sample_regions={}'.format(os.path.abspath(input.sample_regions)),
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
+                'sv_ref_alts={}'.format(os.path.abspath(input.sv_ref_alts)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
-                'contig_sam={}'.format(os.path.abspath(input.contig_sam)),
                 'output_bam={}'.format(output_file),
                 'mapq={}'.format(params.mapq),
                 'threads={}'.format(params.threads),
@@ -485,11 +484,11 @@ rule gt_altref_alt_contig_to_chr:
 # adjust alignment scores.
 rule gt_altref_make_alts:
     input:
-        bam='contigs/contigs.sam'
+        sam='contigs/contigs.sam'
     output:
         alt='altref/ref.fasta.alt'
     shell:
-        """ln -sf ../contigs/contigs.sam {output.alt}"""
+        """python {SMRTSV_DIR}/scripts/genotype/SamToAlt.py {input.sam} {output.alt}"""
 
 # gt_altref_index
 #
@@ -790,6 +789,9 @@ rule gt_contig_list:
 # Get sexes from the manifest
 #
 
+# gt_sv_sexes
+#
+# Translate manifest and normalize sex information for each sample.
 rule gt_sv_sexes:
     output:
         tab='sv_calls/sexes.tab'
