@@ -324,7 +324,7 @@ rule gt_call_sample_breakpoint_depth:
 # Map reads.
 #
 
-# gt_map
+# gt_map_sample_reads
 #
 # Extract reads from the original BAM guided. Mapped read locations discovered by mapping pseudoreads to the sample's
 # reference are extracted along with unmapped reads.
@@ -363,9 +363,6 @@ rule gt_map_sample_reads:
                 )
             )
 
-            # Separate BAM directory and file. Snakemake will run in "working_dir" and write "output_file"
-            output_file = os.path.abspath(output.bam)
-
             # Setup sub-Snake command
             command = (
                 'gt_map_postalt_merge',
@@ -379,8 +376,8 @@ rule gt_map_sample_reads:
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
                 'sv_ref_alt={}'.format(os.path.abspath(input.sv_ref_alts)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
-                'output_bam={}'.format(output_file),
-                'primary_map_log={}'.format(log.map),
+                'output_bam={}'.format(os.path.abspath(output.bam)),
+                'primary_map_log={}'.format(os.path.abspath(log.map)),
                 'mapq={}'.format(params.mapq),
                 'threads={}'.format(params.threads),
                 'smrtsv_dir={}'.format(SMRTSV_DIR),
