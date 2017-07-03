@@ -16,29 +16,22 @@ if not 'INCLUDE_SNAKEFILE' in globals():
 
 ### Get parameters ###
 
+# Output
+CONTIG_BAM = config['contig_bam']
+CONTIG_BAM_BAI = CONTIG_BAM + '.bai'
+
+LOG_DIR = config['log_dir']
+LOG_DIR_ASM = os.path.join(LOG_DIR, 'asm')
+
 # Params
 MAPQ = config['mapping_quality']
 ALN_PARAMS=config['asm_alignment_parameters'].strip('"')
 GROUP_ID = config['group_id']
-ASSEMBLE_TEMP = config['assemble_temp']
 
 # Input files
 ALIGN_FOFN = config['align_fofn']
 BED_GROUPS = config['bed_groups']
 BED_CANDIDATES = config['bed_candidates']
-
-
-### Utility Functions ###
-
-def _asm_temp(file_name):
-    """
-    Get a path relative to the temporary directory `ASSEMBLE_TEMP`.
-
-    :param temp_file: Relative path to 'ASSEMBLE_TEMP`.
-
-    :return: Full path in `ASSEMBLE_TEMP`.
-    """
-    return os.path.join(ASSEMBLE_TEMP, file_name)
 
 
 ### Candidate Regions ###
@@ -62,25 +55,40 @@ GROUP = GROUP.loc[GROUP_ID].copy()
 GROUP['POS1'] = GROUP['POS'] + 1
 
 
+### Init Paths ###
+os.makedirs(LOG_DIR_ASM, exist_ok=True)
+
+
 #############
 ### Rules ###
 #############
+
+# merge_group_contigs
+#
+# Get final contig for each assembly in this group.
+rule merge_group_contigs:
+    output:
+        bam=CONTIG_BAM,
+        bai=CONTIG_BAM_BAI
+    run:
+        pass
+
 
 # assemble_reads
 #
 # Assemble sequence reads.
 rule assemble_reads:
     input:
-        fasta=_asm_temp('region/{region_id}/reads/reads.fasta'),
+        fasta='region/{region_id}/reads/reads.fasta'
     output:
-        fasta=_asm_temp('region/{region_id}/asm/contigs.fasta')
+        fasta='region/{region_id}/asm/contigs.fasta'
     params:
         threads='4',
         read_length='1000',
         partitions='50',
-        max_runtime='10m'
+        max_runtime='20m'
     log:
-        'canu.log'
+        os.path.join(LOG_DIR_ASM, '{region_id}.log')
     run:
 
         # Setup output locations and flag
@@ -106,34 +114,46 @@ rule assemble_reads:
                 """useGrid=false """
                 """corMhapSensitivity=high """
                 """corMinCoverage=2 """
-                """errorRate=0.035 """
-                """>{log}"""
+                """correctedErrorRate=0.045 """  # Was errorRate=0.035
+                """-pacbio-raw """
+                """>{log} 2>&1"""
             )
         except:
-            print('Assembly crashed on region: {wildcards.region_id}')
+            print('Assembly crashed on region: {}'.format(wildcards.region_id))
 
+        # Copy unitigs
+        contig_file_name = 'region/{region_id}/asm/canu/asm.unitigs.fasta'.format(**wildcards)
 
-        # Find assembly and copy to output.
-        if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
-            shell(
-                """cat {assembly_output} > {output.fasta}; """
-                """echo -e "{REGION}\tassembly_exists" >> %s""" % config['log']
-            )
-            assembly_exists = True
-
-        elif os.path.exists(unitig_output) and os.stat(unitig_output).st_size > 0:
-            shell(
-                """cat {unitig_output} > {output.fasta}; """ +
-                """echo -e "{REGION}\tunitig_assembly_exists" >> %s""" % config['log']
-            )
-            assembly_exists = True
-
+        if os.path.exists(contig_file_name):
+            shutil.copyfile(contig_file_name, output.fasta)
         else:
-            shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config['log'])
+            open(output.fasta, 'w').close()  # Touch and/or clear file
 
-        # Create an empty assembly for failed regions.
-        if not assembly_exists:
-            shell("echo -e '>{REGION}\nN' > {output}")
+        # Clean assembly directory
+        shutil.rmtree(canu_dir, ignore_errors=True)
+
+
+#        # Find assembly and copy to output.
+#        if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
+#            shell(
+#                """cat {assembly_output} > {output.fasta}; """
+#                """echo -e "{REGION}\tassembly_exists" >> %s""" % config['log']
+#            )
+#            assembly_exists = True
+##
+#        elif os.path.exists(unitig_output) and os.stat(unitig_output).st_size > 0:
+#            shell(
+#                """cat {unitig_output} > {output.fasta}; """ +
+#                """echo -e "{REGION}\tunitig_assembly_exists" >> %s""" % config['log']
+#            )
+#            assembly_exists = True
+##
+#        else:
+#            shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config['log'])
+##
+#        # Create an empty assembly for failed regions.
+#        if not assembly_exists:
+#            shell("echo -e '>{REGION}\nN' > {output}")
 
 
 # convert_reads_to_fasta
@@ -141,10 +161,10 @@ rule assemble_reads:
 # Get FASTA and FASTQ file of extracted sequence reads.
 rule asm_group_reads_to_fasta:
     input:
-        bam=_asm_temp('region/{region_id}/reads/reads.bam')
+        bam='region/{region_id}/reads/reads.bam'
     output:
-        fasta=_asm_temp('region/{region_id}/reads/reads.fasta'),
-        fastq=_asm_temp('region/{region_id}/reads/reads.fastq')
+        fasta='region/{region_id}/reads/reads.fasta',
+        fastq='region/{region_id}/reads/reads.fastq'
     shell:
         """echo "### Entering: asm_group_get_region_bam"; """
         """echo "Writing FASTA: {output.fasta}"; """
@@ -156,11 +176,11 @@ rule asm_group_reads_to_fasta:
 # Get reads for one region from the alignment cache (align/reads.bam).
 rule asm_group_get_region_bam:
     input:
-        bam=_asm_temp('group/reads.bam'),
-        bai=_asm_temp('group/reads.bam.bai')
+        bam='group/reads.bam',
+        bai='group/reads.bam.bai'
     output:
-        bam=temp(_asm_temp('region/{region_id}/reads/reads.bam')),
-        bai=temp(_asm_temp('region/{region_id}/reads/reads.bam.bai'))
+        bam=temp('region/{region_id}/reads/reads.bam'),
+        bai=temp('region/{region_id}/reads/reads.bam.bai')
     run:
 
         # Get region
@@ -186,8 +206,8 @@ rule asm_group_get_reads:
     input:
         fofn=ALIGN_FOFN
     output:
-        bam=_asm_temp('group/reads.bam'),
-        bai=_asm_temp('group/reads.bam.bai')
+        bam='group/reads.bam',
+        bai='group/reads.bam.bai'
     params:
         mapq=MAPQ,
         group_id=GROUP_ID
@@ -211,8 +231,8 @@ rule asm_group_get_reads:
         print('Extracting over region: {}'.format(group_region))
 
         # Extract reads
-        BATCH_TEMP = _asm_temp('group/batch_temp')
-        os.makedirs(BATCH_TEMP, exist_ok=True)
+        batch_temp = 'group/batch_temp'
+        os.makedirs(batch_temp, exist_ok=True)
 
         try:
             for bam_file in bam_file_list:
@@ -221,14 +241,14 @@ rule asm_group_get_reads:
                 shell(
                     """echo "Extracting reads from batch {batch_index}..."; """
                     """samtools view -hb -q {params.mapq} {bam_file} {group_region} """
-                    """>{BATCH_TEMP}/{batch_index}.bam"""
+                    """>{batch_temp}/{batch_index}.bam"""
                 )
 
             shell(
                 """echo "Merging batches..."; """
-                """samtools merge {output.bam} {BATCH_TEMP}/*.bam; """
+                """samtools merge {output.bam} {batch_temp}/*.bam; """
                 """samtools index {output.bam}; """
             )
 
         finally:
-            shutil.rmtree(BATCH_TEMP, ignore_errors=True)
+            shutil.rmtree(batch_temp, ignore_errors=True)

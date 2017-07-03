@@ -1,0 +1,6 @@
+X.npy: Matrix of features (after scaling) used for training and cross-validation.
+y.npy: Labels for each sample (row of X) used for training and cross-validation.
+features.tab: Input features for training with extra information not used in training.
+  * Training pipeline generates X from this table.
+predictor_stats.tab: Training stats.
+

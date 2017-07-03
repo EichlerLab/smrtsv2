@@ -492,10 +492,12 @@ rule gt_altref_index:
         fasta='altref/ref.fasta'
     output:
         bwt='altref/ref.fasta.bwt'
+    params:
+        block_size=1000000000
     log:
         'altref/log/sv_altref_index.log'
     shell:
-        """bwa index {input.fasta} >{log} 2>&1"""
+        """bwa index -b {params.block_size} {input.fasta} >{log} 2>&1"""
 
 
 # gt_altref_prepare
