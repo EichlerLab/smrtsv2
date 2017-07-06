@@ -71,6 +71,7 @@ FEATURE_SAMPLE_TRAIN = CONFIG_LEARN.get('train_feature')
 CONFIG_LEARN_PARAMS = CONFIG_LEARN.get('params', {})
 
 PARAM_RETAIN_NOCALL = CONFIG_LEARN_PARAMS.get('retain_nocall', 'False').lower() in ('true', 't', '1')
+PARAM_BALANCE_CALLS = CONFIG_LEARN_PARAMS.get('balance_calls', 'True').lower() in ('true', 't', '1')
 
 
 #############
@@ -121,20 +122,27 @@ rule gt_learn_model_train:
 
         features = pd.read_table(input.feat_tab, header=0)
 
-        # Get set of callable indices
-        callable_indices = np.asarray(features.index[features['CALLABLE']])
+        # Get variants selected for testing (some may have been left out when balancing calls for each SV type)
+        train_indices = features.index[features['SELECTED']]
 
         # Filter no-call if set
         if not params.retain_nocall:
-            X = X[callable_indices, :]
-            y = y[callable_indices]
+            callable_set = set(features.index[features['CALLABLE']])
+            train_indices = [i for i in train_indices if i in callable_set]
+
+        # Subset
+        X = X[train_indices, :]
+        y = y[train_indices]
+
+        features = features.iloc[train_indices]
+        features.reset_index(inplace=True)
 
         # Optimize hyper-parameters and fit the best model
         clf = GridSearchCV(
             estimator=SVC(C=1),
             param_grid=PARAM_GRID,
             scoring='accuracy',
-            cv=ml.cv_set_iter(ml.stratify_folds(features['STRATIFIED'][callable_indices], params.k)),
+            cv=ml.cv_set_iter(ml.stratify_folds(features['STRATIFIED'], params.k)),
             refit=False,
             error_score=0,
             n_jobs=params.threads
@@ -157,10 +165,10 @@ rule gt_learn_model_train:
 # Test model by statified K-fold cross-validation
 #
 
-# gt_learn_link_stats
+# gt_learn_get_stats
 #
-# Link the stats array for the main sample.
-rule gt_learn_link_stats:
+# Get stats array.
+rule gt_learn_get_stats:
     input:
         tab=expand('cv/samples/{sample}/stats.tab', sample=FEATURE_SAMPLES),
         tab_pred=expand('cv/samples/{sample}/model_predict.tab', sample=FEATURE_SAMPLES)
@@ -259,6 +267,7 @@ rule gt_learn_cv_run:
         y_npy='model/y.npy',
         scaler='model/scaler.pkl',
         cv_tab='cv/test_sets.tab',
+        cv_nosel_tab='cv/test_sets_nosel.tab',
         feat_tab='model/features.tab',
         X_sample=expand('model/samples/{sample}/X.npy', sample=FEATURE_SAMPLES)
     output:
@@ -279,6 +288,7 @@ rule gt_learn_cv_run:
         scaler = joblib.load(input.scaler)
 
         fold_array = np.loadtxt(input.cv_tab, np.int32, skiprows=1)
+        fold_array_nosel = np.loadtxt(input.cv_nosel_tab, np.int32, skiprows=1)
 
         features = pd.read_table(input.feat_tab, header=0)
 
@@ -300,12 +310,19 @@ rule gt_learn_cv_run:
         if not params.retain_nocall:
             train_indices = np.array([x for x in train_indices if x in callable_set])
 
+        # Add variants that were not selected (for balancing SVCALLs)
+        if fold_array_nosel.shape[0] > 0:
+            test_indices_nosel = fold_array_nosel[fold_array_nosel[:, 1] == cv_set, 0]
+
+            test_indices = np.concatenate([test_indices, test_indices_nosel], axis=0)
+            test_indices = np.sort(test_indices, axis=0)
+
         # Subset test indices into variants that would be callable and those that would not be
         test_callable_indices = np.array([x for x in test_indices if x in callable_set])
         test_nocall_indices = np.array([x for x in test_indices if x not in callable_set])
 
         # Get an array of stratified labels and callable flag for each variant in this fold
-        selection_labels = np.asarray(features['STRATIFIED'].loc[train_indices])
+        selection_labels = features.loc[train_indices].reset_index()['STRATIFIED']
 
         clf = GridSearchCV(
             estimator=SVC(),
@@ -360,7 +377,8 @@ rule gt_learn_cv_statify_k:
     input:
         feat_tab='model/features.tab'
     output:
-        cv_tab='cv/test_sets.tab'
+        cv_tab='cv/test_sets.tab',
+        cv_tab_nosel='cv/test_sets_nosel.tab'
     params:
         k=FOLDS_K
     run:
@@ -368,11 +386,20 @@ rule gt_learn_cv_statify_k:
         # Read data
         features = pd.read_table(input.feat_tab, header=0)
 
+        features_nosel = features.loc[~features['SELECTED']]
+        features = features.loc[features['SELECTED']]
+
         # Stratify folds over labels
         fold_array = ml.stratify_folds(features['STRATIFIED'], params.k)
 
+        if features_nosel.shape[0] > 0:
+            fold_array_nosel = ml.stratify_folds(features_nosel['STRATIFIED'], params.k)
+        else:
+            fold_array_nosel = np.zeros((0, 2))
+
         # Write
         pd.DataFrame(fold_array, columns=('variant', 'test_set')).to_csv(output.cv_tab, sep='\t', index=False)
+        pd.DataFrame(fold_array_nosel, columns=('variant', 'test_set')).to_csv(output.cv_tab_nosel, sep='\t', index=False)
 
 
 #
@@ -443,9 +470,44 @@ rule gt_learn_model_link_features:
     input:
         tab='model/samples/{}/features.tab'.format(FEATURE_SAMPLE_TRAIN)
     output:
-        tab='model/features.tab'
-    shell:
-        """ln -sf samples/{FEATURE_SAMPLE_TRAIN}/features.tab model/features.tab"""
+        tab='model/features.tab',
+        tab_summary='model/features_summary.tab'
+    run:
+
+        # Read
+        df = pd.read_table(input.tab, header=0)
+
+        cross = pd.crosstab(df['SVTYPE'], df['CALL'])
+
+        # Balance calls by SVTYPE
+        if PARAM_BALANCE_CALLS:
+
+            df['SELECTED'] = False
+
+            for sv_type in cross.index:
+
+                # Subset and get minimum count
+                df_type = df.loc[df['SVTYPE'] == sv_type]
+                min_count = min(cross.loc[sv_type])
+
+                # Get a list of indices by CALL
+                class_indices = df_type.groupby('CALL')['CALL'].aggregate(lambda x: tuple(x.index))
+
+                # Subset indices
+                for sv_call in class_indices.index:
+                    df.loc[sorted(np.random.choice(class_indices[sv_call], min_count, replace=False)), 'SELECTED'] = True
+
+        else:
+            df['SELECTED'] = True
+
+        # Write
+        df.to_csv(output.tab, sep='\t', index=False)
+        cross.to_csv(output.tab_summary, sep='\t', index=True)
+
+
+
+#    shell:
+#        """ln -sf samples/{FEATURE_SAMPLE_TRAIN}/features.tab model/features.tab"""
 
 # gt_learn_model_annotate
 #

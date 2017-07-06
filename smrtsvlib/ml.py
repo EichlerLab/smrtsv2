@@ -327,6 +327,9 @@ def stratify_folds(labels, k):
 
     fold_array = np.concatenate(skf_test, axis=0)
 
+    # Replace indices with label indices
+    fold_array[:, 0] = labels.index[fold_array[:, 0]]
+
     # Sort by variant index
     fold_array = fold_array[fold_array[:, 0].argsort(), :]
 
