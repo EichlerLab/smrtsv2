@@ -73,6 +73,38 @@ rule merge_group_contigs:
     run:
         pass
 
+# assemble_align_org
+#
+# Align original reads back to assembly
+rule assemble_align_org:
+    input:
+        fasta='region/{region_id}/asm/contigs.fasta',
+        bam='region/{region_id}/reads/reads.bam'
+    output:
+        bam='region/{region_id}/reads/align_reads.bam',
+    run:
+
+        # Make temporary file location (usorted BAM)
+        bam_usort='temp/region/{region_id}/reads/align_reads.bam'
+
+        # Map reads
+        if os.stat(input.contig).st_size > 0:
+            os.makedirs(os.path.dirname(bam_usort), exist_ok=True)
+
+            shell(
+                """blasr """
+                """{input.bam} {input.fasta} """
+                """--bam --bestn 1 """
+                """--unaligned /dev/null """
+                """--out {bam_usort} """
+                """--nproc {params.threads}; """
+                """samtools sort {output.usort_bam} -o {output.bam}; """
+                """rm {bam_usort}"""
+            )
+
+        else:
+            open(output.bam, 'w').close()  # Touch and/or clear file
+
 
 # assemble_reads
 #
@@ -81,7 +113,8 @@ rule assemble_reads:
     input:
         fasta='region/{region_id}/reads/reads.fasta'
     output:
-        fasta='region/{region_id}/asm/contigs.fasta'
+        fasta='region/{region_id}/asm/contigs.fasta',
+        preads='region/{region_id}/asm/corrected_reads.fastq.gz'  # Corrected reads
     params:
         threads='4',
         read_length='1000',
@@ -121,40 +154,19 @@ rule assemble_reads:
         except:
             print('Assembly crashed on region: {}'.format(wildcards.region_id))
 
-        # Copy unitigs
+        # Copy unitigs and corrected reads
         contig_file_name = 'region/{region_id}/asm/canu/asm.unitigs.fasta'.format(**wildcards)
+        preads_file_name = 'region/{region_id}/asm/canu/asm.correctedReads.fasta.gz'.format(**wildcards)
 
         if os.path.exists(contig_file_name):
             shutil.copyfile(contig_file_name, output.fasta)
+            shutil.copyfile(preads_file_name, output.preads)
         else:
             open(output.fasta, 'w').close()  # Touch and/or clear file
+            open(output.preads, 'w').close()  # Touch and/or clear file
 
         # Clean assembly directory
         shutil.rmtree(canu_dir, ignore_errors=True)
-
-
-#        # Find assembly and copy to output.
-#        if os.path.exists(assembly_output) and os.stat(assembly_output).st_size > 0:
-#            shell(
-#                """cat {assembly_output} > {output.fasta}; """
-#                """echo -e "{REGION}\tassembly_exists" >> %s""" % config['log']
-#            )
-#            assembly_exists = True
-##
-#        elif os.path.exists(unitig_output) and os.stat(unitig_output).st_size > 0:
-#            shell(
-#                """cat {unitig_output} > {output.fasta}; """ +
-#                """echo -e "{REGION}\tunitig_assembly_exists" >> %s""" % config['log']
-#            )
-#            assembly_exists = True
-##
-#        else:
-#            shell("""echo -e "{REGION}\tno_assembly_exists" >> %s""" % config['log'])
-##
-#        # Create an empty assembly for failed regions.
-#        if not assembly_exists:
-#            shell("echo -e '>{REGION}\nN' > {output}")
-
 
 # convert_reads_to_fasta
 #
