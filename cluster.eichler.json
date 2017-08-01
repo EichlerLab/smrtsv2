@@ -1,54 +1,191 @@
 {
   "__default__": {
-  "params": "-l mfree=1G -l h_rt=00:30:00 -N smrtv_job"
+    "mem": "1G",
+    "cpu": "1",
+    "rt": "00:30:00",
+    "params": ""
   },
 
-  "ref_make_fai": {"params": "-l mfree=4G -l h_rt=01:00:00"},
-  "ref_make_sa": {"params": "-l mfree=40G -l h_rt=08:00:00"},
-  "ref_make_ctab": {"params": "-l mfree=8G -l h_rt=00:30:00"},
+  "ref_make_fai": {
+    "mem": "4G",
+    "rt": "01:00:00"
+  },
+  "ref_make_sa": {
+    "mem": "40G",
+    "rt": "08:00:00"
+  },
+  "ref_make_ctab": {
+    "mem": "8G",
+    "rt": "00:30:00"
+  },
 
-  "aln_align_batch": {"params": "-l h_rt=5:00:00:00 -l disk_free=10G -l mfree=8.25G -pe serial 8"},
+  "aln_align_batch": {
+    "mem": "8.25G",
+    "rt": "5:00:00:00",
+    "cpu": "8",
+    "params": "-l disk_free=10G"
+  },
 
-  "detect_get_regions": {"params": "-l mfree=10G -l h_rt=01:00:00"},
-  "detect_stops_ref_gaps": {"params": "-l h_rt=04:00:00 -l mfree=2G"},
-  "detect_stops_merge_batches": {"params": "-l mfree=4G -l h_rt=01:00:00"},
-  "detect_stops_find_hardstops": {"params": "-l mfree=4G -l h_rt=04:00:00"},
-  "detect_gaps_annotate_coverage": {"params": "-l mfree=24G -l h_rt=01:00:00"},
-  "detect_gaps_search": {"params": "-l mfree=8G -l disk_free=2G -l h_rt=08:00:00"},
-  "detect_merge_coverage": {"params": "-l mfree=4G -l h_rt=10:00:00"},
-  "detect_coverage_per_batch": {"params": "-l mfree=4G -l h_rt=04:00:00"},
+  "detect_get_regions": {
+    "mem": "10G",
+    "rt": "01:00:00"
+  },
+  "detect_stops_ref_gaps": {
+    "mem": "2G",
+    "rt": "04:00:00"
+  },
+  "detect_stops_merge_batches": {
+    "mem": "4G",
+    "rt": "01:00:00"
+  },
+  "detect_stops_find_hardstops": {
+    "mem": "4G",
+    "rt": "04:00:00"
+  },
+  "detect_gaps_annotate_coverage": {
+    "mem": "24G",
+    "rt": "01:00:00"
+  },
+  "detect_gaps_search": {
+    "mem": "8G",
+    "rt": "08:00:00",
+    "params": "-l disk_free=2G"
+  },
+  "detect_merge_coverage": {
+    "mem": "4G",
+    "rt": "10:00:00"
+  },
+  "detect_coverage_per_batch": {
+    "mem": "4G",
+    "rt": "04:00:00"
+  },
 
-  "collect_assembly_alignments": {"params": "-l mfree=30G -l disk_free=10G -l h_rt=01:00:00"},
-  "asm_assemble_group": {"params": "-l mfree=12G -pe serial 1 -l disk_free=10G -l h_rt=02:00:00"},
+  "collect_assembly_alignments": {
+    "mem": "30G",
+    "rt": "01:00:00",
+    "params": "-l disk_free=10G"
+  },
+  "asm_assemble_group": {
+    "mem": "12G",
+    "rt": "02:00:00",
+    "params": "-l disk_free=10G"
+  },
 
-  "find_inversions": {"params": "-pe serial 8 -l mfree=4G -l h_rt=05:00:00"},
-  "tile_contigs_from_alignments": {"params": "-l h_rt=01:00:00"},
-  "find_calls_by_gaps_in_alignments": {"params": "-l h_rt=02:00:00"},
-  "identify_calls_by_type": {"params": "-l h_rt=02:00:00 -l mfree=8G"},
-  "repeatmask_sv_fasta": {"params": "-l h_rt=06:00:00 -pe serial 8 -l mfree=5G"},
-  "trf_mask_sv_fasta": {"params": "-l h_rt=01:00:00 -l mfree=2G"},
-  "find_indel_gaps_in_alignments": {"params": "-l h_rt=02:00:00"},
-  "filter_indel_gaps_by_tiling_path": {"params": "-l mfree=4G -l h_rt=00:30:00"},
-  "calculate_coverage_from_assembled_contigs": {"params": "-l mfree=12G -l h_rt=01:00:00"},
-  "annotate_coverage_of_assembled_contigs_for_indels": {"params": "-l h_rt=01:00:00"},
-  "annotate_coverage_of_pacbio_reads_for_indels": {"params": "-l h_rt=01:00:00"},
-  "find_snvs_alignments": {"params": "-l h_rt=02:00:00"},
-  "map_sv_sequences_to_bam_reference": {"params": "-l h_rt=02:00:00 -l mfree=33G -R y"},
-  "find_positions_of_sv_sequences_in_bam_reference": {"params": "-l h_rt=01:00:00"},
-  "merge_reference_and_local_assemblies": {"params": "-l h_rt=01:00:00"},
-  "bwa_index_combined_reference": {"params": "-l mfree=10G -l h_rt=06:00:00"},
+  "find_inversions": {
+    "mem": "4G",
+    "cpu": "8",
+    "rt": "05:00:00"
+  },
+  "tile_contigs_from_alignments": {
+    "rt": "01:00:00"
+  },
+  "find_calls_by_gaps_in_alignments": {
+    "rt": "02:00:00"
+  },
+  "identify_calls_by_type": {
+    "mem": "8G",
+    "rt": "02:00:00"
+  },
+  "repeatmask_sv_fasta": {
+    "mem": "5G",
+    "cpu": "8",
+    "rt": "06:00:00"
+  },
+  "trf_mask_sv_fasta": {
+    "mem": "2G",
+    "rt": "01:00:00"
+  },
+  "find_indel_gaps_in_alignments": {
+    "rt": "02:00:00"
+  },
+  "filter_indel_gaps_by_tiling_path": {
+    "mem": "4G"
+  },
+  "calculate_coverage_from_assembled_contigs": {
+    "mem": "12G",
+    "rt": "01:00:00"
+  },
+  "annotate_coverage_of_assembled_contigs_for_indels": {
+    "rt": "01:00:00"
+  },
+  "annotate_coverage_of_pacbio_reads_for_indels": {
+    "rt": "01:00:00"
+  },
+  "find_snvs_alignments": {
+    "rt": "02:00:00"
+  },
+  "map_sv_sequences_to_bam_reference": {
+    "mem": "33G",
+    "rt": "02:00:00",
+    "params": "-R y"
+  },
+  "find_positions_of_sv_sequences_in_bam_reference": {
+    "rt": "01:00:00"
+  },
+  "merge_reference_and_local_assemblies": {
+    "rt": "01:00:00"
+  },
+  "bwa_index_combined_reference": {
+    "mem": "10G",
+    "rt": "06:00:00"
+  },
 
-  "gt_call_sample_breakpoint_depth": {"params": "-l mfree=4G -l h_rt=2:00:00"},
-  "gt_call_sample_insert_delta": {"params": "-l mfree=4G -l h_rt=2:00:00"},
-  "gt_call_sample_read_depth": {"params": "-l mfree=4G -l h_rt=2:00:00"},
-  "gt_contig_bam_to_fasta": {"params": "-l mfree=24G -l h_rt=2:00:00"},
-  "gt_altref_index": {"params": "-l mfree=16G -l h_rt=48:00:00 -R y"},
-  "gt_svmap_map_pseudoreads": {"params": "-l mfree=1G -pe serial 12 -l disk_free=2G -l h_rt=2:00:00 -R y -l ssd=FALSE"},
-  "gt_map_sample_reads": {"params": "-l mfree=5G -pe serial 12 -l disk_free=50G -l h_rt=48:00:00 -R y -l ssd=FALSE"},
-  "gt_call_genotype_merged_samples": {"params": "-l h_rt=00:30:00 -l mfree=2G"},
-  "gt_call_to_vcf": {"params": "-l h_rt=00:30:00 -l mfree=4G"},
-  "gt_altref_alt_info_bed": {"params": "-l h_rt=2:00:00 -l mfree=8G"},
+  "gt_vcf_merge": {
+    "mem": "8G",
+    "rt": "08:00:00"
+  },
+  "gt_call_sample_breakpoint_depth": {
+    "mem": "4G",
+    "rt": "02:00:00"
+  },
+  "gt_call_sample_insert_delta": {
+    "mem": "4G",
+    "rt": "02:00:00"
+  },
+  "gt_call_sample_read_depth": {
+    "mem": "4G",
+    "rt": "02:00:00"
+  },
+  "gt_contig_bam_to_fasta": {
+    "mem": "24G",
+    "rt": "02:00:00"
+  },
+  "gt_altref_index": {
+    "mem": "16G",
+    "rt": "02:00:00:00",
+    "params": "-R y"
+  },
+  "gt_svmap_map_pseudoreads": {
+    "mem": "2G",
+    "cpu": "12",
+    "rt": "02:00:00",
+    "params": "-l disk_free=2G -R y -l ssd=FALSE"
+  },
+  "gt_map_sample_reads": {
+    "mem": "{params.mem}",
+    "cpu": "{params.threads}",
+    "rt": "36:00:00",
+    "params": "-l disk_free=50G -R y -l ssd=FALSE"
+  },
+  "gt_call_genotype_merged_samples": {
+    "mem": "2G",
+  },
+  "gt_call_to_vcf": {
+    "mem": "4G",
+  },
+  "gt_altref_alt_info_bed": {
+    "mem": "8G",
+    "rt": "02:00:00"
+  },
 
-  "gt_learn_cv_run": {"params": "-l h_rt=24:00:00 -pe serial 4 -l mfree=2G"},
-  "gt_learn_model_train": {"params": "-l h_rt=24:00:00 -pe serial 4 -l mfree=2G"}
+  "gt_learn_cv_run": {
+    "mem": "2G",
+    "cpu": "4",
+    "rt": "01:00:00:00"
+  },
+  "gt_learn_model_train": {
+    "mem": "2G",
+    "cpu": "4",
+    "rt": "01:00:00:00"
+  }
 }

@@ -151,7 +151,7 @@ rule gt_vcf_fixup:
 rule gt_vcf_merge:
     input:
         vcf='sv_calls/sv_calls.vcf.gz',
-        sexes='sv_calls/sexes.tab',
+        sexes='temp/sv_calls/sexes.tab',
         genotype=expand('samples/{sample}/genotype.tab', sample=SAMPLES)
     output:
         vcf=temp('gt/temp/variants_genotyped.vcf')
@@ -267,7 +267,7 @@ rule gt_call_sample_read_depth:
         tab=temp('samples/{sample}/temp/depth_delta.tab'),
         stats='samples/{sample}/depth_delta_stats.tab'
     params:
-        mapq=get_config_param('genotype_mapq'),
+        mapq=get_config_param('gt_mapq'),
         flank=100
     shell:
         """python {SMRTSV_DIR}/scripts/genotype/GetReadDepthDiff.py """
@@ -287,7 +287,7 @@ rule gt_call_sample_insert_delta:
         tab=temp('samples/{sample}/temp/insert_delta.tab'),
         stats='samples/{sample}/insert_size_stats.tab'
     params:
-        mapq=get_config_param('genotype_mapq'),
+        mapq=get_config_param('gt_mapq'),
         ref_flank=int(5e3),
         sample_size=int(5e6),
         size_limit=1500,
@@ -313,7 +313,7 @@ rule gt_call_sample_breakpoint_depth:
     output:
         tab=temp('samples/{sample}/temp/breakpoint_depth.tab')
     params:
-        mapq=get_config_param('genotype_mapq'),
+        mapq=get_config_param('gt_mapq'),
     shell:
         """python {SMRTSV_DIR}/scripts/genotype/GetBreakpointReadDepth.py """
             """-f """
@@ -341,8 +341,9 @@ rule gt_map_sample_reads:
         bam='samples/{sample}/alignments.bam',
         bai='samples/{sample}/alignments.bam.bai'
     params:
-        mapq=get_config_param('genotype_mapq'),
-        threads=12
+        mapq=get_config_param('gt_mapq'),
+        threads=get_config_param('gt_map_cpu'),  # Parses into cluster params
+        mem=get_config_param('gt_map_mem')       # Parses into cluster params
     benchmark:
         'samples/{sample}/bm/alignments.txt'
     log:
@@ -531,7 +532,7 @@ rule gt_svmap_locate_regions:
     output:
         bed='svmap/mapping/{reference}/pseudoreads.bed'
     benchmark:
-        'benchmarks/positions_of_sv_sequences_in_bam_reference/{reference}.txt'
+        'svmap/mapping/{reference}/bm/gt_svmap_locate_regions.txt'
     params:
         slop=SVMAP_REF_WINDOW
     shell:
@@ -555,7 +556,7 @@ rule gt_svmap_map_pseudoreads:
     log:
         'svmap/mapping/{reference}/pseudoreads.log'
     benchmark:
-        'svmap/mapping/{reference}/benchmark.txt'
+        'svmap/mapping/{reference}/bm/gt_svmap_map_pseudoreads.txt'
     run:
 
         mapping_temp = None
@@ -685,7 +686,7 @@ rule gt_svmap_ref_ins_positions:
     output:
         bed='svmap/regions/ref_ins.bed'
     params:
-        slop=SVMAP_REF_WINDOW
+        slop=SVMAP_CONTIG_WINDOW
     shell:
         """awk '$6 == "INS"' {input.sv_bed} | """
         """awk 'OFS="\\t" {{ print $1,$2,$2+1 }}' | """
@@ -704,7 +705,7 @@ rule gt_svmap_ref_del_positions:
     output:
         bed='svmap/regions/ref_del.bed'
     params:
-        slop=SVMAP_REF_WINDOW
+        slop=SVMAP_CONTIG_WINDOW
     shell:
         """awk '$6 == "DEL"' {input.sv_bed} | """
         """cut -f 1-3 | """
@@ -790,13 +791,13 @@ rule gt_contig_list:
 # Translate manifest and normalize sex information for each sample.
 rule gt_sv_sexes:
     output:
-        tab='sv_calls/sexes.tab'
+        tab=temp('temp/sv_calls/sexes.tab')
     run:
 
         # Pre-process manifest or write a default manifest
         genotype.preprocess_manifest(
             config.get('manifest_file_name', None), SAMPLES
-        ).to_csv('sv_calls/sexes.tab', sep='\t', header=True)
+        ).to_csv(output.tab, sep='\t', header=True)
 
 
 #

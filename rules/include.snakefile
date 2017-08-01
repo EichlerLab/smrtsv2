@@ -34,6 +34,7 @@ sys.path.append(SMRTSV_DIR)
 #
 
 from smrtsvlib.args import args_dict
+from smrtsvlib.args import get_arg
 
 
 ###################
@@ -62,10 +63,17 @@ def get_config_param(param_name, as_is=False):
     :param as_is: Leave the default type as it is defined; do not translate to a string.
     """
 
-    if as_is:
-        return config.get(param_name, args_dict[param_name]['default'])
-    else:
-        return config.get(param_name, str(args_dict[param_name]['default']))
+    # Get configured parameter
+    if param_name in config:
+        return config[param_name]
+
+    # Get default parameter
+    val = get_arg(param_name)
+
+    if not as_is:
+        val = str(val)
+
+    return val
 
 
 #

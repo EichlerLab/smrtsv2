@@ -1,5 +1,8 @@
 {
-    "__default__": {
-        "params": ""
-    }
+  "__default__": {
+    "mem": "1G",
+    "cpu": "1",
+    "rt": "00:30:00",
+    "params": ""
+  }
 }

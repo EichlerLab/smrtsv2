@@ -5,6 +5,10 @@ Defines a dictionary of command-line options.
 args_dict = dict()
 
 
+###########
+# Options #
+###########
+
 #
 # Option to the base parser
 #
@@ -36,6 +40,16 @@ args_dict['jobs'] = {
     'help': 'Number of jobs to run simultaneously.'
 }
 
+args_dict['job_prefix'] = {
+    'default': None,
+    'help': 'Prepend this string to submitted job names. Can be used to distinguish jobs from multiple runs.'
+}
+
+args_dict['log'] = {
+    'default': 'log',
+    'help': 'Cluster log file output directory.'
+}
+
 args_dict['nt'] = {
     'action': 'store_true',
     'default': False,
@@ -51,6 +65,25 @@ args_dict['tempdir'] = {
 args_dict['verbose'] = {
     'action': 'store_true',
     'help': 'Print extra runtime information.'
+}
+
+args_dict['wait_time'] = {
+    'type': int,
+    'default': 60,
+    'help': 'Number of seconds to wait for files after a jobs finishes before giving up. Set to a high value for'
+            'distributed storage with high latency.'
+}
+
+args_dict['cluster_params'] = {
+    'default': ' -V -cwd -e ./{log} -o ./{log} '
+               '-l mfree={{cluster.mem}} '
+               '-pe serial {{cluster.cpu}} '
+               '-l h_rt={{cluster.rt}} '
+               '{{cluster.params}} '
+               '-w n -S /bin/bash',
+    'help': 'Cluster scheduling parameters with place-holders as {{cluster.XXX}} for parameters in the cluster '
+            'configuration file (--cluster_config) and {log} for the log directory where standard output from cluster '
+            'jobs is written.'
 }
 
 
@@ -238,7 +271,7 @@ args_dict['genotyper_config'] = {
         'and their corresponding references.'
 }
 
-args_dict['genotype_mapq'] = {
+args_dict['gt_mapq'] = {
     'type': int,
     'default': 20,
     'help': 'Minimum mapping quality of short reads against the reference and contigs.'
@@ -247,6 +280,19 @@ args_dict['genotype_mapq'] = {
 # genotyped_variants
 args_dict['genotyped_variants'] = {
     'help': 'VCF of SMRT SV variant genotypes for the given sample-level BAMs.'
+}
+
+# CPU cores for BWA mapping jobs
+args_dict['gt_map_cpu'] = {
+    'type': int,
+    'default': 12,
+    'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
+}
+
+# Memory per CPU core for BWA mapping jobs
+args_dict['gt_map_mem'] = {
+    'default': '4G',
+    'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
 }
 
 
@@ -286,3 +332,43 @@ args_dict['species'] = {
 args_dict['variants'] = {
     'help': 'VCF of variants called by local assembly alignments.'
 }
+
+
+#############
+# Functions #
+#############
+
+def get_arg(key, args=None, default=None):
+    """
+    Get an argument from object `args` or the default value for an argument if it is not in `args`.
+
+    :param key: Argument key (name).
+    :param args: Argument object or `None` to always get the default argument.
+    :param default: Default value if not in `args`. Uses hard-coded default if `None`.
+
+    :return: Argument value.
+
+    Raises:
+        KeyError: If `key` is not in `args` and does not have a default value.
+    """
+
+    # Get argument from args
+    if args is not None and hasattr(args, key):
+        return getattr(args, key)
+
+    # Get explicit default value
+    if default is not None:
+        return default
+
+    # Get hard-coded default value
+    if key not in args_dict:
+        raise KeyError('No record for argument with key {}'.format(key))
+
+    if 'default' in args_dict[key]:
+        return args_dict[key]['default']
+
+    if 'action' in args_dict[key] and args_dict[key]['action'] == 'store_true':
+        # 'action' entries have an implicit default of False
+        return False
+
+    raise KeyError('No default value for argument with key {}'.format(key))

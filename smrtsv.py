@@ -315,7 +315,9 @@ def genotype(args):
             '--config',
             'genotyper_config={}'.format(args.genotyper_config),
             'genotyped_variants={}'.format(args.genotyped_variants),
-            'threads={}'.format(args.threads)
+            'gt_mapq={}'.format(args.gt_mapq),
+            'gt_map={}'.format(args.gt_mapq),
+            'gt_map={}'.format(args.gt_mapq)
          )
     )
 
@@ -336,8 +338,12 @@ if __name__ == '__main__':
     parser.add_argument('--tempdir', **args_dict['tempdir'])
     parser.add_argument('--verbose', '-v', **args_dict['verbose'])
     parser.add_argument('--cluster_config', **args_dict['cluster_config'])
+    parser.add_argument('--cluster_params', **args_dict['cluster_params'])
     parser.add_argument('--drmaalib', **args_dict['drmaalib'])
+    parser.add_argument('--job_prefix', **args_dict['job_prefix'])
     parser.add_argument('--nt', **args_dict['nt'])
+    parser.add_argument('--log', **args_dict['log'])
+    parser.add_argument('--wait_time', **args_dict['wait_time'])
     subparsers = parser.add_subparsers()
 
     # SMRTSV command: Index reference
@@ -416,8 +422,9 @@ if __name__ == '__main__':
     parser_genotyper = subparsers.add_parser('genotype', help='Genotype SVs with Illumina reads')
     parser_genotyper.add_argument('genotyper_config', **args_dict['genotyper_config'])
     parser_genotyper.add_argument('genotyped_variants', **args_dict['genotyped_variants'])
-    parser_genotyper.add_argument('--genotype_mapq', '--mapq', **args_dict['genotype_mapq'])
-    parser_genotyper.add_argument('--threads', **args_dict['threads'])
+    parser_genotyper.add_argument('--gt_mapq', '--mapq', **args_dict['gt_mapq'])
+    parser_genotyper.add_argument('--gt_map_cpu', **args_dict['gt_map_cpu'])
+    parser_genotyper.add_argument('--gt_map_mem', **args_dict['gt_map_mem'])
     parser_genotyper.set_defaults(func=genotype)
 
     cmd_args = parser.parse_args()
@@ -459,10 +466,6 @@ if __name__ == '__main__':
 
         # Flush output
         sys.stdout.flush()
-
-    # Make log directory for distributed jobs
-    if cmd_args.distribute and not cmd_args.dryrun and not os.path.isdir('log'):
-        os.makedirs('log', exist_ok=True)
 
     # Run target command
     cmd_return_code = cmd_args.func(cmd_args)

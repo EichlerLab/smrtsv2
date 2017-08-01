@@ -8,6 +8,8 @@ import os
 import subprocess
 import sys
 
+from smrtsvlib.args import get_arg
+
 
 # List of relative paths for PATH
 INSTALL_PATH = [
@@ -24,10 +26,6 @@ INSTALL_PATH = [
 INSTALL_LD_PATH = [
     'dist/hdf5/lib'
 ]
-
-# Cluster parameters
-CLUSTER_SETTINGS = ' -V -cwd -e ./log -o ./log {cluster.params} -w n -S /bin/bash'
-CLUSTER_FLAG = ('--drmaa', CLUSTER_SETTINGS, '-w', '120')
 
 
 # Empty arguments
@@ -109,15 +107,16 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
 
     cmd = list(cmd)
 
+    # Get args and attributes
     if args is None:
         args = EmptyArgs()
 
-    # Use the user-defined cluster config path if one is given. Otherwise, use
-    # an empty config that comes with the SMRT-SV distribution.
-    if hasattr(args, 'cluster_config') and args.cluster_config is not None:
-        cluster_config_path = args.cluster_config
-    else:
-        cluster_config_path = os.path.join(smrtsv_dir, 'cluster.template.json')
+    log = get_arg('log', args)
+    wait_time = get_arg('wait_time', args)
+    dry_run = get_arg('dryrun', args)
+    cluster_params = get_arg('cluster_params', args)
+    cluster_config_path = get_arg('cluster_config', args, os.path.join(smrtsv_dir, 'cluster.template.json'))
+    job_prefix = get_arg('job_prefix', args)
 
     # Setup snakemake command
     prefix = [
@@ -132,7 +131,7 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
         prefix.extend(['-j', str(args.jobs)])
 
     # Set dryrun
-    if hasattr(args, 'dryrun') and args.dryrun:
+    if dry_run:
         prefix.append('-n')
 
     if hasattr(args, 'nt') and args.nt:
@@ -140,14 +139,24 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
 
     # Set distribute
     if hasattr(args, 'distribute') and args.distribute:
+
+        cluster_params = cluster_params.format(**{'log': log})
+
         prefix.extend(['--cluster-config', cluster_config_path])
-        prefix.extend(CLUSTER_FLAG)
+        prefix.extend(('--drmaa', cluster_params, '-w', str(wait_time)))
 
         if not hasattr(args, 'jobs'):
             prefix.extend(['-j', '1'])
 
         # Set job name
-        prefix.extend(['--jobname', '{rulename}.{jobid}'])
+        if job_prefix is None:
+            prefix.extend(['--jobname', '{rulename}.{jobid}'])
+        else:
+            prefix.extend(['--jobname', '{}{{rulename}}.{{jobid}}'.format(job_prefix)])
+
+        # Make log directory for distributed jobs
+        if not dry_run and not os.path.isdir(log):
+            os.makedirs(log, exist_ok=True)
 
     # Append command
     prefix.extend(cmd)
@@ -163,7 +172,7 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
 
     # Report (verbose)
     if hasattr(args, 'verbose') and args.verbose:
-        print('Running snakemake command: {}'.format(' '.join(prefix)))
+        print('Running snakemake command:\n\t* {}'.format('\n\t* '.join(prefix)))
 
     # Run snakemake command
     return run_cmd(prefix, process_env, stdout=stdout, stderr=stderr, cwd=cwd)
