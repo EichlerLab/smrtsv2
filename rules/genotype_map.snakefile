@@ -30,6 +30,8 @@ MAPQ = config['mapq']                        # Minimum mapping quality of reads 
 SMRTSV_DIR = config['smrtsv_dir']            # Directory where SMRTSV is installed.
 POSTALT_PATH = config['postalt_path']        # Full path to bwa-postalt.js
 
+BM_DIR = os.path.join(os.path.dirname(OUTPUT_BAM), 'bm')
+
 # Read alternate info BED and primary contig names
 ALT_BED = pd.read_table(SV_REF_ALT_INFO, header=0)
 ALT_BED.index = ALT_BED['#CHROM']
@@ -71,8 +73,6 @@ rule gt_map_postalt_merge:
 # gt_map_postalt_realign
 #
 # Remap reads to alternate contigs for one primary contig and adjust quality scores.
-#
-# Note: The primary BAM is required to avoid over-requesting resources (disk and CPU).
 rule gt_map_postalt_remap:
     input:
         bam='primary.bam',
@@ -80,6 +80,8 @@ rule gt_map_postalt_remap:
         bed='postalt/{primary_contig}.bed'
     output:
         bam='postalt/bam/{primary_contig}.bam'
+    benchmark:
+        os.path.join(BM_DIR, 'postalt', 'remap_{primary_contig}.txt')
     shell:
         """echo "Post-ALT processing {wildcards.primary_contig}"; """
         """samtools view -hL {input.bed} {input.bam} | """
@@ -122,6 +124,8 @@ rule gt_map_primary_alignment:
         primary_bam='primary.bam'
     log:
         MAPPING_LOG
+    benchmark:
+        os.path.join(BM_DIR, 'primary_alignment.txt')
     shell:
         """echo "Running primary alignment for sample {SAMPLE}"; """
         """echo "Input BAM: {SAMPLE_BAM}"; """
