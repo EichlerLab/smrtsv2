@@ -77,17 +77,24 @@ bin/*
 
 # Files in dist
 dist/**/*
-!dist/RepeatMasker/Makefile
-!dist/boost/Makefile
-!dist/bwa/Makefile
-!dist/bz2/Makefile
-!dist/celera/Makefile
-!dist/hdf5/Makefile
-!dist/hmmer/Makefile
-!dist/java/Makefile
-!dist/miniconda/install.sh
-!dist/pm/Makefile
-!dist/snakemake/cluster
-!dist/swig/Makefile
+!dist/htslib/Makefile
 !dist/zlib/Makefile
+!dist/hdf5/Makefile
+!dist/xz/Makefile
+!dist/samtools/Makefile
+!dist/bcftools/Makefile
+!dist/bwa/Makefile
+!dist/bwakit/Makefile
+!dist/bedtools/Makefile
+!dist/vcflib/Makefile
+!dist/miniconda/Makefile
+!dist/miniconda/install_packages.sh
+!dist/canu/Makefile
+!dist/blasr/Makefile
+!dist/boost/Makefile
+!dist/blasr/Makefile
+!dist/GenomicConsensus/Makefile
+!dist/pbcore/Makefile
+!dist/ConsensusCore/Makefile
+!dist/swig/Makefile
 

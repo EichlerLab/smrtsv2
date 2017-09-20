@@ -1,17 +1,11 @@
-PWD=$(shell pwd)
+PREFIX = $(abspath ..)
 
-all: lib/libz.so
+${PREFIX}/lib/libz.so: zlib-1.2.11/configure
+	cd $(dir $<) && ./configure --prefix=${PREFIX} && make install
 
-lib/libz.so: zlib-1.2.8
-	cd $< && ./configure --prefix=$(PWD) && make install clean
+zlib-1.2.11/configure: v1.2.11.tar.gz
+	tar -zxvf $<
+	touch $@
 
-zlib-1.2.8: zlib-1.2.8.tar.gz
-	tar zxvf $<
-
-zlib-1.2.8.tar.gz:
-	wget "https://github.com/madler/zlib/archive/v1.2.8.tar.gz" -O $@
-
-.PHONY: clean
-
-clean:
-	rm -rf zlib-1.2.8*; rm -rf include lib share;
+v1.2.11.tar.gz:
+	wget https://github.com/madler/zlib/archive/v1.2.11.tar.gz

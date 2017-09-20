@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+relpath() {
+    local pos="${1%%/}" ref="${2%%/}" down=''
+
+    while :; do
+        test "$pos" = '/' && break
+        case "$ref" in $pos/*) break;; esac
+        down="../$down"
+        pos=${pos%/*}
+    done
+
+    echo "$down${ref##$pos/}"
+}
+
+relpath $1 $2
+
