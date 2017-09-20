@@ -6,6 +6,8 @@ import os
 import pandas as pd
 import shutil
 
+from Bio import SeqIO
+
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
 
@@ -27,6 +29,9 @@ LOG_DIR_ASM = os.path.join(LOG_DIR, 'asm')
 MAPQ = config['mapping_quality']
 ALN_PARAMS=config['asm_alignment_parameters'].strip('"')
 GROUP_ID = config['group_id']
+THREADS = config['threads']
+POLISH_METHOD = config['asm_polish']
+REF_FA = config['ref_fa']
 
 # Input files
 ALIGN_FOFN = config['align_fofn']
@@ -73,6 +78,116 @@ rule merge_group_contigs:
     run:
         pass
 
+# assemble_align_ref_region
+#
+# Align contigs to the reference region.
+rule assemble_align_ref_region:
+    input:
+        ref='region/{region_id}/asm/ref_region.fasta',
+        contig='region/{region_id}/asm/contigs_named.fasta'
+    output:
+        sam='region/{region_id}/asm/contig.sam'
+    params:
+        threads=THREADS
+    run:
+
+        if os.stat(input.contig).st_size > 0:
+            shell(
+                """blasr """
+                    """{input.contig} {input.ref} """
+                    """--sam --bestn 1 """
+                    """--unaligned /dev/null """
+                    """--out {output.sam} """
+                    """--clipping subread """
+                    """--nproc {params.threads}; """
+            )
+
+        else:
+            open(output.sam, 'w').close()  # Touch and/or clear file
+
+# assemble_get_ref_region
+#
+# Get reference region.
+rule assemble_get_ref_region:
+    input:
+        fasta=REF_FA,
+        fasta_contig='region/{region_id}/asm/contigs.fasta'
+    output:
+        fasta='region/{region_id}/asm/ref_region.fasta'
+    run:
+
+        # Get region
+        if not wildcards.region_id in DF_CANDIDATES.index:
+            raise RuntimeError('Region ID {} is not in the candidates file {}'.format(wildcards.region_id, BED_CANDIDATES))
+
+        region = '{#CHROM}:{POS1}-{END}'.format(**DF_CANDIDATES.loc[wildcards.region_id])
+
+        # Extract region
+        if os.stat(input.fasta).st_size > 0:
+            shell("""samtools faidx {input.fasta} {region} >{output.fasta}""")
+        else:
+            open(output.fasta, 'w').close()  # Touch and/or clear file
+
+# assemble_set_pb_seq_name
+#
+# BLASR SAM output is designed for PacBio SAM/BAM input. To align a FASTA file, the sequence names must follow
+# the PacBio convention "movie/zmw/start_end". For this pipeline, the movie name will be the name of the
+# polished contig, the ZMW will start at 1 and be incremented, the start will be 0, and the end will be the
+# the length of the sequence.
+rule assemble_set_pb_seq_name:
+    input:
+        fasta='region/{region_id}/asm/contigs_polished.fasta'
+    output:
+        fasta='region/{region_id}/asm/contigs_named.fasta'
+    run:
+
+        zmw_id = 0
+
+        seq_list = list()
+
+        # Read and set name
+        with open(input.fasta, 'r') as in_file:
+            with open(output.fasta, 'w') as out_file:
+                for record in SeqIO.parse(in_file, 'fasta'):
+                    zmw_id += 1
+
+                    # movie/zmw/start_end
+                    record.id = '{}/{}/0_{}'.format(record.name, zmw_id, len(record.seq))
+                    record.description = ''
+
+                    seq_list.append(record)
+
+        # Write
+        with open(output.fasta, 'w') as out_file:
+            SeqIO.write(seq_list, out_file, 'fasta')
+
+# assemble_polish
+#
+# Polish assembly.
+rule assemble_polish:
+    input:
+        fasta='region/{region_id}/asm/contigs.fasta',
+        fai='region/{region_id}/asm/contigs.fasta.fai',
+        bam='region/{region_id}/asm/contig_aligned_reads.bam'
+    output:
+        fasta='region/{region_id}/asm/contigs_polished.fasta'
+    params:
+        algorithm=POLISH_METHOD
+    run:
+
+        if os.stat(input.fasta).st_size > 0:
+            shell(
+                """pbindex {input.bam}; """
+                """variantCaller """
+                    """--referenceFilename {input.fasta} """
+                    """{input.bam} """
+                    """-o {output.fasta} """
+                    """--algorithm={params.algorithm}; """
+            )
+
+        else:  # Touch and/or clear file
+            open(output.fasta, 'w').close()
+
 # assemble_align_org
 #
 # Align original reads back to assembly
@@ -81,14 +196,17 @@ rule assemble_align_org:
         fasta='region/{region_id}/asm/contigs.fasta',
         bam='region/{region_id}/reads/reads.bam'
     output:
-        bam='region/{region_id}/reads/align_reads.bam',
+        bam='region/{region_id}/asm/contig_aligned_reads.bam'
+    params:
+        threads=THREADS
     run:
 
         # Make temporary file location (usorted BAM)
-        bam_usort='temp/region/{region_id}/reads/align_reads.bam'
+        bam_usort='temp/region/{}/reads/align_reads.bam'.format(wildcards.region_id)
+        bam_stemp='temp/region/{}/reads/align_reads_slice'.format(wildcards.region_id)
 
         # Map reads
-        if os.stat(input.contig).st_size > 0:
+        if os.stat(input.fasta).st_size > 0:
             os.makedirs(os.path.dirname(bam_usort), exist_ok=True)
 
             shell(
@@ -98,13 +216,12 @@ rule assemble_align_org:
                 """--unaligned /dev/null """
                 """--out {bam_usort} """
                 """--nproc {params.threads}; """
-                """samtools sort {output.usort_bam} -o {output.bam}; """
+                """samtools sort -O bam -T {bam_stemp} -o {output.bam} {bam_usort}; """
                 """rm {bam_usort}"""
             )
 
         else:
             open(output.bam, 'w').close()  # Touch and/or clear file
-
 
 # assemble_reads
 #
@@ -114,6 +231,7 @@ rule assemble_reads:
         fasta='region/{region_id}/reads/reads.fasta'
     output:
         fasta='region/{region_id}/asm/contigs.fasta',
+        fai='region/{region_id}/asm/contigs.fasta.fai',
         preads='region/{region_id}/asm/corrected_reads.fastq.gz'  # Corrected reads
     params:
         threads='4',
@@ -161,9 +279,13 @@ rule assemble_reads:
         if os.path.exists(contig_file_name):
             shutil.copyfile(contig_file_name, output.fasta)
             shutil.copyfile(preads_file_name, output.preads)
-        else:
-            open(output.fasta, 'w').close()  # Touch and/or clear file
-            open(output.preads, 'w').close()  # Touch and/or clear file
+
+            shell("""samtools faidx {output.fasta}""")
+
+        else:  # Touch and/or clear files
+            open(output.fasta, 'w').close()
+            open(output.preads, 'w').close()
+            open(output.fai, 'w').close()
 
         # Clean assembly directory
         shutil.rmtree(canu_dir, ignore_errors=True)

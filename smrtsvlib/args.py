@@ -253,12 +253,27 @@ args_dict['asm_alignment_parameters'] = {
     'help': 'BLASR parameters to use to align local assemblies.'
 }
 
-# rebuild_regions
-args_dict['rebuild_regions'] = {
-    'action': 'store_true',
-    'help': 'Rebuild subset of regions to assemble.'
+# asm_cpu
+args_dict['asm_cpu'] = {
+    'type': int,
+    'default': 4,
+    'help': 'Number of CPUs to use for assembly steps.'
 }
 
+# asm_mem
+args_dict['asm_mem'] = {
+    'default': '3G',
+    'help':
+        'Multiply this amount of memory by the number of cores for the amount of memory allocated to assembly steps.'
+}
+
+# asm_polish
+args_dict['asm_polish'] = {
+    'default': 'arrow',
+    'help':
+        'Assembly polishing method (arrow|quiver). "arrow" should work on all PacBio data, but "quiver" will only '
+        'work on RS II input.'
+}
 
 #
 # Genotyper

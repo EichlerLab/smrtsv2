@@ -66,7 +66,8 @@
     "params": "-l disk_free=10G"
   },
   "asm_assemble_group": {
-    "mem": "12G",
+    "mem": "{params.mem}",
+    "cpu": "{params.threads}",
     "rt": "02:00:00",
     "params": "-l disk_free=10G"
   },
@@ -168,10 +169,10 @@
     "params": "-l disk_free=50G -R y -l ssd=FALSE"
   },
   "gt_call_genotype_merged_samples": {
-    "mem": "2G",
+    "mem": "2G"
   },
   "gt_call_to_vcf": {
-    "mem": "4G",
+    "mem": "4G"
   },
   "gt_altref_alt_info_bed": {
     "mem": "8G",

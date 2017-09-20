@@ -379,9 +379,11 @@ if __name__ == '__main__':
     parser_assembler = subparsers.add_parser('assemble', help='Assemble candidate regions.')
     parser_assembler.add_argument('reference', **args_dict['reference'])
     parser_assembler.add_argument('reads', **args_dict['reads'])
-    parser_assembler.add_argument('--rebuild_regions', **args_dict['rebuild_regions'])
     parser_assembler.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
     parser_assembler.add_argument('--mapping_quality', **args_dict['mapping_quality'])
+    parser_assembler.add_argument('--asm_cpu', **args_dict['asm_cpu'])
+    parser_assembler.add_argument('--asm_mem', **args_dict['asm_mem'])
+    parser_assembler.add_argument('--asm_polish', **args_dict['asm_polish'])
     parser_assembler.set_defaults(func=assemble)
 
     # SMRTSV command: Call variants
@@ -402,12 +404,14 @@ if __name__ == '__main__':
     parser_runner.add_argument('--exclude', **args_dict['exclude'])
     parser_runner.add_argument('--assembly_window_size', **args_dict['assembly_window_size'])
     parser_runner.add_argument('--assembly_window_slide', **args_dict['assembly_window_slide'])
+    parser_runner.add_argument('--asm_cpu', **args_dict['asm_cpu'])
+    parser_runner.add_argument('--asm_mem', **args_dict['asm_mem'])
+    parser_runner.add_argument('--asm_polish', **args_dict['asm_polish'])
     parser_runner.add_argument('--min_length', **args_dict['min_length'])
     parser_runner.add_argument('--min_support', **args_dict['min_support'])
     parser_runner.add_argument('--max_support', **args_dict['max_support'])
     parser_runner.add_argument('--min_coverage', **args_dict['min_coverage'])
     parser_runner.add_argument('--max_coverage', **args_dict['max_coverage']),
-    parser_runner.add_argument('--rebuild_regions', **args_dict['rebuild_regions'])
     parser_runner.add_argument('--sample', **args_dict['sample'])
     parser_runner.add_argument('--species', **args_dict['species'])
     parser_runner.add_argument('--runjobs', **args_dict['runjobs'])

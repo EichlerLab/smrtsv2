@@ -68,13 +68,20 @@ rule asm_assemble_group:
     input:
         align_fofn='align/alignments.fofn',
         bed_grp='detect/candidate_groups.bed',
-        bed_can='detect/candidates.bed'
+        bed_can='detect/candidates.bed',
+        ref_fa='reference/ref.fasta',
+        ref_fai='reference/ref.fasta.fai',
+        ref_sa='reference/ref.fasta.sa',
+        ref_ctab='reference/ref.fasta.ctab'
     output:
         bam='assemble/group/{group_id}/contig.bam',
         bai='assemble/group/{group_id}/contig.bam.bai'
     params:
         mapq=get_config_param('mapping_quality'),
-        align_params=get_config_param('asm_alignment_parameters')
+        align_params=get_config_param('asm_alignment_parameters'),
+        threads=get_config_param('asm_cpu'),  # Parses into cluster params
+        mem=get_config_param('asm_mem')       # Parses into cluster params
+        asm_polish=get_config_param('asm_polish')
     log:
         'assemble/group/{group_id}/contig.log'
     run:
@@ -105,10 +112,13 @@ rule asm_assemble_group:
                 'log_dir={}'.format(log_dir),
                 'mapping_quality={}'.format(params.mapq),
                 'asm_alignment_parameters={}'.format(params.align_params),  # String is already quoted to prevent Snakemake from trying to interpret the command options
+                'asm_polish={}'.format(params.asm_polish),
                 'group_id={}'.format(wildcards.group_id),
                 'align_fofn={}'.format(os.path.abspath(input.align_fofn)),
                 'bed_groups={}'.format(os.path.abspath(input.bed_grp)),
-                'bed_candidates={}'.format(os.path.abspath(input.bed_can))
+                'bed_candidates={}'.format(os.path.abspath(input.bed_can)),
+                'threads={}'.format(params.threads),
+                'ref_fa={}'.format(os.path.abspath(input.ref_fa))
             )
 
             # Clear locks

@@ -1,100 +1,58 @@
-
-#
-# OLD
-#
-
-
-# Standard genomic outputs
-*.bed
-*.bam
-*.tab
-*.txt
-*.pdf
-.snakemake*
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-env/
-build/
-develop-eggs/
-downloads/
-eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.cache
-nosetests.xml
-coverage.xml
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-*.tar.gz
-*.tar.bz2
-
+# Python compiled files
+**/*.pyc
+**/__pycache__/
 
 # Files in bin
 bin/*
-!bin/smrtsv.py
 !bin/trf
 
 # Files in dist
-dist/**/*
+dist/**
+!dist/htslib/
 !dist/htslib/Makefile
+!dist/zlib/
 !dist/zlib/Makefile
+!dist/hdf5/
 !dist/hdf5/Makefile
+!dist/xz/
 !dist/xz/Makefile
+!dist/samtools/
 !dist/samtools/Makefile
+!dist/bcftools/
 !dist/bcftools/Makefile
+!dist/bwa/
 !dist/bwa/Makefile
+!dist/bwakit/
 !dist/bwakit/Makefile
+!dist/bedtools/
 !dist/bedtools/Makefile
+!dist/vcflib/
 !dist/vcflib/Makefile
+!dist/miniconda/
 !dist/miniconda/Makefile
 !dist/miniconda/install_packages.sh
+!dist/canu/
 !dist/canu/Makefile
+!dist/blasr/
 !dist/blasr/Makefile
+!dist/boost/
 !dist/boost/Makefile
+!dist/blasr/
 !dist/blasr/Makefile
+!dist/GenomicConsensus/
 !dist/GenomicConsensus/Makefile
+!dist/pbcore/
 !dist/pbcore/Makefile
+!dist/hdf5/
+!dist/hdf5/Makefile
+!dist/ConsensusCore/
 !dist/ConsensusCore/Makefile
+!dist/swig/
 !dist/swig/Makefile
+!dist/smrtsvtools/
+!dist/smrtsvtools/Makefile
+!dist/smrtsvtools/src/
+!dist/smrtsvtools/src/*
+!dist/smrtsvtools/include/
+!dist/smrtsvtools/include/*
 
