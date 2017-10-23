@@ -39,27 +39,27 @@ all: ${BIN_OUT}
 
 # htslib
 dist/lib/libhts.so: dist/lib/liblzma.so
-	cd dist/htslib && make
+	make -C dist/htslib
 
 # zlib
 dist/lib/libz.so:
-	cd dist/zlib && make
+	make -C dist/zlib
 
 # hdf5
 dist/lib/libhdf5_cpp.so:
-	cd dist/hdf5 && make
+	make -C dist/hdf5
 
 # xz (liblzma)
 dist/lib/liblzma.so:
-	cd dist/xz && make
+	make -C dist/xz
 
 # Boost
-dist/lib/libboost_program_options.so: dist/bin/snakemake
-	cd dist/boost && make
+dist/lib/libboost_program_options.so: dist/bin/snakemake dist/lib/liblzma.so dist/lib/libz.so
+	make -C dist/boost
 
 # Swig
 dist/bin/swig:
-	cd dist/swig && make
+	make -C dist/swig
 
 
 #
@@ -68,11 +68,11 @@ dist/bin/swig:
 
 # samtools
 dist/bin/samtools: dist/lib/libhts.so
-	cd dist/samtools && make
+	make -C dist/samtools
 
 # bcftools
 dist/bin/bcftools: dist/lib/libhts.so
-	cd dist/bcftools && make
+	make -C dist/bcftools
 
 
 #
@@ -81,23 +81,23 @@ dist/bin/bcftools: dist/lib/libhts.so
 
 # bwa
 dist/bin/bwa:
-	cd dist/bwa && make
+	make -C dist/bwa
 
 # bwakit (seqtk, k8, and bwa-postalt.js)
 dist/bin/bwa-postalt.js dist/bin/k8 dist/bin/seqtk dist/bin/samblaster:
-	cd dist/bwakit && make
+	make -C dist/bwakit
 
 # bedtools
 dist/bin/bedtools:
-	cd dist/bedtools && make
+	make -C dist/bedtools
 
 # vcflib
 dist/bin/vcffixup:
-	cd dist/vcflib && make
+	make -C dist/vcflib
 
 # canu
 dist/bin/canu:
-	cd dist/canu && make
+	make -C dist/canu
 
 
 #
@@ -106,7 +106,7 @@ dist/bin/canu:
 
 # Python (2/3) and snakemake
 dist/bin/snakemake:
-	cd dist/miniconda && make
+	make -C dist/miniconda
 
 
 #
@@ -115,22 +115,22 @@ dist/bin/snakemake:
 
 # BLASR (blasr sawriter samtoh5 samFilter)
 dist/bin/blasr: dist/lib/libhdf5_cpp.so dist/lib/libz.so dist/bin/snakemake
-	cd dist/blasr && make
+	make -C dist/blasr
 
 # pbcore
 dist/miniconda/envs/python2/lib/python2.7/site-packages/pbcore-1.4.0-py2.7.egg/pbcore/__init__.py: dist/bin/snakemake
-	cd dist/pbcore && make
+	make -C dist/pbcore
 
 # ConsensusCore
 dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.2-py2.7.egg/ConsensusCore.py: dist/miniconda/envs/python2/lib/python2.7/site-packages/pbcore-1.4.0-py2.7.egg/pbcore/__init__.py dist/lib/libboost_program_options.so dist/bin/swig
-	cd dist/ConsensusCore && make
+	make -C dist/ConsensusCore
 
 # GenomicConsensus (arrow and quiver) - For assembly polishing
 dist/bin/variantCaller: dist/miniconda/envs/python2/lib/python2.7/site-packages/ConsensusCore-1.0.2-py2.7.egg/ConsensusCore.py
-	cd dist/GenomicConsensus && make
+	make -C dist/GenomicConsensus
 
 
 # PRIV: Removed RepeatMasker for the private version (using module RepeatMasker/3.3.0)
 #bin/RepeatMasker: bin/phmmer
-#	-cd dist/RepeatMasker && make
+#	-make -C dist/RepeatMasker
 #	-@ln -s ../dist/RepeatMasker/RepeatMasker/RepeatMasker bin/RepeatMasker

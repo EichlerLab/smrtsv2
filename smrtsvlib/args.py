@@ -13,7 +13,7 @@ args_dict = dict()
 # Option to the base parser
 #
 
-args_dict['cluster_config'] = {
+args_dict['cluster-config'] = {
     'help': 'JSON/YAML file specifying cluster configuration parameters to pass to Snakemake\'s '
             '--cluster-config option'
 }
@@ -74,7 +74,7 @@ args_dict['wait_time'] = {
             'distributed storage with high latency.'
 }
 
-args_dict['cluster_params'] = {
+args_dict['cluster-params'] = {
     'default': ' -V -cwd -e ./{log} -o ./{log} '
                '-l mfree={{cluster.mem}} '
                '-pe serial {{cluster.cpu}} '
@@ -82,7 +82,7 @@ args_dict['cluster_params'] = {
                '{{cluster.params}} '
                '-w n -S /bin/bash',
     'help': 'Cluster scheduling parameters with place-holders as {{cluster.XXX}} for parameters in the cluster '
-            'configuration file (--cluster_config) and {log} for the log directory where standard output from cluster '
+            'configuration file (--cluster-config) and {log} for the log directory where standard output from cluster '
             'jobs is written.'
 }
 

@@ -19,8 +19,8 @@ if not 'INCLUDE_SNAKEFILE' in globals():
 ### Get parameters ###
 
 # Output
-CONTIG_BAM = config['contig_bam']
-CONTIG_BAM_BAI = CONTIG_BAM + '.bai'
+CONTIG_CRAM = config['contig_cram']
+CONTIG_CRAM_INDEX = CONTIG_CRAM + '.crai'
 
 LOG_DIR = config['log_dir']
 LOG_DIR_ASM = os.path.join(LOG_DIR, 'asm')
@@ -72,11 +72,38 @@ os.makedirs(LOG_DIR_ASM, exist_ok=True)
 #
 # Get final contig for each assembly in this group.
 rule merge_group_contigs:
+    input:
+        cram=expand('region/{region_id}/asm/contig_fixup.cram', region_id=GROUP.index)
     output:
-        bam=CONTIG_BAM,
-        bai=CONTIG_BAM_BAI
+        cram=CONTIG_CRAM,
+        crai=CONTIG_CRAM_INDEX
+    shell:
+        pass  # CONTINUE HERE
+
+# assemble_align_fixup
+#
+# Translate alignment from region back to reference and prepend each contig name with
+# the region to ensure they are globally unique within each sample.
+rule assemble_align_fixup:
+    input:
+        sam='region/{region_id}/asm/contig.sam'
+        align_fofn=ALIGN_FOFN,
+        ref_fa='reference/ref.fasta'
+    output:
+        bam=temp('region/{region_id}/asm/contig_fixup.bam')
     run:
-        pass
+
+        if os.stat(input.contig).st_size > 0:
+            shell(
+                """alignfixup """
+                    """-i {input.sam} """
+                    """-d $(head -n 1 {input.align_fofn}) """
+                    """-r {REF_FA} -g {wildcards.region_id} """
+                    """-o {output.bam}; """
+                """samtools index {output.bam}"""
+            )
+        else:
+            open(output.bam, 'w').close()  # Touch and/or clear file
 
 # assemble_align_ref_region
 #

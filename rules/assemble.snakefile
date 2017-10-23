@@ -74,8 +74,8 @@ rule asm_assemble_group:
         ref_sa='reference/ref.fasta.sa',
         ref_ctab='reference/ref.fasta.ctab'
     output:
-        bam='assemble/group/{group_id}/contig.bam',
-        bai='assemble/group/{group_id}/contig.bam.bai'
+        cram='assemble/group/{group_id}/contig.cram',
+        crai='assemble/group/{group_id}/contig.cram.crai'
     params:
         mapq=get_config_param('mapping_quality'),
         align_params=get_config_param('asm_alignment_parameters'),
@@ -108,7 +108,7 @@ rule asm_assemble_group:
                 'get_contig',
                 '-f',
                 '--config',
-                'contig_bam={}'.format(os.path.abspath(output.bam)),
+                'contig_out={}'.format(os.path.abspath(output.cram)),
                 'log_dir={}'.format(log_dir),
                 'mapping_quality={}'.format(params.mapq),
                 'asm_alignment_parameters={}'.format(params.align_params),  # String is already quoted to prevent Snakemake from trying to interpret the command options

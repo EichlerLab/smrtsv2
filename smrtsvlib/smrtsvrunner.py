@@ -114,8 +114,8 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     log = get_arg('log', args)
     wait_time = get_arg('wait_time', args)
     dry_run = get_arg('dryrun', args)
-    cluster_params = get_arg('cluster_params', args)
-    cluster_config_path = get_arg('cluster_config', args, os.path.join(smrtsv_dir, 'cluster.template.json'))
+    cluster_params = get_arg('cluster-params', args)
+    cluster_config_path = get_arg('cluster-config', args, os.path.join(smrtsv_dir, 'cluster.template.json'))
     job_prefix = get_arg('job_prefix', args)
 
     # Setup snakemake command

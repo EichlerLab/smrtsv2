@@ -4,7 +4,7 @@ ${PREFIX}/lib/libhdf5_cpp.so: hdf5-1.8.19/configure
 	cd $(dir $<) && ./configure --enable-cxx --prefix=${PREFIX} && make install
 
 hdf5-1.8.19/configure: hdf5-1.8.19.tar.gz
-	tar -zxvf $<
+	tar -zxf $<
 	touch $@
 
 hdf5-1.8.19.tar.gz:
