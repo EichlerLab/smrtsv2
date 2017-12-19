@@ -17,6 +17,7 @@ if not 'INCLUDE_SNAKEFILE' in globals():
 from smrtsvlib import genotype
 from smrtsvlib import ml
 from smrtsvlib import smrtsvrunner
+from smrtsvlib import smrtsvutil
 
 localrules: gt_vcf_write
 
@@ -64,13 +65,15 @@ if POSTALT_PATH is None:
 
 ### Other Parameters ###
 
-FINAL_GENOTYPES = config["genotyped_variants"]
-SAMPLES = sorted(CONFIG_GT["samples"].keys())
+FINAL_GENOTYPES = config['genotyped_variants']
+SAMPLES = sorted(CONFIG_GT['samples'].keys())
 SVMAP_REF_WINDOW = 5000
 SVMAP_CONTIG_WINDOW = 500
 MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', 4)
 
 SAMPLES = sorted(CONFIG_GT['samples'].keys())
+
+KEEP_TEMP = smrtsvutil.as_bool(config.get('gt_keep_temp', False))
 
 
 ### Utility Functions ###
@@ -401,7 +404,7 @@ rule gt_map_sample_reads:
         finally:
 
             # Clean up temp directory
-            if mapping_temp is not None:
+            if mapping_temp is not None and not KEEP_TEMP:
                 shutil.rmtree(mapping_temp)
 
 

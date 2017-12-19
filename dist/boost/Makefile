@@ -1,7 +1,7 @@
 PREFIX=$(abspath ..)
 
 ${PREFIX}/lib/libboost_program_options.so: boost_1_65_1/b2
-	cd boost_1_65_1 && ./b2 install
+	cd boost_1_65_1 && ./b2 --without-python install
 
 boost_1_65_1/b2: boost_1_65_1/bootstrap.sh
 	cd boost_1_65_1 && ./bootstrap.sh --prefix=${PREFIX}

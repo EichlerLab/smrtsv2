@@ -13,7 +13,7 @@ args_dict = dict()
 # Option to the base parser
 #
 
-args_dict['cluster-config'] = {
+args_dict['cluster_config'] = {
     'help': 'JSON/YAML file specifying cluster configuration parameters to pass to Snakemake\'s '
             '--cluster-config option'
 }
@@ -45,6 +45,13 @@ args_dict['job_prefix'] = {
     'help': 'Prepend this string to submitted job names. Can be used to distinguish jobs from multiple runs.'
 }
 
+args_dict['keep_going'] = {
+    'action': 'store_true',
+    'default': False,
+    'help': 'When a step in a Snakemake pipeline fails, do not stop the pipeline. This will cause Snakemake '
+            'to continue submitting new jobs until it cannot continue.'
+}
+
 args_dict['log'] = {
     'default': 'log',
     'help': 'Cluster log file output directory.'
@@ -74,7 +81,7 @@ args_dict['wait_time'] = {
             'distributed storage with high latency.'
 }
 
-args_dict['cluster-params'] = {
+args_dict['cluster_params'] = {
     'default': ' -V -cwd -e ./{log} -o ./{log} '
                '-l mfree={{cluster.mem}} '
                '-pe serial {{cluster.cpu}} '
@@ -308,6 +315,11 @@ args_dict['gt_map_cpu'] = {
 args_dict['gt_map_mem'] = {
     'default': '4G',
     'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
+}
+
+args_dict['gt_keep_temp'] = {
+    'action': 'store_true',
+    'help': 'Do not remove temp directory after genotyping.'
 }
 
 

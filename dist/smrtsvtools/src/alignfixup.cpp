@@ -29,6 +29,8 @@ char *progName;
 
 const int ALIGN_BUF_LEN = 512;  // Length of buffers holding alignment data
 
+const int FLAG_NON_PRIMARY = BAM_FSECONDARY | BAM_FSUPPLEMENTARY;  // Flags if read is not primary
+
 // Set chrN and pos from a string in the format "chr:pos-end" where coordinates are 1-based.
 bool setAlignPos(const char *chrNameHdr, int &chrId, int &pos, bam_hdr_t *outHeader, int recordCount);
 
@@ -215,6 +217,10 @@ int main(int argc, char *argv[]) {
 	while (sam_read1(inFile, inHeader, alignRecordIn) >= 0) {
 		++recordCount;
 
+		// Skip supplementary
+		if (alignRecordIn->core.flag & FLAG_NON_PRIMARY)
+			continue;
+
 		// Get chromosome and position
 		if (! setAlignPos(inHeader->target_name[alignRecordIn->core.tid], chrId, pos, outHeader, recordCount))
 			return ERR_FORMAT;  // Err message already output
@@ -244,7 +250,7 @@ int main(int argc, char *argv[]) {
 
 		// Write
 		if (sam_write1(outFile, outHeader, alignRecordOut) < 0) {
-			err("Error writing record %d to output file %d", recordCount, outFileName.c_str());
+			err("Error writing record %d to output file %s", recordCount, outFileName.c_str());
 		}
 	}
 
@@ -355,14 +361,12 @@ bool setContigName(bam1_t *alignRecordIn, bam1_t *alignRecordOut, const uint8_t 
 	uint8_t *dataPtr;
 
 	// Set new qname length
-	qnameLen = alignRecordIn->core.l_qname - alignRecordIn->core.l_extranul;  // Name length without null-padding
+	qnameLen = alignRecordIn->core.l_qname - alignRecordIn->core.l_extranul;  // Name length without null-padding, but with null terminator
 	newQnameLen = qnameLen + regionNameLen;
 	extraNul = 4 - (newQnameLen - 1) % 4 - 1;  // Number of nulls to pad to reach 32-bit boundary
 
 	// Setup transfer
-	dataNoQname = alignRecordIn->data + alignRecordIn->core.l_qname;
-
-	alignRecordOut->l_data = qnameLen + extraNul + (alignRecordIn->l_data - alignRecordIn->core.l_qname);
+	alignRecordOut->l_data = newQnameLen + 1 + extraNul + (alignRecordIn->l_data - alignRecordIn->core.l_qname);
 
 	// Expand data buffer
 	if (alignRecordOut->l_data > alignRecordOut->m_data) {
@@ -386,6 +390,8 @@ bool setContigName(bam1_t *alignRecordIn, bam1_t *alignRecordOut, const uint8_t 
 	}
 
 	// Copy remaining line
+	dataNoQname = alignRecordIn->data + alignRecordIn->core.l_qname;
+
 	memcpy(dataPtr, dataNoQname, alignRecordIn->l_data - alignRecordIn->core.l_qname);
 
 	// Set record core

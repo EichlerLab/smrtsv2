@@ -46,7 +46,6 @@ def align(args):
             'reads={}'.format(args.reads),
             'batches={}'.format(args.batches),
             'threads={}'.format(args.threads),
-            'tempdir={}'.format(args.tempdir if args.tempdir is not None else ''),
             'alignment_parameters="{}"'.format(args.alignment_parameters)
         )
     )
@@ -90,10 +89,8 @@ def assemble(args):
     base_command = (
         'collect_assembly_alignments',
         '--config',
-        'tempdir={}'.format(args.tempdir),
         'asm_alignment_parameters="{}"'.format(args.asm_alignment_parameters),
-        'mapping_quality="{}"'.format(args.mapping_quality),
-        'no_rm_temp="{}"'.format('no_rm_temp')
+        'mapping_quality="{}"'.format(args.mapping_quality)
     )
 
     # For each contig/chromosome in the candidates file, submit a separate
@@ -316,8 +313,9 @@ def genotype(args):
             'genotyper_config={}'.format(args.genotyper_config),
             'genotyped_variants={}'.format(args.genotyped_variants),
             'gt_mapq={}'.format(args.gt_mapq),
-            'gt_map={}'.format(args.gt_mapq),
-            'gt_map={}'.format(args.gt_mapq)
+            'gt_map_cpu={}'.format(args.gt_map_cpu),
+            'gt_map_mem={}'.format(args.gt_map_mem),
+            'gt_keep_temp={}'.format(args.gt_keep_temp)
          )
     )
 
@@ -337,10 +335,11 @@ if __name__ == '__main__':
     parser.add_argument('--jobs', **args_dict['jobs'])
     parser.add_argument('--tempdir', **args_dict['tempdir'])
     parser.add_argument('--verbose', '-v', **args_dict['verbose'])
-    parser.add_argument('--cluster-config', **args_dict['cluster-config'])
-    parser.add_argument('--cluster-params', **args_dict['cluster-params'])
+    parser.add_argument('--cluster-config', dest='cluster_config', **args_dict['cluster_config'])
+    parser.add_argument('--cluster-params', dest='cluster_params', **args_dict['cluster_params'])
     parser.add_argument('--drmaalib', **args_dict['drmaalib'])
     parser.add_argument('--job_prefix', **args_dict['job_prefix'])
+    parser.add_argument('--keep-going', '-k', dest='keep_going', **args_dict['keep_going'])
     parser.add_argument('--nt', **args_dict['nt'])
     parser.add_argument('--log', **args_dict['log'])
     parser.add_argument('--wait_time', **args_dict['wait_time'])
@@ -429,6 +428,7 @@ if __name__ == '__main__':
     parser_genotyper.add_argument('--gt_mapq', '--mapq', **args_dict['gt_mapq'])
     parser_genotyper.add_argument('--gt_map_cpu', **args_dict['gt_map_cpu'])
     parser_genotyper.add_argument('--gt_map_mem', **args_dict['gt_map_mem'])
+    parser_genotyper.add_argument('--gt-keep-temp', dest='gt_keep_temp', **args_dict['gt_keep_temp'])
     parser_genotyper.set_defaults(func=genotype)
 
     cmd_args = parser.parse_args()

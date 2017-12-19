@@ -73,6 +73,10 @@ rule gt_map_postalt_merge:
 # gt_map_postalt_realign
 #
 # Remap reads to alternate contigs for one primary contig and adjust quality scores.
+#
+# bwa-postalt.js (POSTALT_PATH) sometimes ends files with a line consisting of "NaN" and whitespace. This has to be
+# removed to avoid crashing samtools. It appears that the file is not truncated when this occurs (original SAM and
+# post-alt SAM have the same number of alignments to the primary contig).
 rule gt_map_postalt_remap:
     input:
         bam='primary.bam',
@@ -86,6 +90,7 @@ rule gt_map_postalt_remap:
         """echo "Post-ALT processing {wildcards.primary_contig}"; """
         """samtools view -hL {input.bed} {input.bam} | """
         """k8 {POSTALT_PATH} {input.alt} | """
+        """grep -Ev '^\s*NaN\s*' | """
         """samtools view -hq {MAPQ} | """
         """samtools sort -T postalt/bam/temp/{wildcards.primary_contig} -O bam -o {output.bam}; """
 

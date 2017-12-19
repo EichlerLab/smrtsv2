@@ -37,9 +37,20 @@ from smrtsvlib.args import args_dict
 from smrtsvlib.args import get_arg
 
 
+
 ###################
 ### Definitions ###
 ###################
+
+#
+# Load project configuration
+#
+
+CONFIG_LOCAL = os.path.join(WORKING_DIR, 'config.json')
+
+if os.path.exists(CONFIG_LOCAL):
+    configfile: CONFIG_LOCAL
+
 
 #
 # Snakemake directives
@@ -85,16 +96,6 @@ INSDEL= ['INS', 'DEL']
 
 
 #
-# Load project configuration
-#
-
-CONFIG_LOCAL = os.path.join(WORKING_DIR, 'config.json')
-
-if os.path.exists(CONFIG_LOCAL):
-    configfile: CONFIG_LOCAL
-
-
-#
 # Set environment
 #
 
@@ -121,12 +122,16 @@ TEMP_DIR = config.get('tempdir', None)
 
 if TEMP_DIR is None or TEMP_DIR == '':
     TEMP_DIR = tempfile.gettempdir()
+else:
+    TEMP_DIR = os.path.abspath(TEMP_DIR)
 
 if os.path.samefile(TEMP_DIR, '.'):
     # Defaults to local directory if a temp cannot be found. This
     # should not occur on real systems, but don't clutter the working
     # directory if it does.
     TEMP_DIR = os.path.join(TEMP_DIR, 'temp')
+
+
 
 
 #

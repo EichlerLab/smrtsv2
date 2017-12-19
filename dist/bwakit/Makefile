@@ -1,9 +1,14 @@
 PREFIX = $(abspath ..)
 
-.PHONY: install
-install: ${PREFIX}/bin/bwa-postalt.js ${PREFIX}/bin/k8 ${PREFIX}/bin/seqtk ${PREFIX}/bin/samblaster
+# Note: Do not install the version of samblaster in bwakit. It will cause the
+# genotyper to fail on some samples with:
+# samblaster: New buffer length exceeds maximum while changing field value.
 
-${PREFIX}/bin/bwa-postalt.js ${PREFIX}/bin/k8 ${PREFIX}/bin/seqtk ${PREFIX}/bin/samblaster: bwa.kit/bwa
+
+.PHONY: install
+install: ${PREFIX}/bin/bwa-postalt.js ${PREFIX}/bin/k8 ${PREFIX}/bin/seqtk
+
+${PREFIX}/bin/bwa-postalt.js ${PREFIX}/bin/k8 ${PREFIX}/bin/seqtk: bwa.kit/bwa
 	mkdir -p ${PREFIX}/bin
 	install bwa.kit/k8 ${PREFIX}/bin
 	install bwa.kit/seqtk ${PREFIX}/bin

@@ -13,18 +13,12 @@ from smrtsvlib.args import get_arg
 
 # List of relative paths for PATH
 INSTALL_PATH = [
-    'bin',
-    'dist/miniconda/envs/python2/bin',
-    'dist/miniconda/envs/python3/bin',
-    'dist/miniconda/bin',
-    'dist/celera/wgs-8.3rc2/Linux-amd64/bin/',
-    'dist/amos-3.1.0/bin',
-    'canu/Linux-amd64/bin'
+    'dist/bin'
 ]
 
 # List of relative paths for LD_LIBRARY_PATH
 INSTALL_LD_PATH = [
-    'dist/hdf5/lib'
+    'dist/lib'
 ]
 
 
@@ -60,8 +54,6 @@ def get_env(install_dir):
         process_env['LD_LIBRARY_PATH'] = process_env_ld_path + ':' + process_env['LD_LIBRARY_PATH']
     else:
         process_env['LD_LIBRARY_PATH'] = process_env_ld_path
-
-    os.environ['LD_LIBRARY_PATH'] = process_env['LD_LIBRARY_PATH']
 
     # Return environment variables
     return process_env
@@ -114,8 +106,8 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     log = get_arg('log', args)
     wait_time = get_arg('wait_time', args)
     dry_run = get_arg('dryrun', args)
-    cluster_params = get_arg('cluster-params', args)
-    cluster_config_path = get_arg('cluster-config', args, os.path.join(smrtsv_dir, 'cluster.template.json'))
+    cluster_params = get_arg('cluster_params', args)
+    cluster_config_path = get_arg('cluster_config', args, os.path.join(smrtsv_dir, 'cluster.template.json'))
     job_prefix = get_arg('job_prefix', args)
 
     # Setup snakemake command
@@ -125,6 +117,10 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
         '-T',
         '--rerun-incomplete'
     ]
+
+    # Set keep-going flag
+    if hasattr(args, 'keep_going') and args.keep_going:
+        prefix.append('--keep-going')
 
     # Set jobs
     if hasattr(args, 'jobs'):
@@ -161,13 +157,16 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     # Append command
     prefix.extend(cmd)
 
-    # Append path and ld_path
+    # Append path, ld_path, and temp
     if '--config' not in cmd:
         prefix.append('--config')
 
+    temp_dir = args.tempdir.strip() if hasattr(args, 'tempdir') and args.tempdir is not None else ''
+
     prefix.extend([
         'ld_path={}'.format(process_env['LD_LIBRARY_PATH']),
-        'path={}'.format(process_env['PATH'])
+        'path={}'.format(process_env['PATH']),
+        'tempdir={}'.format(temp_dir)
     ])
 
     # Report (verbose)

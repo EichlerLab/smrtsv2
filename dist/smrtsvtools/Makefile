@@ -1,14 +1,17 @@
 PREFIX = $(abspath ..)
 
-CXXFLAGS = -Iinclude -I../include --std=c++14
+CXXFLAGS = -I$(abspath include) -I$(abspath ../include) --std=c++14
 
-LDFLAGS = -L../lib
-LDLIBS = -lboost_program_options -lrt -lpthread -lbz2 -lhts
+LDFLAGS = -L$(abspath ../lib)
+LDLIBS = -lboost_program_options -lrt -lpthread -lbz2 -lhts -llzma
+
+BIN_OUT = $(addprefix bin/, alignfixup phasereads)
 
 .PHONY: all
-all: bin/alignfixup bin/phasereads
+all: ${BIN_OUT}
+	install bin/* ${PREFIX}/bin
 
-bin/phasereads: build/phasereads.o build/phase/PhaseTable.o build/phase/SNVEntry.o build/phase/ReadPhaser.o build/phase/PhaseWriter.o build/phase/StringUtil.o
+bin/phasereads: build/phasereads.o build/phase/PhaseTable.o build/phase/SNVEntry.o build/phase/ReadPhaser.o build/phase/PhaseWriter.o build/phase/StringUtil.o build/util/err.o
 	mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) ${LDFLAGS} ${LDLIBS} -o $@ $^
 

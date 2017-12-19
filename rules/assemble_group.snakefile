@@ -19,8 +19,8 @@ if not 'INCLUDE_SNAKEFILE' in globals():
 ### Get parameters ###
 
 # Output
-CONTIG_CRAM = config['contig_cram']
-CONTIG_CRAM_INDEX = CONTIG_CRAM + '.crai'
+CONTIG_BAM = config['contig_bam']
+CONTIG_BAM_INDEX = CONTIG_BAM + '.bai'
 
 LOG_DIR = config['log_dir']
 LOG_DIR_ASM = os.path.join(LOG_DIR, 'asm')
@@ -73,12 +73,13 @@ os.makedirs(LOG_DIR_ASM, exist_ok=True)
 # Get final contig for each assembly in this group.
 rule merge_group_contigs:
     input:
-        cram=expand('region/{region_id}/asm/contig_fixup.cram', region_id=GROUP.index)
+        bam=expand('region/{region_id}/asm/contig_fixup.bam', region_id=GROUP.index)
     output:
-        cram=CONTIG_CRAM,
-        crai=CONTIG_CRAM_INDEX
+        bam=CONTIG_BAM,
+        bai=CONTIG_BAM_INDEX
     shell:
-        pass  # CONTINUE HERE
+        """samtools merge {input.bam} {output.bam}; """
+        """samtools index {output.bam}"""
 
 # assemble_align_fixup
 #
@@ -86,21 +87,22 @@ rule merge_group_contigs:
 # the region to ensure they are globally unique within each sample.
 rule assemble_align_fixup:
     input:
-        sam='region/{region_id}/asm/contig.sam'
+        sam='region/{region_id}/asm/contig.sam',
         align_fofn=ALIGN_FOFN,
-        ref_fa='reference/ref.fasta'
+        ref_fa=REF_FA
     output:
-        bam=temp('region/{region_id}/asm/contig_fixup.bam')
+        bam=temp('region/{region_id}/asm/contig_fixup.bam'),
+        bam_usort=temp('region/{region_id}/asm/contig_fixup_usort.bam')
     run:
 
-        if os.stat(input.contig).st_size > 0:
+        if os.stat(input.sam).st_size > 0:
             shell(
                 """alignfixup """
                     """-i {input.sam} """
                     """-d $(head -n 1 {input.align_fofn}) """
                     """-r {REF_FA} -g {wildcards.region_id} """
-                    """-o {output.bam}; """
-                """samtools index {output.bam}"""
+                    """-o {output.bam_usort}; """
+                """samtools sort -o {output.bam} {output.bam_usort}"""
             )
         else:
             open(output.bam, 'w').close()  # Touch and/or clear file
@@ -120,14 +122,17 @@ rule assemble_align_ref_region:
 
         if os.stat(input.contig).st_size > 0:
             shell(
-                """blasr """
-                    """{input.contig} {input.ref} """
-                    """--sam --bestn 1 """
-                    """--unaligned /dev/null """
-                    """--out {output.sam} """
-                    """--clipping subread """
-                    """--nproc {params.threads}; """
+                """minimap2 -a {input.ref} {input.contig} >{output.sam}"""
             )
+#            shell(
+#                """blasr """
+#                    """{input.contig} {input.ref} """
+#                    """--sam --bestn 1 """
+#                    """--unaligned /dev/null """
+#                    """--out {output.sam} """
+#                    """--clipping subread """
+#                    """--nproc {params.threads}; """
+#            )
 
         else:
             open(output.sam, 'w').close()  # Touch and/or clear file

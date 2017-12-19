@@ -25,10 +25,10 @@ export LD_LIBRARY_PATH
 
 
 #
-# Default rule: Bulid all
+# Default rule: Build all
 #
 
-BIN_OUT = $(addprefix dist/bin/, samtools bcftools bwa bwa-postalt.js k8 seqtk samblaster bedtools vcffixup snakemake canu blasr variantCaller)
+BIN_OUT = $(addprefix dist/bin/, samtools bcftools bwa bwa-postalt.js k8 seqtk samblaster bedtools vcffixup snakemake canu blasr variantCaller alignfixup minimap2)
 
 all: ${BIN_OUT}
 
@@ -63,6 +63,14 @@ dist/bin/swig:
 
 
 #
+# SMRTSV Tools
+#
+
+# smrtsvtools
+dist/bin/alignfixup: dist/lib/libboost_program_options.so dist/lib/libhts.so
+	make -C dist/smrtsvtools
+
+#
 # SAM/BCF tools
 #
 
@@ -78,6 +86,9 @@ dist/bin/bcftools: dist/lib/libhts.so
 #
 # Core genomics tools
 #
+
+dist/bin/minimap2:
+	make -C dist/minimap2
 
 # bwa
 dist/bin/bwa:
