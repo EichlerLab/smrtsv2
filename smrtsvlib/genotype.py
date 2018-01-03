@@ -257,7 +257,7 @@ def preprocess_manifest(manifest_file_name, samples):
         df = pd.DataFrame(data=['U'] * len(samples), index=samples, columns=('sex',))
         df.index.name = 'sample'
 
-        return df
+        return df['sex']
 
     # Read manifest
     df = pd.read_table(manifest_file_name, header=0)
@@ -282,10 +282,10 @@ def preprocess_manifest(manifest_file_name, samples):
 
     # Add any missing samples
     for sample in samples:
-        if sample not in df['sample']:
+        if sample not in list(df['sample']):
             raise RuntimeWarning('Missing sample "{}" in manifest "{}"'.format(sample, manifest_file_name))
 
-        df = df.append(pd.Series({'sample': sample, 'sex': 'U'}), ignore_index=True)
+            df = df.append(pd.Series({'sample': sample, 'sex': 'U'}), ignore_index=True)
 
     # Order by samples and drop unused samples
     df.index = df['sample']

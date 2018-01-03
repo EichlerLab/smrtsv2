@@ -71,9 +71,15 @@ SVMAP_REF_WINDOW = 5000
 SVMAP_CONTIG_WINDOW = 500
 MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', 4)
 
-SAMPLES = sorted(CONFIG_GT['samples'].keys())
-
 KEEP_TEMP = smrtsvutil.as_bool(config.get('gt_keep_temp', False))
+
+
+###  Get sample manifest ###
+SAMPLE_MANIFEST = CONFIG_GT.get('sample_manifest', None)
+
+if SAMPLE_MANIFEST is None:
+    if not smrtsvutil.as_bool(CONFIG_GT.get('default_sample_manifest', False)):
+        raise RuntimeError('Configuration file "{}" is missing entry "sample_manifest" (only allowed if "default_sample_manifest" is set to "True")'.format(CONFIG_FILE))
 
 
 ### Utility Functions ###
@@ -154,7 +160,6 @@ rule gt_vcf_fixup:
 rule gt_vcf_merge:
     input:
         vcf='sv_calls/sv_calls.vcf.gz',
-        sexes='temp/sv_calls/sexes.tab',
         genotype=expand('samples/{sample}/genotype.tab', sample=SAMPLES)
     output:
         vcf=temp('gt/temp/variants_genotyped.vcf')
@@ -165,7 +170,7 @@ rule gt_vcf_merge:
         vcf_body = genotype.vcf_table(input.vcf)
 
         # Get sexes from the sample manifest
-        sexes = pd.read_table(input.sexes, header=0, index_col=0, squeeze=True)
+        sexes = genotype.preprocess_manifest(SAMPLE_MANIFEST, SAMPLES)
 
         # Merge samples into VCF
         vcf_df = pd.concat(
@@ -783,24 +788,6 @@ rule gt_contig_list:
             with open(output.txt, 'w') as oh:
                 for contig in sorted(set([record.info['CONTIG'] for record in vcf])):
                     oh.write('%s\n' % contig)
-
-
-#
-# Get sexes from the manifest
-#
-
-# gt_sv_sexes
-#
-# Translate manifest and normalize sex information for each sample.
-rule gt_sv_sexes:
-    output:
-        tab=temp('temp/sv_calls/sexes.tab')
-    run:
-
-        # Pre-process manifest or write a default manifest
-        genotype.preprocess_manifest(
-            config.get('manifest_file_name', None), SAMPLES
-        ).to_csv(output.tab, sep='\t', header=True)
 
 
 #
