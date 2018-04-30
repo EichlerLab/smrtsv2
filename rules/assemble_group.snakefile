@@ -122,17 +122,15 @@ rule assemble_align_ref_region:
 
         if os.stat(input.contig).st_size > 0:
             shell(
-                """minimap2 -a {input.ref} {input.contig} >{output.sam}"""
+                """blasr """
+                    """{input.contig} {input.ref} """
+                    """-sam """
+                    """-unaligned /dev/null """
+                    """-out {output.sam} """
+                    """-clipping subread """
+                    """-nproc {params.threads} """
+                    """{ALN_PARAMS};"""
             )
-#            shell(
-#                """blasr """
-#                    """{input.contig} {input.ref} """
-#                    """--sam --bestn 1 """
-#                    """--unaligned /dev/null """
-#                    """--out {output.sam} """
-#                    """--clipping subread """
-#                    """--nproc {params.threads}; """
-#            )
 
         else:
             open(output.sam, 'w').close()  # Touch and/or clear file

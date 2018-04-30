@@ -83,9 +83,10 @@ args_dict['wait_time'] = {
 
 args_dict['cluster_params'] = {
     'default': ' -V -cwd -e ./{log} -o ./{log} '
-               '-l mfree={{cluster.mem}} '
                '-pe serial {{cluster.cpu}} '
+               '-l mfree={{cluster.mem}} '
                '-l h_rt={{cluster.rt}} '
+               '-l gpfsstate=0 '
                '{{cluster.params}} '
                '-w n -S /bin/bash',
     'help': 'Cluster scheduling parameters with place-holders as {{cluster.XXX}} for parameters in the cluster '
