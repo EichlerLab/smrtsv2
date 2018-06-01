@@ -70,8 +70,11 @@ FEATURE_SAMPLE_TRAIN = CONFIG_LEARN.get('train_feature')
 # Get other parameters
 CONFIG_LEARN_PARAMS = CONFIG_LEARN.get('params', {})
 
+# Param retain_nocall: Train with No-call variants if True. Otherwise, discard no-call variants before training.
 PARAM_RETAIN_NOCALL = CONFIG_LEARN_PARAMS.get('retain_nocall', 'False').lower() in ('true', 't', '1')
-PARAM_BALANCE_CALLS = CONFIG_LEARN_PARAMS.get('balance_calls', 'True').lower() in ('true', 't', '1')
+
+# Param balance_calls: Randomly down-sample variants so that call types are perfectly balanced in all folds.
+PARAM_BALANCE_CALLS = CONFIG_LEARN_PARAMS.get('balance_calls', 'False').lower() in ('true', 't', '1')
 
 
 #############

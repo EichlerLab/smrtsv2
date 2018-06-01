@@ -26,27 +26,98 @@ localrules: gt_vcf_write
 ### Definitions ###
 ###################
 
+### Default Values ###
+
+GT_DEFAULT_MODEL_NAME = '30x-4'
+GT_DEFAULT_MIN_CALL_DEPTH = 8
+
+
 ### Read Genotyper Config File ###
 
-CONFIG_FILE = config['genotyper_config']
+# Get config file
+CONFIG_FILE = config.get('genotyper_config', None)
 
+if CONFIG_FILE is None:
+    raise RuntimeError('No genotyper config file specified (e.g. "snakemake ... --config genotyper_config=path/to/config.json")')
+
+if not os.path.isfile(CONFIG_FILE):
+    raise RuntimeError('Missing genotyper config file: {}'.format(CONFIG_FILE))
+
+# Load config
 with open(CONFIG_FILE, 'r') as CONFIG_FILE_FH:
     CONFIG_GT = json.load(CONFIG_FILE_FH)
 
 
 ### Find genotyping model ###
 
-# Scaler: Scales feature matrix for model prediction.
-GT_SCALER = CONFIG_GT.get('model', {}).get('scaler', None)
+# Get model name
+GT_MODEL_NAME = CONFIG_GT.get('model', None)
 
-if GT_SCALER is None:
-    GT_SCALER = os.path.join(SMRTSV_DIR, 'files/gtmodel/scaler.pkl')
+if GT_MODEL_NAME is None:
+    GT_MODEL_NAME = GT_DEFAULT_MODEL_NAME
+    GT_MODEL_DEFAULT = True
+else:
+    GT_MODEL_DEFAULT = False
 
-# Predictor: Predicts genotype from scaled features.
-GT_PREDICTOR = CONFIG_GT.get('model', {}).get('predictor', None)
+# Find path to model files
+GT_MODEL_PATH = os.path.join(GT_MODEL_NAME, 'model')
 
-if GT_PREDICTOR is None:
-    GT_PREDICTOR = os.path.join(SMRTSV_DIR, 'files/gtmodel/predictor.pkl')
+if not os.path.isdir(GT_MODEL_PATH):
+    GT_MODEL_PATH = os.path.join(SMRTSV_DIR, 'files', 'gtmodel', GT_MODEL_NAME, 'model')
+
+    if not os.path.isdir(GT_MODEL_PATH):
+        if GT_MODEL_DEFAULT:
+            raise RuntimeError('Cannot locate default genotyper model "{}": {} (no such directory)'.format(GT_MODEL_NAME, GT_MODEL_PATH))
+        else:
+            raise RuntimeError('Cannot locate genotyper model "{}": {} (no such directory) and {} (no such directory)'.format(GT_MODEL_NAME, GT_MODEL_PATH, os.path.join(GT_MODEL_NAME, 'model')))
+
+GT_MODEL_PATH = os.path.abspath(GT_MODEL_PATH)
+
+# Verify model files
+GT_SCALER = os.path.join(GT_MODEL_PATH, 'scaler.pkl')
+GT_PREDICTOR = os.path.join(GT_MODEL_PATH, 'predictor.pkl')
+
+if not os.path.isfile(GT_SCALER):
+    raise RuntimeError('Missing scaler "scaler.pkl" for model {}: {}'.format(GT_MODEL_NAME, GT_SCALER))
+
+if not os.path.isfile(GT_PREDICTOR):
+    raise RuntimeError('Missing predictor "predictor.pkl" for model {}: {}'.format(GT_MODEL_NAME, GT_PREDICTOR))
+
+
+### Get paths to variants, contigs, and reference ###
+
+# Contigs
+SV_CONTIGS = CONFIG_GT.get('sv_contigs', None)
+
+if SV_CONTIGS is None:
+    raise ValueError('Genotyper config file is missing element "sv_contigs"')
+
+if not os.path.isfile(SV_CONTIGS):
+    raise ValueError('Genotyper config contains a path to a missing file for element "sv_contigs": {}'.format(SV_CONTIGS))
+
+# Calls
+SV_CALLS = CONFIG_GT.get('sv_calls', None)
+
+if SV_CALLS is None:
+    raise ValueError('Genotyper config file is missing element "sv_calls"')
+
+if not os.path.isfile(SV_CALLS):
+    raise ValueError('Genotyper config contains a path to a missing file for element "sv_calls": {}'.format(SV_CALLS))
+
+# Reference
+SV_REFERENCE = CONFIG_GT.get('sv_reference', None)
+
+if SV_REFERENCE is None:
+    raise ValueError('Genotyper config file is missing element "sv_reference"')
+
+if not os.path.isfile(SV_REFERENCE):
+    raise ValueError('Genotyper config contains a path to a missing file for element "sv_reference": {}'.format(SV_REFERENCE))
+
+SV_REFERENCE_FAI = '{}.fai'.format(SV_REFERENCE)
+
+if not os.path.isfile(SV_REFERENCE_FAI):
+    raise ValueError('Genotyper config element "sv_reference" points to a reference with no index (.fai file): {}'.format(SV_REFERENCE))
+
 
 ### Find bwa-postalt.js ###
 
@@ -63,56 +134,32 @@ if POSTALT_PATH is None:
     raise RuntimeError('Cannot find "bwa-postalt.js" in PATH (part of bwakit)')
 
 
+### Get sample manifest ###
+
+SAMPLE_MANIFEST_FILE = CONFIG_GT.get('sample_manifest', None)
+
+if SAMPLE_MANIFEST_FILE is None:
+    raise RuntimeError('Configuration file "{}" is missing entry "sample_manifest"'.format(CONFIG_FILE))
+
+if not os.path.isfile(SAMPLE_MANIFEST_FILE):
+    raise RuntimeError('Cannot find sample manifest file: {}'.format(SAMPLE_MANIFEST_FILE))
+
+SAMPLE_TABLE = genotype.preprocess_manifest(SAMPLE_MANIFEST_FILE)
+
+SAMPLES = sorted(list(SAMPLE_TABLE.index))
+
+
 ### Other Parameters ###
 
-FINAL_GENOTYPES = config['genotyped_variants']
-SAMPLES = sorted(CONFIG_GT['samples'].keys())
-SVMAP_REF_WINDOW = 5000
-SVMAP_CONTIG_WINDOW = 500
-MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', 4)
+FINAL_GENOTYPES = config.get('genotyped_variants', 'variants_gt.vcf.gz')
+
+if os.path.exists(FINAL_GENOTYPES):
+    raise RuntimeError('Aborting: Output file {} exists'.format(FINAL_GENOTYPES))
+
+MIN_CALL_DEPTH = CONFIG_GT.get('min_call_depth', GT_DEFAULT_MIN_CALL_DEPTH)
 
 KEEP_TEMP = smrtsvutil.as_bool(config.get('gt_keep_temp', False))
 
-
-###  Get sample manifest ###
-SAMPLE_MANIFEST = CONFIG_GT.get('sample_manifest', None)
-
-if SAMPLE_MANIFEST is None:
-    if not smrtsvutil.as_bool(CONFIG_GT.get('default_sample_manifest', False)):
-        raise RuntimeError('Configuration file "{}" is missing entry "sample_manifest" (only allowed if "default_sample_manifest" is set to "True")'.format(CONFIG_FILE))
-
-
-### Utility Functions ###
-
-def _get_sv_regions_for_sample(wildcards):
-    """
-    Get the BAM file specifying which regions reads are extracted from. The input BAM for each sample is aligned to
-    a reference sequence, which may not be the same as the reference SVs were called against. It may also be different
-    among the samples. This rule finds the BED file containing regions reads should be extracted from for each sample.
-
-    :param wildcards: Rule wildcards. Must contain attribute `sample`.
-    """
-
-    if 'sample_bam_reference' in CONFIG_GT and CONFIG_GT["sample_bam_reference"].get(wildcards.sample, None) is not None:
-        reference = CONFIG_GT['sample_bam_reference'].get(wildcards.sample)
-    else:
-        reference = CONFIG_GT['default_bam_reference']
-
-    return 'svmap/mapping/{}/pseudoreads.bed'.format(reference)
-
-def _get_reference_for_sample(wildcards):
-    """
-    Get the reference FASTA file for a sample.
-
-    :param wildcards: Rule wildcards. Must contain attribute `sample`.
-    """
-
-    if 'sample_bam_reference' in CONFIG_GT and CONFIG_GT["sample_bam_reference"].get(wildcards.sample, None) is not None:
-        reference = CONFIG_GT['sample_bam_reference'].get(wildcards.sample)
-    else:
-        reference = CONFIG_GT['default_bam_reference']
-
-    return CONFIG_GT['bam_reference'][reference]
 
 
 #############
@@ -169,12 +216,9 @@ rule gt_vcf_merge:
         header_line_list = genotype.vcf_header_lines(input.vcf)
         vcf_body = genotype.vcf_table(input.vcf)
 
-        # Get sexes from the sample manifest
-        sexes = genotype.preprocess_manifest(SAMPLE_MANIFEST, SAMPLES)
-
         # Merge samples into VCF
         vcf_df = pd.concat(
-            [vcf_body] + [genotype.get_sample_column('samples/{}/genotype.tab'.format(sample), sample, sexes[sample]) for sample in SAMPLES],
+            [vcf_body] + [genotype.get_sample_column('samples/{}/genotype.tab'.format(sample), sample, SAMPLE_TABLE.loc[sample, 'SEX']) for sample in SAMPLES],
             axis=1
         )
 
@@ -269,7 +313,7 @@ rule gt_call_sample_merge:
 rule gt_call_sample_read_depth:
     input:
         bed='sv_calls/sv_calls.bed',
-        bam='samples/{sample}/alignments.bam',
+        bam='samples/{sample}/alignments.cram',
         alt_info='altref/alt_info.bed'
     output:
         tab=temp('samples/{sample}/temp/depth_delta.tab'),
@@ -290,7 +334,7 @@ rule gt_call_sample_read_depth:
 rule gt_call_sample_insert_delta:
     input:
         bed='sv_calls/sv_calls.bed',
-        bam='samples/{sample}/alignments.bam'
+        bam='samples/{sample}/alignments.cram'
     output:
         tab=temp('samples/{sample}/temp/insert_delta.tab'),
         stats='samples/{sample}/insert_size_stats.tab'
@@ -317,7 +361,7 @@ rule gt_call_sample_insert_delta:
 rule gt_call_sample_breakpoint_depth:
     input:
         bed='sv_calls/sv_calls.bed',
-        bam='samples/{sample}/alignments.bam'
+        bam='samples/{sample}/alignments.cram'
     output:
         tab=temp('samples/{sample}/temp/breakpoint_depth.tab')
     params:
@@ -338,25 +382,24 @@ rule gt_call_sample_breakpoint_depth:
 # reference are extracted along with unmapped reads.
 rule gt_map_sample_reads:
     input:
-        sample_bam=lambda wildcards: CONFIG_GT['samples'][wildcards.sample],
-        sample_ref=_get_reference_for_sample,
-        sample_regions=_get_sv_regions_for_sample,
+        sample_bam=lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, 'DATA'],
         sv_ref='altref/ref.fasta',
         sv_ref_bwt='altref/ref.fasta.bwt',
         sv_ref_alts='altref/ref.fasta.alt',
-        sv_ref_alt_info='altref/alt_info.bed'
+        sv_ref_alt_info='altref/alt_info.bed',
+        map_regions_bed='altref/map_regions.bed'
     output:
-        bam='samples/{sample}/alignments.bam',
-        bai='samples/{sample}/alignments.bam.bai'
+        bam='samples/{sample}/alignments.cram',
+        bai='samples/{sample}/alignments.cram.crai'
     params:
         mapq=get_config_param('gt_mapq'),
-        threads=get_config_param('gt_map_cpu'),  # Parses into cluster params
-        mem=get_config_param('gt_map_mem')       # Parses into cluster params
+        threads=get_config_param('gt_map_cpu'),         # Parses into cluster params
+        mem=get_config_param('gt_map_mem'),             # Parses into cluster params
+        disk_free=get_config_param('gt_map_disk_map')  # Parses into cluster params
     benchmark:
         'samples/{sample}/bm/alignments.txt'
     log:
-        align='samples/{sample}/alignments.log',
-        map='samples/{sample}/primary_mapping.log'
+        align='samples/{sample}/alignments.log'
     run:
 
         # Set mapping_temp (will be deleted if not None)
@@ -374,19 +417,18 @@ rule gt_map_sample_reads:
 
             # Setup sub-Snake command
             command = (
-                'gt_map_postalt_merge',
+                'gt_map_align_sample_reads',
                 '-f',
                 '--jobs', str(params.threads),
                 '--config',
                 'sample={}'.format(wildcards.sample),
                 'sample_bam={}'.format(os.path.abspath(input.sample_bam)),
-                'sample_ref={}'.format(os.path.abspath(input.sample_ref)),
-                'sample_regions={}'.format(os.path.abspath(input.sample_regions)),
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
                 'sv_ref_alt={}'.format(os.path.abspath(input.sv_ref_alts)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
+                'map_regions_bed={}'.format(os.path.abspath(input.map_regions_bed)),
                 'output_bam={}'.format(os.path.abspath(output.bam)),
-                'primary_map_log={}'.format(os.path.abspath(log.map)),
+                'output_bam_index={}'.format(os.path.abspath(output.bai)),
                 'mapq={}'.format(params.mapq),
                 'threads={}'.format(params.threads),
                 'smrtsv_dir={}'.format(SMRTSV_DIR),
@@ -417,6 +459,46 @@ rule gt_map_sample_reads:
 # Prepare local assembly sequences and references.
 #
 
+# gt_altref_map_regions_merge_bed
+#
+# Merge regions around SVs. Reads mapping outside these regions will be dropped.
+#
+# Note: params.ref_flank must be larger than params.ref_flank in rule gt_call_sample_insert_delta
+rule gt_altref_map_regions_merge_bed:
+    input:
+        bed='temp/altref/map_regions.bed',
+        fai='altref/ref.fasta.fai'
+    output:
+        bed='altref/map_regions.bed'
+    params:
+        ref_flank=int(5.2e3)
+    shell:
+        """bedtools slop -i {input.bed} -g {input.fai} -b {params.ref_flank} | """
+        """sort -k1,1 -k2,2n | """
+        """bedtools merge """
+        """> {output.bed}"""
+
+# gt_altref_map_regions_bed
+#
+# Make a BED file of primary and SV-contig regions.
+rule gt_altref_map_regions_bed:
+    input:
+        bed='sv_calls/sv_calls.bed'
+    output:
+        bed=temp('temp/altref/map_regions.bed')
+    run:
+
+        # Read breakpoints on primary contigs
+        df_primary = pd.read_table(input.bed, usecols=('#CHROM', 'POS', 'END'))
+
+        # Read breakpoints on SV contigs
+        df_sv = pd.read_table(input.bed, usecols=('CONTIG', 'CONTIG_START', 'CONTIG_END'))
+        df_sv.columns = ('#CHROM', 'POS', 'END')
+
+        # Merge and write
+        pd.concat([df_primary, df_sv], axis=0).to_csv(output.bed, sep='\t', index=False)
+
+
 # gt_altref_alt_info_bed
 #
 # Make a BED file for each chromosme and ALT contig (records cover the whole sequence) with the last column identifying
@@ -424,7 +506,7 @@ rule gt_map_sample_reads:
 # contig name itself.
 rule gt_altref_alt_info_bed:
     input:
-        sv_ref_fai=CONFIG_GT['sv_reference_fai'],
+        sv_ref_fai=SV_REFERENCE_FAI,
         altref_fai='altref/ref.fasta.fai',
         contig_chr='temp/altref/alt_to_primary.tab'
     output:
@@ -514,7 +596,7 @@ rule gt_altref_index:
 # Create a reference with contigs as alternate sequences.
 rule gt_altref_prepare:
     input:
-        ref=CONFIG_GT['sv_reference'],
+        ref=SV_REFERENCE,
         contig='contigs/contigs.fasta'
     output:
         fasta='altref/ref.fasta',
@@ -522,204 +604,6 @@ rule gt_altref_prepare:
     shell:
         """cat {input.ref} {input.contig} >{output.fasta}; """
         """samtools faidx {output.fasta}; """
-
-
-#
-# Find locations where SV associated reads might have mapped in the input BAM file. This is accomplished
-# by making psedoreads from SV associated regions (breakpoints and inserted sequence) and mapping them against
-# the reference sequence of the aligned BAM file.
-#
-
-# gt_svmap_locate_regions
-#
-# Locate regions where the pseudoreads mapped.
-rule gt_svmap_locate_regions:
-    input:
-        bam='svmap/mapping/{reference}/pseudoreads.bam',
-        ref=lambda wildcards: CONFIG_GT['bam_reference'][wildcards.reference]
-    output:
-        bed='svmap/mapping/{reference}/pseudoreads.bed'
-    benchmark:
-        'svmap/mapping/{reference}/bm/gt_svmap_locate_regions.txt'
-    params:
-        slop=SVMAP_REF_WINDOW
-    shell:
-        """bedtools bamtobed -i {input.bam} | """
-        """bedtools slop -i stdin -g {input.ref}.fai -b {params.slop} | """
-        """sort -k 1,1 -k 2,2n | """
-        """bedtools merge -i stdin -d 0 """
-        """>{output.bed}"""
-
-# gt_svmap_map_pseudoreads
-#
-# Map pseudoreads to the reference.
-rule gt_svmap_map_pseudoreads:
-    input:
-        ref=lambda wildcards: CONFIG_GT['bam_reference'][wildcards.reference],
-        fasta='svmap/pseudoreads.fasta.gz'
-    output:
-        bam='svmap/mapping/{reference}/pseudoreads.bam'
-    params:
-        threads=12
-    log:
-        'svmap/mapping/{reference}/pseudoreads.log'
-    benchmark:
-        'svmap/mapping/{reference}/bm/gt_svmap_map_pseudoreads.txt'
-    run:
-
-        mapping_temp = None
-
-        try:
-            # Create temporary directory
-            mapping_temp = tempfile.mkdtemp(
-                prefix=os.path.join(
-                    TEMP_DIR,
-                    'map_pseudo_{}_'.format(wildcards.reference)
-                )
-            )
-
-            shell(
-                """echo "Temp directory: {mapping_temp}" >{log}; """
-                """bwa mem -t {params.threads} {input.ref} {input.fasta} 2>>{log} | """
-                """samtools sort -o {output.bam} -O bam -T {mapping_temp} 2>>{log}"""
-            )
-
-        finally:
-            # Remove temp
-            if mapping_temp is not None:
-                shutil.rmtree(mapping_temp)
-
-# gt_svmap_compress_fragmented_fasta
-#
-# Compress fragmented FASTA.
-rule gt_svmap_compress_fragmented_fasta:
-    input:
-        fasta='svmap/pseudoreads.fasta'
-    output:
-        fasta='svmap/pseudoreads.fasta.gz'
-    shell:
-        """bgzip {input.fasta}"""
-
-# gt_svmap_fragment_fasta
-#
-# Create pseudoreads by taking all SV associated sequences (breakpoints on the reference and contigs) and
-# breaking them into 250 bp sequences (overlapping by 125 bp).
-rule gt_svmap_fragment_fasta:
-    input:
-        fasta='svmap/regions.fasta'
-    output:
-        fasta=temp('svmap/pseudoreads.fasta')
-    params:
-        window="250",
-        slide="125"
-    shell:
-        """python {SMRTSV_DIR}/scripts/genotype/FragmentFastaRecords.py {input.fasta} {output.fasta} {params.window} --slide {params.slide}"""
-
-# gt_svmap_merge_fasta
-#
-# Merge FASTA sequences from inserted sequence and breakpoints on the reference.
-rule gt_svmap_merge_fasta:
-    input:
-        fasta_contig='svmap/regions/contig_insdel.fasta',
-        fasta_ref='svmap/regions/ref_insdel.fasta'
-    output:
-        fasta=temp('svmap/regions.fasta')
-    shell:
-        """cat {input.fasta_contig} {input.fasta_ref} """
-        """>{output.fasta}"""
-
-# gt_svmap_contig_sequences
-#
-# Get sequences around SVs over contigs.
-rule gt_svmap_contig_sequences:
-    input:
-        sv_bed='svmap/regions/contig_insdel.bed',
-        contigs='contigs/contigs.fasta'
-    output:
-        fasta=temp('svmap/regions/contig_insdel.fasta')
-    shell:
-        """bedtools getfasta -fi {input.contigs} -bed {input.sv_bed} -fo {output.fasta}"""
-
-# gt_svmap_ref_sequences
-#
-# Get sequences around SVs.
-rule gt_svmap_sequences:
-    input:
-        sv_bed='svmap/regions/ref_insdel.bed',
-        ref=CONFIG_GT['sv_reference']
-    output:
-        fasta=temp('svmap/regions/ref_insdel.fasta')
-    shell:
-        """bedtools getfasta -fi {input.ref} -bed {input.sv_bed} -fo {output.fasta}"""
-
-# gt_svmap_contig_positions
-#
-# Get SV positions over contigs.
-rule gt_svmap_contig_positions:
-    input:
-        sv_bed='sv_calls/sv_calls.bed',
-        contig_fai='contigs/contigs.fasta.fai'
-    output:
-        bed='svmap/regions/contig_insdel.bed'
-    params:
-        slop=SVMAP_CONTIG_WINDOW
-    shell:
-        """awk -vOFS="\\t" '(NR > 1) {{print $8, $9, $10}}' {input.sv_bed} | """
-        """bedtools slop -i stdin -g {input.contig_fai} -b {params.slop} | """
-        """sort -k 1,1 -k 2,2n | """
-        """bedtools merge -i stdin -d 0 """
-        """>{output.bed}"""
-
-# gt_svmap_merge_ref_positions
-#
-# Merge positions from insertions and deletions.
-rule gt_svmap_merge_ref_positions:
-    input:
-        bed_ins='svmap/regions/ref_ins.bed',
-        bed_del='svmap/regions/ref_del.bed'
-    output:
-        bed='svmap/regions/ref_insdel.bed'
-    shell:
-        """sort -k 1,1 -k 2,2n -m {input.bed_ins} {input.bed_del} | """
-        """bedtools merge -i stdin -d 0 """
-        """>{output.bed}"""
-
-# gt_svmap_ref_ins_positions
-#
-# Get locations of insertions.
-rule gt_svmap_ref_ins_positions:
-    input:
-        sv_bed='sv_calls/sv_calls.bed',
-        ref_fai=CONFIG_GT['sv_reference_fai']
-    output:
-        bed='svmap/regions/ref_ins.bed'
-    params:
-        slop=SVMAP_CONTIG_WINDOW
-    shell:
-        """awk '$6 == "INS"' {input.sv_bed} | """
-        """awk 'OFS="\\t" {{ print $1,$2,$2+1 }}' | """
-        """bedtools slop -i stdin -g {input.ref_fai} -b {params.slop} | """
-        """sort -k 1,1 -k 2,2n | """
-        """bedtools merge -i stdin -d 0 """
-        """>{output.bed}"""
-
-# gt_svmap_ref_del_positions
-#
-# Get locations of deletions.
-rule gt_svmap_ref_del_positions:
-    input:
-        sv_bed='sv_calls/sv_calls.bed',
-        ref_fai=CONFIG_GT['sv_reference_fai']
-    output:
-        bed='svmap/regions/ref_del.bed'
-    params:
-        slop=SVMAP_CONTIG_WINDOW
-    shell:
-        """awk '$6 == "DEL"' {input.sv_bed} | """
-        """cut -f 1-3 | """
-        """bedtools slop -i stdin -g {input.ref_fai} -b {params.slop} | """
-        """bedtools merge -i stdin -d 0 """
-        """>{output.bed}"""
 
 
 #
@@ -767,7 +651,7 @@ rule gt_contig_bam_to_fasta:
 # Retrieve all contigs with at least one structural variant.
 rule gt_contig_filter:
     input:
-        contigs=CONFIG_GT['sv_contigs'],
+        contigs=SV_CONTIGS,
         list='contigs/contig_list.txt'
     output:
         sam='contigs/contigs.sam',
@@ -785,9 +669,9 @@ rule gt_contig_list:
         txt='contigs/contig_list.txt'
     run:
         with pysam.VariantFile(input.vcf) as vcf:
-            with open(output.txt, 'w') as oh:
+            with open(output.txt, 'w') as out_file:
                 for contig in sorted(set([record.info['CONTIG'] for record in vcf])):
-                    oh.write('%s\n' % contig)
+                    out_file.write('%s\n' % contig)
 
 
 #
@@ -801,15 +685,15 @@ rule gt_sv_to_bed:
     input:
         vcf='sv_calls/sv_calls.vcf.gz'
     output:
-        vcf='sv_calls/sv_calls.bed'
+        bed='sv_calls/sv_calls.bed'
     run:
         record_count = 0
 
         with pysam.VariantFile(input.vcf) as vcf:
-            with open(output[0], "w") as oh:
+            with open(output.bed, 'w') as out_file:
 
                 # Write header
-                oh.write('#CHROM\tPOS\tEND\tID\tINDEX\tSVTYPE\tSVLEN\tCONTIG\tCONTIG_START\tCONTIG_END\n')
+                out_file.write('#CHROM\tPOS\tEND\tID\tINDEX\tSVTYPE\tSVLEN\tCONTIG\tCONTIG_START\tCONTIG_END\n')
 
                 # Process records
                 for record in vcf:
@@ -847,7 +731,7 @@ rule gt_sv_to_bed:
                         record_id = '.'
 
                     # Write
-                    oh.write("%s\n" % "\t".join(map(str, (
+                    out_file.write("%s\n" % "\t".join(map(str, (
                         record.chrom,
                         record.start,
                         sv_end,
@@ -865,7 +749,7 @@ rule gt_sv_to_bed:
 # Extract structural variants from variant calls.
 rule gt_sv_filter_vcf_for_sv:
     input:
-        vcf=CONFIG_GT['sv_calls']
+        vcf=SV_CALLS
     output:
         vcf='sv_calls/sv_calls.vcf.gz',
         tbi='sv_calls/sv_calls.vcf.gz.tbi'

@@ -1,0 +1,24 @@
+{
+  "features": {
+    "PSEUDO_4x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_4x/gt_features.tab",
+    "PSEUDO_5x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_5x/gt_features.tab",
+    "PSEUDO_6x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_6x/gt_features.tab",
+    "PSEUDO_7x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_7x/gt_features.tab",
+    "PSEUDO_8x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_8x/gt_features.tab",
+    "PSEUDO_10x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_10x/gt_features.tab",
+    "PSEUDO_15x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_15x/gt_features.tab",
+    "PSEUDO_20x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_20x/gt_features.tab",
+    "PSEUDO_30x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_30x/gt_features.tab",
+    "PSEUDO_40x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_40x/gt_features.tab",
+    "PSEUDO_50x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_50x/gt_features.tab",
+    "PSEUDO_60x": "/net/eichler/vol27/projects/structural_variation/nobackups/projects/gt_realign/features/samples/PSEUDO_60x/gt_features.tab"
+  },
+  "train_feature": "PSEUDO_40x",
+  "labels": "/net/eichler/vol20/projects/structural_variation/nobackups/projects/genotype_v2/chmpseudo/testset/reduced_labels.list",
+  "folds": "8",
+  "callable_threshold": "4",
+  "params": {
+    "retain_nocall": "False",
+    "balance_calls": "False"
+  }
+}

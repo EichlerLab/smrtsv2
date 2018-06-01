@@ -47,6 +47,8 @@ def cigar_seq_to_aln(in_file, out_file):
                 line_count, tok[0], len(tok)
             ))
 
+        tok = tok[:11]  # Remove tags
+
         # Process each CIGAR operation in the record
         for cigar_match in re.finditer('(\d+)([MIDNSHP=X])', tok[5]):
 
@@ -70,9 +72,17 @@ def cigar_seq_to_aln(in_file, out_file):
         if match_len > 0:
             cigar_string += '{}M'.format(match_len)
 
-        # Set new CIGAR and write
+        # Set new CIGAR
         tok[5] = cigar_string
 
+        # Remove SEQ and QUAL (not needed for ALT, reduce file size)
+        tok[9] = '*'
+        tok[10] = '*'
+
+        # Remove tags
+
+
+        # Write
         out_file.write('\t'.join(tok))
         out_file.write('\n')
 

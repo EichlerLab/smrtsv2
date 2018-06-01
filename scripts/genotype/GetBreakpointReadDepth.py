@@ -106,7 +106,7 @@ class AlignRecord:
         """
         Compare the distance from this record to the reference to the distance of `other` from the reference. The
         mapping quality is analyzed first and returned if they are not the same. The CIGAR operations are analyzed
-        second, and ff the number of bases differing is equal, then the NM tag is analyzed (if it exists
+        second, and if the number of bases differing is equal, then the NM tag is analyzed (if it exists
         in both records).
 
         The difference between the mapping quality, CIGAR distance, or the edit distance (see above) is returned

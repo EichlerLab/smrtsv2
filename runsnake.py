@@ -23,6 +23,7 @@ class _EmtpyArguments:
         self.verbose = False
         self.cluster_config = None
 
+
 if __name__ == '__main__':
 
     # Get SMRTSV base directory
@@ -75,6 +76,10 @@ if __name__ == '__main__':
             args.verbose = True
             snake_command = snake_command[1:]
 
+        elif next_arg == '--cluster-config':
+            args.cluster_config = snake_command[1]
+            snake_command = snake_command[2:]
+
         elif next_arg == '--':
             snake_command = snake_command[1:]
             break
@@ -111,6 +116,14 @@ if __name__ == '__main__':
             print('DRMAA_LIBRARY_PATH: {}'.format(process_env['DRMAA_LIBRARY_PATH']))
         else:
             print('DRMAA_LIBRARY_PATH: <NOT_SET>\n\t* Not required unless --distribute is set')
+
+        # Print snake command
+        print('Snake command:')
+        for command_element in snake_command:
+            if command_element is not None:
+                print('\t* {}'.format(command_element))
+            else:
+                print('\t- None')
 
         # Flush output
         sys.stdout.flush()

@@ -308,16 +308,22 @@ args_dict['genotyped_variants'] = {
 # CPU cores for BWA mapping jobs
 args_dict['gt_map_cpu'] = {
     'type': int,
-    'default': 12,
+    'default': 8,
     'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
 }
 
 # Memory per CPU core for BWA mapping jobs
 args_dict['gt_map_mem'] = {
-    'default': '4G',
+    'default': '2.5G',
     'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
 }
 
+args_dict['gt_map_disk_free'] = {
+    'default': '15G',
+    'help': 'Temp space per CPU Core.'
+}
+
+# Keep temp files
 args_dict['gt_keep_temp'] = {
     'action': 'store_true',
     'help': 'Do not remove temp directory after genotyping.'
@@ -366,13 +372,14 @@ args_dict['variants'] = {
 # Functions #
 #############
 
-def get_arg(key, args=None, default=None):
+def get_arg(key, args=None, default=None, default_none=False):
     """
     Get an argument from object `args` or the default value for an argument if it is not in `args`.
 
     :param key: Argument key (name).
     :param args: Argument object or `None` to always get the default argument.
     :param default: Default value if not in `args`. Uses hard-coded default if `None`.
+    :param default_none: If `True` and there is no default argument, return `None` instead of throwing an error.
 
     :return: Argument value.
 
@@ -390,7 +397,7 @@ def get_arg(key, args=None, default=None):
 
     # Get hard-coded default value
     if key not in args_dict:
-        raise KeyError('No record for argument with key {}'.format(key))
+        raise KeyError('No record for argument with key {} in built-in argument dictionary'.format(key))
 
     if 'default' in args_dict[key]:
         return args_dict[key]['default']
@@ -398,5 +405,9 @@ def get_arg(key, args=None, default=None):
     if 'action' in args_dict[key] and args_dict[key]['action'] == 'store_true':
         # 'action' entries have an implicit default of False
         return False
+
+    # No value, no default
+    if default_none:
+        return None
 
     raise KeyError('No default value for argument with key {}'.format(key))

@@ -242,53 +242,37 @@ def vcf_get_format_tags():
     ]
 
 
-def preprocess_manifest(manifest_file_name, samples):
+def preprocess_manifest(manifest_file_name):
     """
     Pre-process the sample manifest and normalize all sex columns.
 
-    :param manifest_file_name: File name to read or `None` to create a set of default sexes (all unknown).
-    :param samples: List of sample names.
+    :param manifest_file_name: File name to read.
 
-    :return: A Series of sexes indexed by the sample.
+    :return: A table with columns "SAMPLE", "SEX", and "DATA".
     """
-
-    # Make default manifest if none exist
-    if manifest_file_name is None:
-        df = pd.DataFrame(data=['U'] * len(samples), index=samples, columns=('sex',))
-        df.index.name = 'sample'
-
-        return df['sex']
 
     # Read manifest
     df = pd.read_table(manifest_file_name, header=0)
 
-    if 'sample' not in df.columns:
-        raise RuntimeError(
-            'Sample manifest "{}" does not contain a column with the label "sample"'.format(manifest_file_name)
-        )
+    df.columns = [colname.upper() for colname in df.columns]
 
-    if 'sex' not in df.columns:
-        raise RuntimeError(
-            'Sample manifest "{}" does not contain a column with the label "sex"'.format(manifest_file_name)
-        )
+    for colname in ['SAMPLE', 'SEX', 'DATA']:
+        if colname not in df.columns:
+            raise RuntimeError(
+                'Sample manifest "{}" does not contain a column with the label "{}"'.format(manifest_file_name, colname)
+            )
 
     # Normalize sex
-    df['sex'] = df['sex'].apply(lambda sex: 'U' if sex is None else sex.upper())
+    df['SEX'] = df['SEX'].apply(lambda sex: 'U' if sex is None else sex.upper())
 
-    if any(df['sex'].apply(lambda sex: sex not in {'M', 'F', 'U'})):
+    if any(df['SEX'].apply(lambda sex: sex not in {'M', 'F', 'U'})):
         raise RuntimeError(
             'Sample manifest "{}" contains sexes that are not "M", "F", or "U"'.format(manifest_file_name)
         )
 
-    # Add any missing samples
-    for sample in samples:
-        if sample not in list(df['sample']):
-            raise RuntimeWarning('Missing sample "{}" in manifest "{}"'.format(sample, manifest_file_name))
-
-            df = df.append(pd.Series({'sample': sample, 'sex': 'U'}), ignore_index=True)
-
-    # Order by samples and drop unused samples
-    df.index = df['sample']
+    # Order and set index
+    df = df.loc[:, ['SAMPLE', 'SEX', 'DATA']]
+    df.set_index('SAMPLE', inplace=True)
 
     # Return
-    return df['sex']
+    return df

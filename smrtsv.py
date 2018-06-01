@@ -315,7 +315,8 @@ def genotype(args):
             'gt_mapq={}'.format(args.gt_mapq),
             'gt_map_cpu={}'.format(args.gt_map_cpu),
             'gt_map_mem={}'.format(args.gt_map_mem),
-            'gt_keep_temp={}'.format(args.gt_keep_temp)
+            'gt_map_disk_free={}'.format(args.gt_map_disk_free),
+            'gt_keep_temp={}'.format(args.gt_keep_temp),
          )
     )
 
@@ -425,9 +426,10 @@ if __name__ == '__main__':
     parser_genotyper = subparsers.add_parser('genotype', help='Genotype SVs with Illumina reads')
     parser_genotyper.add_argument('genotyper_config', **args_dict['genotyper_config'])
     parser_genotyper.add_argument('genotyped_variants', **args_dict['genotyped_variants'])
-    parser_genotyper.add_argument('--gt_mapq', '--mapq', **args_dict['gt_mapq'])
-    parser_genotyper.add_argument('--gt_map_cpu', **args_dict['gt_map_cpu'])
-    parser_genotyper.add_argument('--gt_map_mem', **args_dict['gt_map_mem'])
+    parser_genotyper.add_argument('--gt-mapq', '--mapq', dest='gt_mapq', **args_dict['gt_mapq'])
+    parser_genotyper.add_argument('--gt-map-cpu', dest='gt_map_cpu', **args_dict['gt_map_cpu'])
+    parser_genotyper.add_argument('--gt-map-mem', dest='gt_map_mem', **args_dict['gt_map_mem'])
+    parser_genotyper.add_argument('--gt-map-disk-free', dest='gt_map_disk_free', **args_dict['gt_map_disk_free'])
     parser_genotyper.add_argument('--gt-keep-temp', dest='gt_keep_temp', **args_dict['gt_keep_temp'])
     parser_genotyper.set_defaults(func=genotype)
 

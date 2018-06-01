@@ -154,7 +154,7 @@
   "gt_altref_index": {
     "mem": "16G",
     "rt": "02:00:00:00",
-    "params": "-R y"
+    "params": "-R y -l ssd=TRUE"
   },
   "gt_svmap_map_pseudoreads": {
     "mem": "2G",
@@ -166,7 +166,7 @@
     "mem": "{params.mem}",
     "cpu": "{params.threads}",
     "rt": "36:00:00",
-    "params": "-l disk_free=50G -R y -l ssd=FALSE"
+    "params": "-l disk_free={params.disk_free} -R y -l ssd=FALSE"
   },
   "gt_call_genotype_merged_samples": {
     "mem": "2G"

@@ -107,8 +107,11 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     wait_time = get_arg('wait_time', args)
     dry_run = get_arg('dryrun', args)
     cluster_params = get_arg('cluster_params', args)
-    cluster_config_path = get_arg('cluster_config', args, os.path.join(smrtsv_dir, 'cluster.template.json'))
+    cluster_config_path = get_arg('cluster_config', args, default_none=True)
     job_prefix = get_arg('job_prefix', args)
+
+    if cluster_config_path is None:
+        cluster_config_path = os.path.join(smrtsv_dir, 'cluster.template.json')
 
     # Setup snakemake command
     prefix = [
@@ -171,7 +174,7 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
 
     # Report (verbose)
     if hasattr(args, 'verbose') and args.verbose:
-        print('Running snakemake command:\n\t* {}'.format('\n\t* '.join(prefix)))
+        print('Running snakemake command:\n\t* {}'.format('\n\t* '.join([element if element is not None else 'Nonetype' for element in prefix])))
 
     # Run snakemake command
     return run_cmd(prefix, process_env, stdout=stdout, stderr=stderr, cwd=cwd)
