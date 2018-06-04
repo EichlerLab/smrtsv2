@@ -90,7 +90,6 @@ rule aln_align_batch:
                 """samtools index {output.bam}; """
                 """echo "Cleaning temp \\"${{ALIGN_BATCH_TEMP}}\\"..." >>{log}; """
                 """rm -rf ${{ALIGN_BATCH_TEMP}}"""
-                """echo "Indexing..." >>{log} 2>&1; """
                 """echo "Done aligning batch {wildcards.batch_id}" >>{log}; """
             )
 
@@ -101,7 +100,7 @@ rule aln_align_batch:
                 """echo "Creating empty BAM with headers..." >>{log}; """
                 """echo -e "@HD\tVN:1.3\tSO:coordinate" | """
                 """samtools view -b > {output.bam}; """
-                """samtools index {output.bam}"""
+                """samtools index {output.bam}; """
                 """echo "Done" >>{log}; """
             )
 

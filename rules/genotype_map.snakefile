@@ -14,7 +14,7 @@ import socket
 
 # Get parameters
 SAMPLE = config['sample']                    # Sample name
-SAMPLE_BAM = config['sample_bam']            # BAM file of sample reads (mapped and unmapped reads).
+SAMPLE_FQ = config['sample_fq']              # FASTQ file of reads with interleaved pairs
 SV_REF = config['sv_ref']                    # Augmented reference with local assemblies as alternate contigs.
 SV_REF_ALT = config['sv_ref_alt']            # Reference ALT file (.alt); aligns alternate to primary contigs.
 MAP_REGIONS_BED = config['map_regions_bed']  # Filter alignments outside these loci
@@ -51,13 +51,10 @@ rule gt_map_align_sample_reads:
         os.path.join(BM_DIR, 'primary_alignment.txt')
     shell:
         """echo "Running alignment for sample {SAMPLE}"; """
-        """echo "Input BAM: {SAMPLE_BAM}"; """
+        """echo "Input FASTQ: {SAMPLE_FQ}"; """
         """echo "Temp: $(pwd)"; """
         """echo "Host: {HOSTNAME}"; """
-        """samtools collate {SAMPLE_BAM} -Ou - | """
-        """samtools bam2fq - | """
-        """seqtk dropse - | """
-        """bwa mem -R '@RG\\tID:{SAMPLE}\\tSM:{SAMPLE}' -p -t {THREADS} {SV_REF} - | """
+        """bwa mem -R '@RG\\tID:{SAMPLE}\\tSM:{SAMPLE}' -p -t {THREADS} {SV_REF} {SAMPLE_FQ} | """
         """k8 {POSTALT_PATH} {SV_REF_ALT} | """
         """grep -Ev '^\s*NaN\s*' | """
         """samtools view -h -q {MAPQ} -L {MAP_REGIONS_BED} | """

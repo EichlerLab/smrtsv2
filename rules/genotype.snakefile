@@ -382,7 +382,7 @@ rule gt_call_sample_breakpoint_depth:
 # reference are extracted along with unmapped reads.
 rule gt_map_sample_reads:
     input:
-        sample_bam=lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, 'DATA'],
+        fq='temp/samples/{sample}/paired_reads.fq.gz',
         sv_ref='altref/ref.fasta',
         sv_ref_bwt='altref/ref.fasta.bwt',
         sv_ref_alts='altref/ref.fasta.alt',
@@ -393,11 +393,11 @@ rule gt_map_sample_reads:
         bai='samples/{sample}/alignments.cram.crai'
     params:
         mapq=get_config_param('gt_mapq'),
-        threads=get_config_param('gt_map_cpu'),         # Parses into cluster params
-        mem=get_config_param('gt_map_mem'),             # Parses into cluster params
-        disk_free=get_config_param('gt_map_disk_map')  # Parses into cluster params
+        threads=get_config_param('gt_map_cpu'),          # Parses into cluster params
+        mem=get_config_param('gt_map_mem'),              # Parses into cluster params
+        disk_free=get_config_param('gt_map_disk_align')  # Parses into cluster params
     benchmark:
-        'samples/{sample}/bm/alignments.txt'
+        'samples/{sample}/bm/gt_map_sample_reads.txt'
     log:
         align='samples/{sample}/alignments.log'
     run:
@@ -422,7 +422,7 @@ rule gt_map_sample_reads:
                 '--jobs', str(params.threads),
                 '--config',
                 'sample={}'.format(wildcards.sample),
-                'sample_bam={}'.format(os.path.abspath(input.sample_bam)),
+                'sample_fq={}'.format(os.path.abspath(input.fq)),
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
                 'sv_ref_alt={}'.format(os.path.abspath(input.sv_ref_alts)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
@@ -454,6 +454,44 @@ rule gt_map_sample_reads:
             if mapping_temp is not None and not KEEP_TEMP:
                 shutil.rmtree(mapping_temp)
 
+# gt_map_make_sample_fq
+#
+# Make FASTQ file from reads.
+rule gt_map_make_sample_fq:
+    input:
+        bam=lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, 'DATA']
+    output:
+        fq=temp('temp/samples/{sample}/paired_reads.fq.gz'),
+    params:
+        disk_free=get_config_param('gt_map_disk_fq')  # Parses into cluster params
+    benchmark:
+        'samples/{sample}/bm/gt_map_make_sample_fq.txt'
+    run:
+
+        # Get absolute path to input and output
+        input_bam = os.path.abspath(input.bam)
+        output_fq = os.path.abspath(output.fq)
+
+        # Make temp directory
+        mapping_temp = tempfile.mkdtemp(
+            prefix=os.path.join(
+                TEMP_DIR,
+                'map_sample_fq_{}_'.format(wildcards.sample)
+            )
+        )
+
+        # Convert to FASTQ
+        shell(
+            """cd {mapping_temp} && """
+            """samtools collate {input_bam} -O -n 2048 - | """
+            """samtools bam2fq - | """
+            """seqtk dropse - | """
+            """gzip """
+            """> {output_fq}"""
+        )
+
+        # Cleanup temp directory
+        shutil.rmtree(mapping_temp)
 
 #
 # Prepare local assembly sequences and references.

@@ -162,11 +162,17 @@
     "rt": "02:00:00",
     "params": "-l disk_free=2G -R y -l ssd=FALSE"
   },
+  "gt_map_make_sample_fq": {
+    "mem": "2G",
+    "cpu": "2",
+    "rt": "36:00:00",
+    "params": "-l disk_free={params.disk_free} -R y"
+  },
   "gt_map_sample_reads": {
     "mem": "{params.mem}",
     "cpu": "{params.threads}",
     "rt": "36:00:00",
-    "params": "-l disk_free={params.disk_free} -R y -l ssd=FALSE"
+    "params": "-l disk_free={params.disk_free} -R y"
   },
   "gt_call_genotype_merged_samples": {
     "mem": "2G"
