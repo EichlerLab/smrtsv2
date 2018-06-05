@@ -315,8 +315,7 @@ def genotype(args):
             'gt_mapq={}'.format(args.gt_mapq),
             'gt_map_cpu={}'.format(args.gt_map_cpu),
             'gt_map_mem={}'.format(args.gt_map_mem),
-            'gt_map_disk_fq={}'.format(args.gt_map_disk_fq),
-            'gt_map_disk_align={}'.format(args.gt_map_disk_align),
+            'gt_map_disk={}'.format(args.gt_map_disk),
             'gt_keep_temp={}'.format(args.gt_keep_temp),
          )
     )
@@ -430,8 +429,7 @@ if __name__ == '__main__':
     parser_genotyper.add_argument('--gt-mapq', '--mapq', dest='gt_mapq', **args_dict['gt_mapq'])
     parser_genotyper.add_argument('--gt-map-cpu', dest='gt_map_cpu', **args_dict['gt_map_cpu'])
     parser_genotyper.add_argument('--gt-map-mem', dest='gt_map_mem', **args_dict['gt_map_mem'])
-    parser_genotyper.add_argument('--gt-map-disk-fq', dest='gt_map_disk_fq', **args_dict['gt_map_disk_fq'])
-    parser_genotyper.add_argument('--gt-map-disk-align', dest='gt_map_disk_align', **args_dict['gt_map_disk_align'])
+    parser_genotyper.add_argument('--gt-map-disk', dest='gt_map_disk', **args_dict['gt_map_disk'])
     parser_genotyper.add_argument('--gt-keep-temp', dest='gt_keep_temp', **args_dict['gt_keep_temp'])
     parser_genotyper.set_defaults(func=genotype)
 

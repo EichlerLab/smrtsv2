@@ -318,15 +318,9 @@ args_dict['gt_map_mem'] = {
     'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
 }
 
-args_dict['gt_map_disk_fq'] = {
+args_dict['gt_map_disk'] = {
     'default': '15G',
-    'help': 'Temp space per CPU Core for converting reads to FASTQ. Assume size of the original BAM.'
-}
-
-args_dict['gt_map_disk_align'] = {
-    'default': '5G',
-    'help': 'Temp space per CPU Core for aligning reads. Needs to be large enough to hold the final BAM while sorted '
-            '(approx. 10% of original BAM size).'
+    'help': 'Temp space per CPU Core for .'
 }
 
 # Keep temp files
