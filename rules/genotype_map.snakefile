@@ -55,7 +55,7 @@ rule gt_map_align_sample_reads:
         """echo "Input Reads: {SAMPLE_ALN}"; """
         """echo "Temp: $(pwd)"; """
         """echo "Host: {HOSTNAME}"; """
-        """samtools collate {SAMPLE_ALN} -Ou -n 2048 - | """
+        """samtools collate -Ou -n 1024 {SAMPLE_ALN} collate/part | """
         """samtools bam2fq - | """
         """seqtk dropse - | """
         """bwa mem -R '@RG\\tID:{SAMPLE}\\tSM:{SAMPLE}' -p -t {THREADS} {SV_REF} - | """

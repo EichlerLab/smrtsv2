@@ -52,7 +52,7 @@ with open(config.get('learn_config', 'gt_learn.json'), 'r') as config_in:
 ####################
 
 # Number of cross-validation folds
-FOLDS_K = int(CONFIG_LEARN.get('folds', '6'))
+FOLDS_K = int(CONFIG_LEARN.get('folds', '8'))
 
 # Callable threshold a a sum of depth over ref and alt breakpoints. This is a typical cutoff for choosing NO_CALL
 # variants.
