@@ -83,108 +83,25 @@ def assemble(args):
 
     print('Running local assemblies')
 
-    base_command = (
-        'collect_assembly_alignments',
+    command = (
+        'asm_merge_assembled_groups',
         '--config',
-        'asm_alignment_parameters="{}"'.format(args.asm_alignment_parameters),
-        'mapping_quality="{}"'.format(args.mapping_quality)
+        'asm_alignment_parameters={}'.format(args.asm_alignment_parameters),
+        'mapping_quality={}'.format(args.mapping_quality),
+        'asm_cpu={}'.format(args.asm_cpu),
+        'asm_mem={}'.format(args.asm_mem),
+        'asm_polish={}'.format(args.asm_polish)
     )
 
-    # For each contig/chromosome in the candidates file, submit a separate
-    # Snakemake command. To do so, first split regions to assemble into one
-    # file per contig in a temporary directory.
-    tmpdir = os.path.join(os.getcwd(), 'regions_by_contig')
-
-    rebuild_regions_by_contig = False
-    if not args.dryrun and (not os.path.exists(tmpdir) or args.rebuild_regions):
-        rebuild_regions_by_contig = True
-
-    if rebuild_regions_by_contig:
-        try:
-            os.mkdir(tmpdir)
-        except OSError:
-            pass
-
-    previous_contig = None
-    contig_file = None
-
-    with open(args.candidates, "r") as fh:
-        contigs = set()
-        for line in fh:
-            contig = line.strip().split()[0]
-
-            if previous_contig != contig:
-                if previous_contig is not None and rebuild_regions_by_contig:
-                    contig_file.close()
-                    contig_file = None
-
-                previous_contig = contig
-                contigs.add(contig)
-
-                if rebuild_regions_by_contig:
-                    contig_file = open(os.path.join(tmpdir, '{}.bed'.format(contig)), 'w')
-
-            if rebuild_regions_by_contig:
-                contig_file.write(line)
-
-    if rebuild_regions_by_contig:
-        if contig_file is not None:
-            contig_file.close()
-
-    # Assemble regions per contig creating a single merged BAM for each contig.
-    local_assembly_basename = os.path.basename(args.assembly_alignments)
-    local_assemblies = set()
-
-    return_code = 0
-
-    contig_count = 0  # Number of contigs assemblies were generated for
-
-    for contig in contigs:
-        contig_local_assemblies = os.path.join(
-            'local_assemblies',
-            local_assembly_basename.replace('.bam', '.{}.bam'.format(contig))
-        )
-
-        local_assemblies.add(contig_local_assemblies)
-
-        if os.path.exists(contig_local_assemblies):
-            sys.stdout.write('Local assemblies already exist for %s\n' % contig)
-            continue
-
-        command = base_command + ('regions_to_assemble=%s' % os.path.join(tmpdir, '%s.bed' % contig),)
-        command = command + ('assembly_alignments={}'.format(contig_local_assemblies),)
-        sys.stdout.write('Starting local assemblies for {}\n'.format(contig))
-
-        return_code = smrtsvrunner.run_snake_target(
-            'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command
-        )
-
-        contig_count += 1
-
-        if return_code != 0:
-            break
-
-    # If the last command executed successfully, try to merge all local
-    # assemblies per contig into a single file. Only build if at least one set of local assemblies was performed
-    # or the local assemblies file does not exist.
-    if not args.dryrun and return_code == 0 and (contig_count > 0 or not os.path.exists(args.assembly_alignments)):
-        if len(local_assemblies) > 1:
-            return_code = smrtsvrunner.run_cmd(['samtools', 'merge', args.assembly_alignments] +
-                                               list(local_assemblies), PROCESS_ENV)
-        else:
-            return_code = smrtsvrunner.run_cmd(['samtools', 'view', '-b', '-o', args.assembly_alignments] +
-                                               list(local_assemblies), PROCESS_ENV)
-
-        if return_code == 0:
-            return_code = smrtsvrunner.run_cmd(['samtools', 'index', args.assembly_alignments], PROCESS_ENV)
-
-    # Return the last return code.
-    return return_code
+    return smrtsvrunner.run_snake_target('rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command)
 
 
 def call(args):
     # Call SVs, indels, and inversions.
     sys.stdout.write("Calling variants\n")
+
+    # Stop pipeline here until the snakemake rules are updated
+    raise RuntimeError('SMRT-SV call is under construction')
 
     return_code = smrtsvrunner.run_snake_target(
         'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
@@ -372,8 +289,6 @@ if __name__ == '__main__':
 
     # SMRTSV command: Assemble regions
     parser_assembler = subparsers.add_parser('assemble', help='Assemble candidate regions.')
-    parser_assembler.add_argument('reference', **args_dict['reference'])
-    parser_assembler.add_argument('reads', **args_dict['reads'])
     parser_assembler.add_argument('--asm-alignment-parameters', dest='asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
     parser_assembler.add_argument('--mapping-quality', dest='mapping_quality', **args_dict['mapping_quality'])
     parser_assembler.add_argument('--asm-cpu', dest='asm_cpu', **args_dict['asm_cpu'])

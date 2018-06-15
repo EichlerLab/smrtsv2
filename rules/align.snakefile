@@ -50,7 +50,8 @@ rule aln_align_batch:
         ref_ctab='reference/ref.fasta.ctab'
     output:
         bam=protected('align/bam/{batch_id}.bam'),
-        bai=protected('align/bam/{batch_id}.bam.bai')
+        bai=protected('align/bam/{batch_id}.bam.bai'),
+        unaligned=protected('align/bam/unaligned/{batch_id}.fa.gz')
     params:
         threads=get_config_param('threads'),
         samtools_threads="1",
@@ -61,6 +62,10 @@ rule aln_align_batch:
         'align/bam/log/{batch_id}.log'
     run:
 
+        # Get unaligned FASTA file name before compression
+        unaligned_file_name = output.unaligned[:-3]  # Removed .gz extension
+
+        # Map
         if os.path.getsize(input.reads) > 0:
 
             shell(
@@ -68,7 +73,7 @@ rule aln_align_batch:
                 """mkdir -p ${{ALIGN_BATCH_TEMP}}; """
                 """echo "Aligning batch {wildcards.batch_id}..." >{log}; """
                 """blasr {input.reads} {input.ref_fa} """
-                    """--unaligned /dev/null """
+                    """--unaligned {unaligned_file_name} """
                     """--out ${{ALIGN_BATCH_TEMP}}/batch_out.bam """
                     """--sam """
                     """--sa {input.ref_sa} """
@@ -87,7 +92,9 @@ rule aln_align_batch:
                     """${{ALIGN_BATCH_TEMP}}/batch_out.bam """
                     """>>{log} 2>&1; """
                 """echo "Indexing..." >>{log} 2>&1; """
-                """samtools index {output.bam}; """
+                """samtools index {output.bam} >>{log} 2>&1; """
+                """echo "Compressing unaligned reads..." >>{log} 2>&1; """
+                """gzip {unaligned_file_name} >>{log} 2>&1; """
                 """echo "Cleaning temp \\"${{ALIGN_BATCH_TEMP}}\\"..." >>{log}; """
                 """rm -rf ${{ALIGN_BATCH_TEMP}}"""
                 """echo "Done aligning batch {wildcards.batch_id}" >>{log}; """
@@ -101,6 +108,8 @@ rule aln_align_batch:
                 """echo -e "@HD\tVN:1.3\tSO:coordinate" | """
                 """samtools view -b > {output.bam}; """
                 """samtools index {output.bam}; """
+                """touch {unaligned_file_name}; """
+                """gzip {unaligned_file_name}; """
                 """echo "Done" >>{log}; """
             )
 

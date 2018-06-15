@@ -103,7 +103,8 @@ args_dict['cluster_params'] = {
 args_dict['mapping_quality'] = {
     'type': int,
     'default': 30,
-    'help': 'Minimum mapping quality of raw reads to use for local assembly.'
+    'help': 'Minimum mapping quality of raw reads. Used by "detect" to filter reads while finding gaps and hardstops. '
+            'Used by "assemble" to filter reads with low mapping quality before the assembly step.'
 }
 
 
@@ -282,6 +283,7 @@ args_dict['asm_polish'] = {
         'Assembly polishing method (arrow|quiver). "arrow" should work on all PacBio data, but "quiver" will only '
         'work on RS II input.'
 }
+
 
 #
 # Genotyper
