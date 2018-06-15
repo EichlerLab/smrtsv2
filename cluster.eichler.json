@@ -136,7 +136,7 @@
     "rt": "08:00:00"
   },
   "gt_call_sample_breakpoint_depth": {
-    "mem": "4G",
+    "mem": "6G",
     "rt": "04:00:00"
   },
   "gt_call_sample_insert_delta": {
@@ -144,7 +144,7 @@
     "rt": "04:00:00"
   },
   "gt_call_sample_read_depth": {
-    "mem": "4G",
+    "mem": "6G",
     "rt": "04:00:00"
   },
   "gt_contig_bam_to_fasta": {

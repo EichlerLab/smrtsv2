@@ -1,16 +1,14 @@
 #!/bin/env python3
 
 import argparse
-import logging
 import sys
 import os
 import re
 
 from smrtsvlib.args import args_dict
+from smrtsvlib.args import get_arg
 from smrtsvlib import smrtsvrunner
 
-# Set logging
-logging.basicConfig(filename='smrtsv.log', level=logging.DEBUG)
 
 # Get SMRTSV base directory
 SMRTSV_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +26,7 @@ def index(args):
         (
             'ref_all',
             '--config',
-            'reference={}'.format(args.reference),
-            'link_index={}'.format(args.link_index)
+            'reference={}'.format(args.reference)
         )
     )
 
@@ -157,7 +154,6 @@ def assemble(args):
         command = base_command + ('regions_to_assemble=%s' % os.path.join(tmpdir, '%s.bed' % contig),)
         command = command + ('assembly_alignments={}'.format(contig_local_assemblies),)
         sys.stdout.write('Starting local assemblies for {}\n'.format(contig))
-        logging.debug('Assembly command: %s', ' '.join(command))
 
         return_code = smrtsvrunner.run_snake_target(
             'rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command
@@ -343,13 +339,12 @@ if __name__ == '__main__':
     parser.add_argument('--keep-going', '-k', dest='keep_going', **args_dict['keep_going'])
     parser.add_argument('--nt', **args_dict['nt'])
     parser.add_argument('--log', **args_dict['log'])
-    parser.add_argument('--wait_time', **args_dict['wait_time'])
+    parser.add_argument('--wait-time', dest='wait_time', **args_dict['wait_time'])
     subparsers = parser.add_subparsers()
 
     # SMRTSV command: Index reference
     parser_index = subparsers.add_parser('index', help='Index a reference for BLASR')
     parser_index.add_argument('reference', **args_dict['reference'])
-    parser_index.add_argument('--no_link_index', **args_dict['no_link_index'])
     parser_index.set_defaults(func=index)
 
     # SMRTSV command: Align PacBio reads
@@ -357,33 +352,33 @@ if __name__ == '__main__':
     parser_align.add_argument('reads', **args_dict['reads'])
     parser_align.add_argument('--batches', **args_dict['batches'])
     parser_align.add_argument('--threads', **args_dict['threads'])
-    parser_align.add_argument('--alignment_parameters', **args_dict['alignment_parameters'])
+    parser_align.add_argument('--alignment-parameters', dest='alignment_parameters', **args_dict['alignment_parameters'])
     parser_align.set_defaults(func=align)
 
     # SMRTSV command: Detect windows
     parser_detector = subparsers.add_parser('detect', help='Detect SV signatures in aligned reads')
-    parser_detector.add_argument('--mapping_quality', **args_dict['mapping_quality'])
+    parser_detector.add_argument('--mapping-quality', dest='mapping_quality', **args_dict['mapping_quality'])
     parser_detector.add_argument('--exclude', **args_dict['exclude'])
-    parser_detector.add_argument('--assembly_window_size', **args_dict['assembly_window_size'])
-    parser_detector.add_argument('--assembly_window_slide', **args_dict['assembly_window_slide'])
-    parser_detector.add_argument('--min_length', **args_dict['min_length'])
-    parser_detector.add_argument('--min_support', **args_dict['min_support'])
-    parser_detector.add_argument('--max_support', **args_dict['max_support'])
-    parser_detector.add_argument('--min_coverage', **args_dict['min_coverage'])
-    parser_detector.add_argument('--max_coverage', **args_dict['max_coverage'])
-    parser_detector.add_argument('--min_hardstop_support', **args_dict['min_hardstop_support'])
-    parser_detector.add_argument('--max_candidate_length', **args_dict['max_candidate_length'])
+    parser_detector.add_argument('--assembly-window-size', dest='assembly_window_size', **args_dict['assembly_window_size'])
+    parser_detector.add_argument('--assembly-window-slide', dest='assembly_window_slide', **args_dict['assembly_window_slide'])
+    parser_detector.add_argument('--min-length', dest='min_length', **args_dict['min_length'])
+    parser_detector.add_argument('--min-support', dest='min_support', **args_dict['min_support'])
+    parser_detector.add_argument('--max-support', dest='max_support', **args_dict['max_support'])
+    parser_detector.add_argument('--min-coverage', dest='min_coverage', **args_dict['min_coverage'])
+    parser_detector.add_argument('--max-coverage', dest='max_coverage', **args_dict['max_coverage'])
+    parser_detector.add_argument('--min-hardstop-support', dest='min_hardstop_support', **args_dict['min_hardstop_support'])
+    parser_detector.add_argument('--max-candidate-length', dest='max_candidate_length', **args_dict['max_candidate_length'])
     parser_detector.set_defaults(func=detect)
 
     # SMRTSV command: Assemble regions
     parser_assembler = subparsers.add_parser('assemble', help='Assemble candidate regions.')
     parser_assembler.add_argument('reference', **args_dict['reference'])
     parser_assembler.add_argument('reads', **args_dict['reads'])
-    parser_assembler.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
-    parser_assembler.add_argument('--mapping_quality', **args_dict['mapping_quality'])
-    parser_assembler.add_argument('--asm_cpu', **args_dict['asm_cpu'])
-    parser_assembler.add_argument('--asm_mem', **args_dict['asm_mem'])
-    parser_assembler.add_argument('--asm_polish', **args_dict['asm_polish'])
+    parser_assembler.add_argument('--asm-alignment-parameters', dest='asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
+    parser_assembler.add_argument('--mapping-quality', dest='mapping_quality', **args_dict['mapping_quality'])
+    parser_assembler.add_argument('--asm-cpu', dest='asm_cpu', **args_dict['asm_cpu'])
+    parser_assembler.add_argument('--asm-mem', dest='asm_mem', **args_dict['asm_mem'])
+    parser_assembler.add_argument('--asm-polish', dest='asm_polish', **args_dict['asm_polish'])
     parser_assembler.set_defaults(func=assemble)
 
     # SMRTSV command: Call variants
@@ -402,24 +397,24 @@ if __name__ == '__main__':
     parser_runner.add_argument('--batches', **args_dict['batches'])
     parser_runner.add_argument('--threads', **args_dict['threads'])
     parser_runner.add_argument('--exclude', **args_dict['exclude'])
-    parser_runner.add_argument('--assembly_window_size', **args_dict['assembly_window_size'])
-    parser_runner.add_argument('--assembly_window_slide', **args_dict['assembly_window_slide'])
-    parser_runner.add_argument('--asm_cpu', **args_dict['asm_cpu'])
-    parser_runner.add_argument('--asm_mem', **args_dict['asm_mem'])
-    parser_runner.add_argument('--asm_polish', **args_dict['asm_polish'])
-    parser_runner.add_argument('--min_length', **args_dict['min_length'])
-    parser_runner.add_argument('--min_support', **args_dict['min_support'])
-    parser_runner.add_argument('--max_support', **args_dict['max_support'])
-    parser_runner.add_argument('--min_coverage', **args_dict['min_coverage'])
-    parser_runner.add_argument('--max_coverage', **args_dict['max_coverage']),
+    parser_runner.add_argument('--assembly-window-size', dest='assembly_window_size', **args_dict['assembly_window_size'])
+    parser_runner.add_argument('--assembly-window-slide', dest='assembly_window_slide', **args_dict['assembly_window_slide'])
+    parser_runner.add_argument('--asm-cpu', dest='asm_cpu', **args_dict['asm_cpu'])
+    parser_runner.add_argument('--asm-mem', dest='asm_mem', **args_dict['asm_mem'])
+    parser_runner.add_argument('--asm-polish', dest='asm_polish', **args_dict['asm_polish'])
+    parser_runner.add_argument('--min-length', dest='min_length', **args_dict['min_length'])
+    parser_runner.add_argument('--min-support', dest='min_support', **args_dict['min_support'])
+    parser_runner.add_argument('--max-support', dest='max_support', **args_dict['max_support'])
+    parser_runner.add_argument('--min-coverage', dest='min_coverage', **args_dict['min_coverage'])
+    parser_runner.add_argument('--max-coverage', dest='max_coverage', **args_dict['max_coverage']),
     parser_runner.add_argument('--sample', **args_dict['sample'])
     parser_runner.add_argument('--species', **args_dict['species'])
     parser_runner.add_argument('--runjobs', **args_dict['runjobs'])
-    parser_runner.add_argument('--alignment_parameters', **args_dict['alignment_parameters'])
-    parser_runner.add_argument('--asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
-    parser_runner.add_argument('--mapping_quality', **args_dict['mapping_quality'])
-    parser_runner.add_argument('--min_hardstop_support', **args_dict['min_hardstop_support'])
-    parser_runner.add_argument('--max_candidate_length', **args_dict['max_candidate_length'])
+    parser_runner.add_argument('--alignment-parameters', dest='alignment_parameters', **args_dict['alignment_parameters'])
+    parser_runner.add_argument('--asm-alignment-parameters', dest='asm_alignment_parameters', **args_dict['asm_alignment_parameters'])
+    parser_runner.add_argument('--mapping-quality', dest='mapping_quality', **args_dict['mapping_quality'])
+    parser_runner.add_argument('--min-hardstop-support', dest='min_hardstop_support', **args_dict['min_hardstop_support'])
+    parser_runner.add_argument('--max-candidate-length', dest='max_candidate_length', **args_dict['max_candidate_length'])
     parser_runner.set_defaults(func=run)
 
     # SMRTSV command: Genotype SMRTSV SV calls with Illumina reads

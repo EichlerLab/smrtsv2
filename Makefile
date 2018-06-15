@@ -116,7 +116,7 @@ dist/bin/canu:
 #
 
 # Python (2/3) and snakemake
-dist/bin/snakemake:
+dist/bin/snakemake: dist/lib/libz.so
 	make -C dist/miniconda
 
 

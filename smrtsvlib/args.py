@@ -252,12 +252,12 @@ args_dict['min_support'] = {
 # asm_alignment_parameters
 args_dict['asm_alignment_parameters'] = {
     'default':
-        '-affineAlign '
-        '-affineOpen 8 '
-        '-affineExtend 0 '
-        '-bestn 1 '
-        '-maxMatch 30 '
-        '-sdpTupleSize 13',
+        '--affineAlign '
+        '--affineOpen 8 '
+        '--affineExtend 0 '
+        '--bestn 1 '
+        '--maxMatch 30 '
+        '--sdpTupleSize 13',
     'help': 'BLASR parameters to use to align local assemblies.'
 }
 

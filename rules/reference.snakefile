@@ -34,7 +34,6 @@ rule ref_all:
         ref_fai='reference/ref.fasta.fai',
         ref_ctab='reference/ref.fasta.ctab',
         ref_sa='reference/ref.fasta.sa',
-        ref_mmi='reference/ref.fasta.mmi',
         ref_sizes='reference/ref.fasta.sizes'
 
 # ref_make_sizes
@@ -52,22 +51,6 @@ rule ref_make_sizes:
         """awk -vOFS="\t" '{{print $1, $2}}' {input.ref_fai} | """
         """sort -k1,1 """
         """>{output.ref_sizes}"""
-
-# ref_make_mmi
-#
-# Make minimizer index for minimap2.
-rule ref_make_mmi:
-    input:
-        ref_fa='reference/ref.fasta'
-    output:
-        ref_mmi='reference/ref.fasta.mmi'
-    shell:
-        """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.mmi ]; then """
-            """ln -sf {REFERENCE}.mmi {output.ref_mmi}; """
-        """else """
-            """minimap2 -d {output.ref_mmi} {input.ref_fa}; """
-            """chmod a-w {output.ref_mmi}; """
-        """fi"""
 
 # ref_make_ctab
 #

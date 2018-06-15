@@ -124,11 +124,11 @@ rule assemble_align_ref_region:
             shell(
                 """blasr """
                     """{input.contig} {input.ref} """
-                    """-sam """
-                    """-unaligned /dev/null """
-                    """-out {output.sam} """
-                    """-clipping subread """
-                    """-nproc {params.threads} """
+                    """--sam """
+                    """--unaligned /dev/null """
+                    """--out {output.sam} """
+                    """--clipping subread """
+                    """--nproc {params.threads} """
                     """{ALN_PARAMS};"""
             )
 
