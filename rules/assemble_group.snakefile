@@ -5,6 +5,7 @@ Run assemblies for all windows in a group.
 import os
 import pandas as pd
 import shutil
+import sys
 
 from Bio import SeqIO
 
@@ -19,11 +20,10 @@ if not 'INCLUDE_SNAKEFILE' in globals():
 ### Get parameters ###
 
 # Output
-CONTIG_BAM = config['contig_bam']
+CONTIG_BAM = config['contig_out']
 CONTIG_BAM_INDEX = CONTIG_BAM + '.bai'
 
 LOG_DIR = config['log_dir']
-LOG_DIR_ASM = os.path.join(LOG_DIR, 'asm')
 
 # Params
 MAPQ = config['mapping_quality']
@@ -47,7 +47,7 @@ DF_CANDIDATES = pd.read_table(BED_CANDIDATES, header=0, index_col='ID')
 if GROUP_ID not in set(DF_CANDIDATES['GROUP_ID']):
     raise RuntimeError('Group ID {} is not in the candidates file {}'.format(GROUP_ID, BED_CANDIDATES))
 
-DF_CANDIDATES = DF_CANDIDATES.loc[DF_CANDIDATES['GROUP_ID'] == GROUP_ID, :]
+DF_CANDIDATES = DF_CANDIDATES.loc[DF_CANDIDATES['GROUP_ID'] == GROUP_ID, :].copy()
 DF_CANDIDATES['POS1'] = DF_CANDIDATES['POS'] + 1
 
 del(DF_CANDIDATES['GROUP_ID'])
@@ -61,7 +61,7 @@ GROUP['POS1'] = GROUP['POS'] + 1
 
 
 ### Init Paths ###
-os.makedirs(LOG_DIR_ASM, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 
 
 #############
@@ -73,12 +73,14 @@ os.makedirs(LOG_DIR_ASM, exist_ok=True)
 # Get final contig for each assembly in this group.
 rule merge_group_contigs:
     input:
-        bam=expand('region/{region_id}/asm/contig_fixup.bam', region_id=GROUP.index)
+        bam=expand('region/{region_id}/asm/contig_fixup.bam', region_id=DF_CANDIDATES.index)
     output:
         bam=CONTIG_BAM,
         bai=CONTIG_BAM_INDEX
+    resources:
+        threads=1
     shell:
-        """samtools merge {input.bam} {output.bam}; """
+        """samtools merge {output.bam} {input.bam}; """
         """samtools index {output.bam}"""
 
 # assemble_align_fixup
@@ -93,6 +95,8 @@ rule assemble_align_fixup:
     output:
         bam=temp('region/{region_id}/asm/contig_fixup.bam'),
         bam_usort=temp('region/{region_id}/asm/contig_fixup_usort.bam')
+    resources:
+        threads=1
     run:
 
         if os.stat(input.sam).st_size > 0:
@@ -106,6 +110,7 @@ rule assemble_align_fixup:
             )
         else:
             open(output.bam, 'w').close()  # Touch and/or clear file
+            open(output.bam_usort, 'w').close()  # Touch and/or clear file
 
 # assemble_align_ref_region
 #
@@ -115,8 +120,10 @@ rule assemble_align_ref_region:
         ref='region/{region_id}/asm/ref_region.fasta',
         contig='region/{region_id}/asm/contigs_named.fasta'
     output:
-        sam='region/{region_id}/asm/contig.sam'
+        sam=temp('region/{region_id}/asm/contig.sam')
     params:
+        threads=THREADS
+    resources:
         threads=THREADS
     run:
 
@@ -143,7 +150,9 @@ rule assemble_get_ref_region:
         fasta=REF_FA,
         fasta_contig='region/{region_id}/asm/contigs.fasta'
     output:
-        fasta='region/{region_id}/asm/ref_region.fasta'
+        fasta=temp('region/{region_id}/asm/ref_region.fasta')
+    resources:
+        threads=1
     run:
 
         # Get region
@@ -168,7 +177,9 @@ rule assemble_set_pb_seq_name:
     input:
         fasta='region/{region_id}/asm/contigs_polished.fasta'
     output:
-        fasta='region/{region_id}/asm/contigs_named.fasta'
+        fasta=temp('region/{region_id}/asm/contigs_named.fasta')
+    resources:
+        threads=1
     run:
 
         zmw_id = 0
@@ -198,20 +209,24 @@ rule assemble_polish:
     input:
         fasta='region/{region_id}/asm/contigs.fasta',
         fai='region/{region_id}/asm/contigs.fasta.fai',
-        bam='region/{region_id}/asm/contig_aligned_reads.bam'
+        bam='region/{region_id}/asm/contig_aligned_reads.bam',
+        pbi='region/{region_id}/asm/contig_aligned_reads.bam.pbi'
     output:
-        fasta='region/{region_id}/asm/contigs_polished.fasta'
+        fasta=temp('region/{region_id}/asm/contigs_polished.fasta')
     params:
-        algorithm=POLISH_METHOD
+        algorithm=POLISH_METHOD,
+        threads=THREADS
+    resources:
+        threads=THREADS
     run:
 
         if os.stat(input.fasta).st_size > 0:
             shell(
-                """pbindex {input.bam}; """
                 """variantCaller """
                     """--referenceFilename {input.fasta} """
                     """{input.bam} """
                     """-o {output.fasta} """
+                    """-j {params.threads} """
                     """--algorithm={params.algorithm}; """
             )
 
@@ -226,8 +241,11 @@ rule assemble_align_org:
         fasta='region/{region_id}/asm/contigs.fasta',
         bam='region/{region_id}/reads/reads.bam'
     output:
-        bam='region/{region_id}/asm/contig_aligned_reads.bam'
+        bam=temp('region/{region_id}/asm/contig_aligned_reads.bam'),
+        pbi=temp('region/{region_id}/asm/contig_aligned_reads.bam.pbi')
     params:
+        threads=THREADS
+    resources:
         threads=THREADS
     run:
 
@@ -247,6 +265,7 @@ rule assemble_align_org:
                 """--out {bam_usort} """
                 """--nproc {params.threads}; """
                 """samtools sort -O bam -T {bam_stemp} -o {output.bam} {bam_usort}; """
+                """pbindex {output.bam}; """
                 """rm {bam_usort}"""
             )
 
@@ -260,16 +279,18 @@ rule assemble_reads:
     input:
         fasta='region/{region_id}/reads/reads.fasta'
     output:
-        fasta='region/{region_id}/asm/contigs.fasta',
-        fai='region/{region_id}/asm/contigs.fasta.fai',
-        preads='region/{region_id}/asm/corrected_reads.fastq.gz'  # Corrected reads
+        fasta=temp('region/{region_id}/asm/contigs.fasta'),
+        fai=temp('region/{region_id}/asm/contigs.fasta.fai'),
+        preads=temp('region/{region_id}/asm/corrected_reads.fastq.gz')  # Corrected reads
     params:
-        threads='4',
+        threads=THREADS,
         read_length='1000',
         partitions='50',
-        max_runtime='20m'
+        max_runtime='30m'
+    resources:
+        threads=THREADS
     log:
-        os.path.join(LOG_DIR_ASM, '{region_id}.log')
+        os.path.join(LOG_DIR, '{region_id}.log')
     run:
 
         # Setup output locations and flag
@@ -284,9 +305,9 @@ rule assemble_reads:
         shutil.rmtree(canu_dir, ignore_errors=True)
 
         # Run assembly
-        try:
-            shell(
-                """timeout {params.max_runtime} canu """
+        shell(
+            """set +e; """
+            """timeout {params.max_runtime} canu """
                 """-pacbio-raw """
                 """{input.fasta} """
                 """genomeSize={genome_size} """
@@ -297,16 +318,24 @@ rule assemble_reads:
                 """corMinCoverage=2 """
                 """correctedErrorRate=0.045 """  # Was errorRate=0.035
                 """-pacbio-raw """
-                """>{log} 2>&1"""
-            )
-        except:
-            print('Assembly crashed on region: {}'.format(wildcards.region_id))
+                """>{log} 2>&1; """
+            """RET_CODE=$?; """
+            """if [ ${{RET_CODE}} -ne 0 ]; then """
+                """if [ ${{RET_CODE}} -eq 124 ]; then """
+                    """echo "Assembly timeout ({params.max_runtime})"; """
+                """else """
+                    """echo "Assembly error: Return code = ${{RET_CODE}}"; """
+                    """exit ${{RET_CODE}}; """
+                """fi; """
+            """fi; """
+
+        )
 
         # Copy unitigs and corrected reads
         contig_file_name = 'region/{region_id}/asm/canu/asm.unitigs.fasta'.format(**wildcards)
         preads_file_name = 'region/{region_id}/asm/canu/asm.correctedReads.fasta.gz'.format(**wildcards)
 
-        if os.path.exists(contig_file_name):
+        if os.path.exists(contig_file_name) and os.stat(contig_file_name).st_size > 0:
             shutil.copyfile(contig_file_name, output.fasta)
             shutil.copyfile(preads_file_name, output.preads)
 
@@ -325,10 +354,13 @@ rule assemble_reads:
 # Get FASTA and FASTQ file of extracted sequence reads.
 rule asm_group_reads_to_fasta:
     input:
-        bam='region/{region_id}/reads/reads.bam'
+        bam='region/{region_id}/reads/reads.bam',
+        bai='region/{region_id}/reads/reads.bam.bai'
     output:
-        fasta='region/{region_id}/reads/reads.fasta',
-        fastq='region/{region_id}/reads/reads.fastq'
+        fasta=temp('region/{region_id}/reads/reads.fasta'),
+        fastq=temp('region/{region_id}/reads/reads.fastq')
+    resources:
+        threads=1
     shell:
         """echo "### Entering: asm_group_get_region_bam"; """
         """echo "Writing FASTA: {output.fasta}"; """
@@ -345,6 +377,8 @@ rule asm_group_get_region_bam:
     output:
         bam=temp('region/{region_id}/reads/reads.bam'),
         bai=temp('region/{region_id}/reads/reads.bam.bai')
+    resources:
+        threads=1
     run:
 
         # Get region
@@ -375,6 +409,8 @@ rule asm_group_get_reads:
     params:
         mapq=MAPQ,
         group_id=GROUP_ID
+    resources:
+        threads=1
     run:
 
         # Read input alignment batches into a list

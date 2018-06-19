@@ -53,8 +53,9 @@ args_dict['keep_going'] = {
 }
 
 args_dict['log'] = {
-    'default': 'log',
-    'help': 'Cluster log file output directory.'
+    'help': 'Cluster log file directory for distributed jobs. Each SMRT-SV command defaults to a log directory in its '
+            'output subdirectory. The genotyper will use "log" in its working directory. If this value is set, all '
+            'logs from all commands are written to the specified directory.'
 }
 
 args_dict['nt'] = {
@@ -265,13 +266,13 @@ args_dict['asm_alignment_parameters'] = {
 # asm_cpu
 args_dict['asm_cpu'] = {
     'type': int,
-    'default': 4,
+    'default': 8,
     'help': 'Number of CPUs to use for assembly steps.'
 }
 
 # asm_mem
 args_dict['asm_mem'] = {
-    'default': '3G',
+    'default': '2G',
     'help':
         'Multiply this amount of memory by the number of cores for the amount of memory allocated to assembly steps.'
 }

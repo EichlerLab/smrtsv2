@@ -27,7 +27,8 @@ def index(args):
             'ref_all',
             '--config',
             'reference={}'.format(args.reference)
-        )
+        ),
+        cmd_log='reference/log'
     )
 
 
@@ -44,7 +45,8 @@ def align(args):
             'batches={}'.format(args.batches),
             'threads={}'.format(args.threads),
             'alignment_parameters="{}"'.format(args.alignment_parameters)
-        )
+        ),
+        cmd_log='align/log'
     )
 
 
@@ -73,7 +75,7 @@ def detect(args):
     if args.exclude:
         command = command + ('exclude={}'.format(args.exclude),)
 
-    return smrtsvrunner.run_snake_target('rules/detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command)
+    return smrtsvrunner.run_snake_target('rules/detect.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command, cmd_log='detect/log')
 
 
 def assemble(args):
@@ -83,6 +85,10 @@ def assemble(args):
 
     print('Running local assemblies')
 
+    # Quote alignment params
+    args.asm_alignment_parameters = '"{}"'.format(args.asm_alignment_parameters)
+
+    # Run
     command = (
         'asm_merge_assembled_groups',
         '--config',
@@ -90,10 +96,11 @@ def assemble(args):
         'mapping_quality={}'.format(args.mapping_quality),
         'asm_cpu={}'.format(args.asm_cpu),
         'asm_mem={}'.format(args.asm_mem),
-        'asm_polish={}'.format(args.asm_polish)
+        'asm_polish={}'.format(args.asm_polish),
+        'no_rm_temp={}'.format(args.nt)
     )
 
-    return smrtsvrunner.run_snake_target('rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command)
+    return smrtsvrunner.run_snake_target('rules/assemble.snakefile', args, PROCESS_ENV, SMRTSV_DIR, command, cmd_log='assemble/log')
 
 
 def call(args):
@@ -104,7 +111,7 @@ def call(args):
     raise RuntimeError('SMRT-SV call is under construction')
 
     return_code = smrtsvrunner.run_snake_target(
-        'rules/XXX.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
+        'rules/call.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         (
             'call_variants',
             '--config',
@@ -114,7 +121,8 @@ def call(args):
             'variants={}'.format(args.variants),
             'species="{}"'.format(args.species),
             'sample="{}""'.format(args.sample)
-        )
+        ),
+        cmd_log='call/log'
     )
 
     if return_code != 0:

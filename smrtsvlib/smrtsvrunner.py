@@ -84,7 +84,12 @@ def run_cmd(args, process_env, stdout=None, stderr=None, cwd=None):
     return ret_code if ret_code is not None else -1024
 
 
-def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None, stderr=None, cwd=None):
+def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd,
+                     stdout=None, stderr=None,
+                     cwd=None,
+                     cmd_log=None,
+                     resources=None
+                     ):
     """
     Run a snakemake target.
 
@@ -93,6 +98,10 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     :param stdout: Specify the output stream. This argument is passed directly to `subprocess.Popen`.
     :param stderr: Specify the error stream. This argument is passed directly to `subprocess.Popen`.
     :param cwd: Switch to this directory before executing the command. If `None`, uses current working directory.
+    :param cmd_log: Default to this location for cluster logs if `log` is not explicitly set in `args`. This gives each
+        SMRT-SV command a
+        way to set it's default log file directory and separate cluster logs
+    :param resources: Append "--resources" to command.
 
     :return: Return code from snakemake.
     """
@@ -103,7 +112,6 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
     if args is None:
         args = EmptyArgs()
 
-    log = get_arg('log', args)
     wait_time = get_arg('wait_time', args)
     dry_run = get_arg('dryrun', args)
     cluster_params = get_arg('cluster_params', args)
@@ -112,6 +120,15 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
 
     if cluster_config_path is None:
         cluster_config_path = os.path.join(smrtsv_dir, 'cluster.template.json')
+
+    # Get log directory
+    log = get_arg('log', args, default_none=True)
+
+    if log is None:
+        if cmd_log is None:
+            log = 'log'
+        else:
+            log = cmd_log
 
     # Setup snakemake command
     prefix = [
@@ -171,6 +188,11 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd, stdout=None,
         'path={}'.format(process_env['PATH']),
         'tempdir={}'.format(temp_dir)
     ])
+
+    # Append resources
+    if resources is not None:
+        prefix.append('--resources')
+        prefix.extend(list(resources))
 
     # Report (verbose)
     if hasattr(args, 'verbose') and args.verbose:

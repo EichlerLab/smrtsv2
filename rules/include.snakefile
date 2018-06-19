@@ -120,18 +120,16 @@ PROCESS_ENV = os.environ.copy()
 
 TEMP_DIR = config.get('tempdir', None)
 
-if TEMP_DIR is None or TEMP_DIR == '':
+if TEMP_DIR is None or TEMP_DIR == '' or TEMP_DIR == 'None':
     TEMP_DIR = tempfile.gettempdir()
 else:
     TEMP_DIR = os.path.abspath(TEMP_DIR)
 
-if os.path.samefile(TEMP_DIR, '.'):
+if os.path.isdir(TEMP_DIR) and os.path.samefile(TEMP_DIR, '.'):
     # Defaults to local directory if a temp cannot be found. This
     # should not occur on real systems, but don't clutter the working
     # directory if it does.
     TEMP_DIR = os.path.join(TEMP_DIR, 'temp')
-
-
 
 
 #

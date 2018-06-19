@@ -5,11 +5,13 @@ Coordinates assembly of each group of regions and merges results from each group
 import pandas as pd
 import shutil
 import subprocess
+import socket
 
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
 
 from smrtsvlib import smrtsvrunner
+from smrtsvlib import smrtsvutil
 
 
 ###################
@@ -79,10 +81,13 @@ rule asm_assemble_group:
         align_params=get_config_param('asm_alignment_parameters'),
         threads=get_config_param('asm_cpu'),  # Parses into cluster params
         mem=get_config_param('asm_mem'),      # Parses into cluster params
-        asm_polish=get_config_param('asm_polish')
+        asm_polish=get_config_param('asm_polish'),
+        no_rm_temp=get_config_param('no_rm_temp'),
     log:
-        'assemble/group/{group_id}/contig.log'
+        contig_group='assemble/group/{group_id}/contig_group.log'
     run:
+        # Note: Runs assemble_group snakemake with resources for "threads". This allows single-core steps to be
+        # run in parallel, but runs multi-core steps to one at a time.
 
         # Set assemble_temp (will be deleted if not None)
         assemble_temp = None
@@ -90,21 +95,26 @@ rule asm_assemble_group:
         try:
 
             # Create temporary directories
-            assemble_temp = tempfile.mkdtemp(
-                prefix=os.path.join(
-                    TEMP_DIR,
-                    'asm_assemble_group_{}_'.format(wildcards.group_id)
-                )
-            )
+            assemble_temp = os.path.join(TEMP_DIR, 'asm_group_{}'.format(wildcards.group_id))
+
+            os.makedirs(assemble_temp, exist_ok=True)
 
             # Create log directory
-            log_dir = os.path.abspath('assemble/group/{group_id}/log'.format(wildcards.group_id))
+            log_dir = os.path.abspath(os.path.join(os.path.dirname(log.contig_group), 'log'))
             os.makedirs(log_dir, exist_ok=True)
 
             # Setup sub-Snake command
-            command = (
+            command = [
                 'merge_group_contigs',
                 '-f',
+                '--jobs',
+                str(params.threads)
+            ]
+
+            if smrtsvutil.as_bool(params.no_rm_temp):
+                command += ['--nt']
+
+            command += [
                 '--config',
                 'contig_out={}'.format(os.path.abspath(output.bam)),
                 'log_dir={}'.format(log_dir),
@@ -115,22 +125,35 @@ rule asm_assemble_group:
                 'align_fofn={}'.format(os.path.abspath(input.align_fofn)),
                 'bed_groups={}'.format(os.path.abspath(input.bed_grp)),
                 'bed_candidates={}'.format(os.path.abspath(input.bed_can)),
-                'threads={}'.format(params.threads),
+                'threads={:d}'.format(params.threads),
                 'ref_fa={}'.format(os.path.abspath(input.ref_fa))
-            )
+            ]
 
             # Clear locks
-            shell("""rm -f {working_dir}/.snakemake/locks/*""")
+            #shell("""rm -f {working_dir}/.snakemake/locks/*""")
 
             # Run assembly
-            with open(log, 'w') as log_file:
-                smrtsvrunner.run_snake_target(
+            with open(log.contig_group, 'w') as log_file:
+                log_file.write('Assembling group: {}\n'.format(wildcards.group_id))
+                log_file.write('Assemble temp: {}\n'.format(assemble_temp))
+                log_file.write('Hostname: {}\n'.format(socket.gethostname()))
+                log_file.write('Threads: {}\n'.format(params.threads))
+                log_file.write('Memory: {}\n'.format(params.mem))
+                log_file.write('Polish: {}\n'.format(params.asm_polish))
+                log_file.write('MAPQ: {}\n\n'.format(params.mapq))
+                log_file.flush()
+
+                return_code = smrtsvrunner.run_snake_target(
                     'rules/assemble_group.snakefile', None, PROCESS_ENV, SMRTSV_DIR, command,
-                    stdout=log_file, stderr=subprocess.STDOUT, cwd=assemble_temp
+                    stdout=log_file, stderr=subprocess.STDOUT, cwd=assemble_temp,
+                    resources=['threads={:d}'.format(params.threads)]
                 )
+
+            if return_code != 0:
+                raise RuntimeError('Failed to assemble group {}: See log {}'.format(wildcards.group_id, log.contig_group))
 
         finally:
 
             # Clean up temp directory
-            if assemble_temp is not None:
+            if assemble_temp is not None and not params.no_rm_temp:
                 shutil.rmtree(assemble_temp)
