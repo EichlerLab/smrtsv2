@@ -91,26 +91,35 @@ rule assemble_align_fixup:
     input:
         sam='region/{region_id}/asm/contig.sam',
         align_fofn=ALIGN_FOFN,
-        ref_fa=REF_FA
+        ref_fa=REF_FA,
+        group_bam='group/reads.bam'
     output:
-        bam=temp('region/{region_id}/asm/contig_fixup.bam'),
-        bam_usort=temp('region/{region_id}/asm/contig_fixup_usort.bam')
+        bam=temp('region/{region_id}/asm/contig_fixup.bam')
     resources:
         threads=1
     run:
 
+        bam_temp='temp/region/{}/asm/assemble_align_fixup'.format(wildcards.region_id)
+        bam_usort='temp/region/{}/asm/assemble_align_fixup_usort.bam'.format(wildcards.region_id)
+
         if os.stat(input.sam).st_size > 0:
             shell(
+                """mkdir -p $(dirname {bam_temp}); """
                 """alignfixup """
                     """-i {input.sam} """
                     """-d $(head -n 1 {input.align_fofn}) """
                     """-r {REF_FA} -g {wildcards.region_id} """
-                    """-o {output.bam_usort}; """
-                """samtools sort -o {output.bam} {output.bam_usort}"""
+                    """-o {bam_usort}; """
+                """samtools sort -T {bam_temp} -o {output.bam} {bam_usort}; """
+                """rm {bam_usort}"""
             )
         else:
-            open(output.bam, 'w').close()  # Touch and/or clear file
-            open(output.bam_usort, 'w').close()  # Touch and/or clear file
+            # Output bam with headers only
+            shell(
+                """samtools view -H {input.group_bam} | """
+                """grep -E '^@(HD|SQ)' | """
+                """samtools view -o {output.bam};"""
+            )
 
 # assemble_align_ref_region
 #
@@ -155,17 +164,21 @@ rule assemble_get_ref_region:
         threads=1
     run:
 
-        # Get region
-        if not wildcards.region_id in DF_CANDIDATES.index:
-            raise RuntimeError('Region ID {} is not in the candidates file {}'.format(wildcards.region_id, BED_CANDIDATES))
+        if os.stat(input.fasta_contig).st_size > 0:
+            # Get region
+            if not wildcards.region_id in DF_CANDIDATES.index:
+                raise RuntimeError('Region ID {} is not in the candidates file {}'.format(wildcards.region_id, BED_CANDIDATES))
 
-        region = '{#CHROM}:{POS1}-{END}'.format(**DF_CANDIDATES.loc[wildcards.region_id])
+            region = '{#CHROM}:{POS1}-{END}'.format(**DF_CANDIDATES.loc[wildcards.region_id])
 
-        # Extract region
-        if os.stat(input.fasta).st_size > 0:
-            shell("""samtools faidx {input.fasta} {region} >{output.fasta}""")
+            # Extract region
+            if os.stat(input.fasta).st_size > 0:
+                shell("""samtools faidx {input.fasta} {region} >{output.fasta}""")
+            else:
+                open(output.fasta, 'w').close()  # Touch and/or clear file
+
         else:
-            open(output.fasta, 'w').close()  # Touch and/or clear file
+            open(output.fasta, 'w').close()
 
 # assemble_set_pb_seq_name
 #
@@ -182,25 +195,29 @@ rule assemble_set_pb_seq_name:
         threads=1
     run:
 
-        zmw_id = 0
+        if os.stat(input.fasta).st_size > 0:
+            zmw_id = 0
 
-        seq_list = list()
+            seq_list = list()
 
-        # Read and set name
-        with open(input.fasta, 'r') as in_file:
+            # Read and set name
+            with open(input.fasta, 'r') as in_file:
+                with open(output.fasta, 'w') as out_file:
+                    for record in SeqIO.parse(in_file, 'fasta'):
+                        zmw_id += 1
+
+                        # movie/zmw/start_end
+                        record.id = '{}/{}/0_{}'.format(record.name, zmw_id, len(record.seq))
+                        record.description = ''
+
+                        seq_list.append(record)
+
+            # Write
             with open(output.fasta, 'w') as out_file:
-                for record in SeqIO.parse(in_file, 'fasta'):
-                    zmw_id += 1
+                SeqIO.write(seq_list, out_file, 'fasta')
 
-                    # movie/zmw/start_end
-                    record.id = '{}/{}/0_{}'.format(record.name, zmw_id, len(record.seq))
-                    record.description = ''
-
-                    seq_list.append(record)
-
-        # Write
-        with open(output.fasta, 'w') as out_file:
-            SeqIO.write(seq_list, out_file, 'fasta')
+        else:
+            open(output.fasta, 'w').close()
 
 # assemble_polish
 #
@@ -271,6 +288,7 @@ rule assemble_align_org:
 
         else:
             open(output.bam, 'w').close()  # Touch and/or clear file
+            open(output.pbi, 'w').close()  # Touch and/or clear file
 
 # assemble_reads
 #
