@@ -136,7 +136,7 @@
     "rt": "08:00:00"
   },
   "gt_call_sample_breakpoint_depth": {
-    "mem": "8G",
+    "mem": "8.5G",
     "rt": "04:00:00"
   },
   "gt_call_sample_insert_delta": {

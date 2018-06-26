@@ -85,6 +85,8 @@ rule asm_assemble_group:
         no_rm_temp=get_config_param('no_rm_temp'),
     log:
         contig_group='assemble/group/{group_id}/contig_group.log'
+    benchmark:
+        'assemble/group/{group_id}/contig_group_bm.log'
     run:
         # Note: Runs assemble_group snakemake with resources for "threads". This allows single-core steps to be
         # run in parallel, but runs multi-core steps to one at a time.
