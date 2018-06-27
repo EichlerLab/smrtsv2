@@ -60,11 +60,6 @@
     "rt": "04:00:00"
   },
 
-  "collect_assembly_alignments": {
-    "mem": "30G",
-    "rt": "01:00:00",
-    "params": "-l disk_free=10G"
-  },
   "asm_assemble_group": {
     "mem": "{params.mem}",
     "cpu": "{params.threads}",
@@ -72,63 +67,48 @@
     "params": "-l disk_free=2G"
   },
 
-  "find_inversions": {
+  "call_find_inversions": {
     "mem": "4G",
     "cpu": "8",
     "rt": "05:00:00"
   },
-  "tile_contigs_from_alignments": {
+  "call_tile_contigs_from_alignments": {
     "rt": "01:00:00"
   },
-  "find_calls_by_gaps_in_alignments": {
+  "call_find_calls_by_gaps_in_alignments": {
     "rt": "02:00:00"
   },
-  "identify_calls_by_type": {
+  "call_identify_calls_by_type": {
     "mem": "8G",
     "rt": "02:00:00"
   },
-  "repeatmask_sv_fasta": {
+  "call_repeatmask_sv_fasta": {
     "mem": "5G",
     "cpu": "8",
     "rt": "06:00:00"
   },
-  "trf_mask_sv_fasta": {
+  "call_trf_mask_sv_fasta": {
     "mem": "2G",
     "rt": "01:00:00"
   },
-  "find_indel_gaps_in_alignments": {
+  "call_find_indel_gaps_in_alignments": {
     "rt": "02:00:00"
   },
-  "filter_indel_gaps_by_tiling_path": {
+  "call_filter_indel_gaps_by_tiling_path": {
     "mem": "4G"
   },
-  "calculate_coverage_from_assembled_contigs": {
+  "call_calculate_coverage_from_assembled_contigs": {
     "mem": "12G",
     "rt": "01:00:00"
   },
-  "annotate_coverage_of_assembled_contigs_for_indels": {
+  "call_annotate_coverage_of_assembled_contigs_for_indels": {
     "rt": "01:00:00"
   },
-  "annotate_coverage_of_pacbio_reads_for_indels": {
+  "call_annotate_coverage_of_pacbio_reads_for_indels": {
     "rt": "01:00:00"
   },
-  "find_snvs_alignments": {
+  "call_find_snvs_alignments": {
     "rt": "02:00:00"
-  },
-  "map_sv_sequences_to_bam_reference": {
-    "mem": "33G",
-    "rt": "02:00:00",
-    "params": "-R y"
-  },
-  "find_positions_of_sv_sequences_in_bam_reference": {
-    "rt": "01:00:00"
-  },
-  "merge_reference_and_local_assemblies": {
-    "rt": "01:00:00"
-  },
-  "bwa_index_combined_reference": {
-    "mem": "10G",
-    "rt": "06:00:00"
   },
 
   "gt_vcf_merge": {
@@ -136,7 +116,7 @@
     "rt": "08:00:00"
   },
   "gt_call_sample_breakpoint_depth": {
-    "mem": "8.5G",
+    "mem": "10G",
     "rt": "04:00:00"
   },
   "gt_call_sample_insert_delta": {
@@ -144,7 +124,7 @@
     "rt": "04:00:00"
   },
   "gt_call_sample_read_depth": {
-    "mem": "8G",
+    "mem": "10G",
     "rt": "04:00:00"
   },
   "gt_contig_bam_to_fasta": {
@@ -156,29 +136,11 @@
     "rt": "02:00:00:00",
     "params": "-R y -l ssd=TRUE"
   },
-  "gt_svmap_map_pseudoreads": {
-    "mem": "2G",
-    "cpu": "12",
-    "rt": "02:00:00",
-    "params": "-l disk_free=2G -R y -l ssd=FALSE"
-  },
-  "gt_map_make_sample_fq": {
-    "mem": "2G",
-    "cpu": "2",
-    "rt": "36:00:00",
-    "params": "-l disk_free={params.disk_free} -R y"
-  },
   "gt_map_sample_reads": {
     "mem": "{params.mem}",
     "cpu": "{params.threads}",
     "rt": "72:00:00",
     "params": "-l disk_free={params.disk_free} -R y"
-  },
-  "gt_call_genotype_merged_samples": {
-    "mem": "2G"
-  },
-  "gt_call_to_vcf": {
-    "mem": "4G"
   },
   "gt_altref_alt_info_bed": {
     "mem": "8G",

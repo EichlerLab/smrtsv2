@@ -343,7 +343,6 @@ rule assemble_reads:
                     """echo "Assembly timeout ({params.max_runtime})"; """
                 """else """
                     """echo "Assembly error: Return code = ${{RET_CODE}}"; """
-                    """exit ${{RET_CODE}}; """
                 """fi; """
             """fi; """
 
