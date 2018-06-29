@@ -90,7 +90,7 @@ def assemble(args):
 
     # Run
     command = (
-        'asm_merge_assembled_groups',
+        'asm_merge_groups',
         '--config',
         'asm_alignment_parameters={}'.format(args.asm_alignment_parameters),
         'mapping_quality={}'.format(args.mapping_quality),
@@ -107,17 +107,11 @@ def call(args):
     # Call SVs, indels, and inversions.
     sys.stdout.write("Calling variants\n")
 
-    # Stop pipeline here until the snakemake rules are updated
-    raise RuntimeError('SMRT-SV call is under construction')
-
     return_code = smrtsvrunner.run_snake_target(
         'rules/call.snakefile', args, PROCESS_ENV, SMRTSV_DIR,
         (
-            'call_variants',
+            'call_variant_vcf',
             '--config',
-            'reference={}'.format(args.reference),
-            'alignments={}'.format(args.alignments),
-            'local_assembly_alignments={}'.format(args.assembly_alignments),
             'variants={}'.format(args.variants),
             'species="{}"'.format(args.species),
             'sample="{}""'.format(args.sample)
@@ -306,7 +300,6 @@ if __name__ == '__main__':
 
     # SMRTSV command: Call variants
     parser_caller = subparsers.add_parser('call', help='Call variants from assemblies.')
-    parser_caller.add_argument('reference', **args_dict['reference'])
     parser_caller.add_argument('variants', **args_dict['variants'])
     parser_caller.add_argument('--sample', **args_dict['sample'])
     parser_caller.add_argument('--species', **args_dict['species'])

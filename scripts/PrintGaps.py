@@ -1,10 +1,21 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import re
 import sys
+import os
+import inspect
 
-import Tools
+# Append smrtsvlib to path
+smrtsv_base = os.path.abspath(
+    os.path.dirname(os.path.dirname(
+        os.path.abspath(inspect.getfile(inspect.currentframe()))
+    )),
+)
+
+sys.path.append(smrtsv_base)
+
+from smrtsvlib import tools
 
 
 # Declarations
@@ -47,6 +58,8 @@ ap.add_argument("--context", default=0, type=int,
                 help="Print surrounding context")
 ap.add_argument("--condense", default=0, type=int,
                 help="Pack indels if the matches separating them is less than this value.")
+ap.add_argument("--tsd", default=20, type=int,
+                help="Attempt to find Target Site Duplications at most this length")
 ap.add_argument("--outsam", default=None,
                 help="Write the modified condensed sam to a file.")
 ap.add_argument("--minq", default=10, type=int,
@@ -73,7 +86,7 @@ ap.add_argument('--header', default=False, action='store_true',
 args = ap.parse_args()
 
 # Read FASTA index
-fai = Tools.read_fai_file(args.genome + '.fai')
+fai = tools.read_fai_file(args.genome + '.fai')
 
 # Get SAM files
 sam_files = list()
@@ -96,7 +109,7 @@ for file_name in args.sam:
 if args.outFile is None:
     out_file = sys.stdout
 else:
-    out_file = open(args.out_file, 'w')
+    out_file = open(args.outFile, 'w')
 
 # Open FAI file
 genome_file = open(args.genome, 'r')
@@ -171,7 +184,7 @@ for sam_file_name in sam_files:
         if len(line) <= 1:
             continue
 
-        aln = Tools.SAMEntry(line)
+        aln = tools.SAMEntry(line)
 
         if aln.title is None:
             continue
@@ -352,7 +365,7 @@ for sam_file_name in sam_files:
                 # Inside match block (if op == M)
                 if out_snv_file is not None:
 
-                    targetSeq = Tools.extract_sequence((aln.tName, tPos, tPos + oplen), genome_file, fai)
+                    targetSeq = tools.extract_sequence((aln.tName, tPos, tPos + oplen), genome_file, fai)
 
                     querySeq = aln.seq[qPos:qPos+oplen]
                     nMis = 0
@@ -451,7 +464,7 @@ for sam_file_name in sam_files:
                     else:
                         homopolymer = "F"
 
-                    delSeq = Tools.extract_sequence([chrName, delStart, delEnd], genome_file, fai)
+                    delSeq = tools.extract_sequence([chrName, delStart, delEnd], genome_file, fai)
 
                     out_file.write(
                         "{}\t{}\t{}\t{}\t{}\t{}\tnotsd\t{}\t{}\t{}".format(

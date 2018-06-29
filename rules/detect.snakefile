@@ -432,7 +432,7 @@ rule detect_gaps_merge_batches:
         bed=temp('detect/gaps/gaps_no_cov_{svtype,ins|del}.bed')
     shell:
         """sort -k 1,1 -k 2,2n -m {input.bed} | """
-        """python {SMRTSV_DIR}/scripts/PrintGapSupport.py /dev/stdin /dev/stdout | """
+        """python {SMRTSV_DIR}/scripts/detect/PrintGapSupport.py /dev/stdin /dev/stdout | """
         """sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 """
         """>{output.bed}"""
 

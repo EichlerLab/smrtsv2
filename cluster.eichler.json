@@ -66,6 +66,10 @@
     "rt": "72:00:00",
     "params": "-l disk_free=2G"
   },
+  "asm_merge_groups": {
+    "mem": "2.5G",
+    "rt": "4:00:00"
+  },
 
   "call_find_inversions": {
     "mem": "4G",

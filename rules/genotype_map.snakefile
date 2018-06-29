@@ -62,7 +62,7 @@ rule gt_map_align_sample_reads:
         """k8 {POSTALT_PATH} {SV_REF_ALT} | """
         """grep -Ev '^\s*NaN\s*' | """
         """samtools view -h -q {MAPQ} -L {MAP_REGIONS_BED} | """
-        """samtools sort -@ 4 -m1G -T sort/sample_ | """
+        """samtools sort -@ 4 -m1G -T sort/sample | """
         """samtools view -T {SV_REF} -o {output.aln}; """
         """echo "Indexing mapped reads..."; """
         """samtools index {output.aln}; """

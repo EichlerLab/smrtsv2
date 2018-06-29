@@ -38,28 +38,36 @@ def _get_group_bams(wildcards):
 ### Rules ###
 #############
 
-# asm_merge_assembled_groups
+# asm_merge_groups
 #
 # Merge local assemblies into one BAM.
-rule asm_merge_assembled_groups:
+rule asm_merge_groups:
     input:
-        bam=_get_group_bams
+        list='assemble/group_bam_list.txt'
     output:
         bam='assemble/local_assemblies.bam',
         bai='assemble/local_assemblies.bam.bai'
-    log:
-        'assemble/log/local_assemblies.merge.log'
+    shell:
+        """samtools merge {output.bam} -b {input.list}; """
+        """samtools index {output.bam}"""
+
+# asm_assemble_group_bam_list
+#
+# Make a list of group BAM files to be merged. This file is fed into samtools merge and avoids
+# listing all the files on the command line, which often results in "argument list too long" errors.
+rule asm_assemble_group_bam_list:
+    input:
+        bam=_get_group_bams
+    output:
+        list='assemble/group_bam_list.txt'
     run:
 
-        # Merge BAMs from each group into one
-        if len(input.bam) > 1:
-            shell("""samtools merge {output.bam} {input.bam} >{log} 2>&1""")
-        else:
-            # Copy if there was only one group
-            shell("""cp {input.bam} {output.bam}""")
+        # Make list
+        with open(output.list, 'w') as list_file:
+            for bam_file in input.bam:
+                list_file.write(bam_file)
+                list_file.write('\n')
 
-        # Index
-        shell("""samtools index {output.bam}""")
 
 # asm_assemble_group
 #

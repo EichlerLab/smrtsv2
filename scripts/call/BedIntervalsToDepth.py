@@ -1,9 +1,20 @@
 #!/usr/bin/env python
 
 import argparse
-import Tools
-import sys
 import numpy as np
+import sys
+
+# Append smrtsvlib to path
+smrtsv_base = os.path.abspath(
+    os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(inspect.getfile(inspect.currentframe()))
+    ))),
+)
+
+sys.path.append(smrtsv_base)
+
+from smrtsvlib import tools
+
 
 ap = argparse.ArgumentParser(description="Use a bed file to compute depth.")
 ap.add_argument("bed", help="Input bed file.")
@@ -15,7 +26,7 @@ args = ap.parse_args()
 
 bed = open(args.bed)
 
-fai = Tools.read_fai_file(args.genome + ".fai")
+fai = tools.read_fai_file(args.genome + ".fai")
 
 outFile = open(args.out, 'w')
 

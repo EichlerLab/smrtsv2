@@ -162,6 +162,13 @@ args_dict['reads'] = {
             'from PacBio sequencing technology and be in BAM (.bam) or BAX (.bax.h5) format.'
 }
 
+# threads
+args_dict['threads'] = {
+    'help': 'Number of threads to use for each alignment job.',
+    'type': int,
+    'default': 1
+}
+
 
 #
 # Detect
@@ -287,6 +294,43 @@ args_dict['asm_polish'] = {
 
 
 #
+# Variant caller
+#
+
+# variants
+args_dict['variants'] = {
+    'default': 'variants.vcf.gz',
+    'help': 'VCF of variants called by local assembly alignments.',
+    'nargs': '?'
+}
+
+# sample
+args_dict['sample'] = {
+    'default': 'UnnamedSample',
+    'help': 'Sample name to use in final variant calls'
+}
+
+# species
+args_dict['species'] = {
+    'default': 'human',
+    'help': 'Common or scientific species name to pass to RepeatMasker.'
+}
+
+
+#
+# Run
+#
+
+# runjobs
+args_dict['runjobs'] = {
+    'help':
+        'A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing '
+        'number uses the value set by --jobs (or 1 if --jobs was not set).',
+    'default': ''
+}
+
+
+#
 # Genotyper
 #
 
@@ -330,44 +374,6 @@ args_dict['gt_map_disk'] = {
 args_dict['gt_keep_temp'] = {
     'action': 'store_true',
     'help': 'Do not remove temp directory after genotyping.'
-}
-
-
-
-#
-# Uncategorized
-#
-
-# runjobs
-args_dict['runjobs'] = {
-    'help':
-        'A comma-separated list of jobs for each step: align, detect, assemble, and call (in that order). A missing '
-        'number uses the value set by --jobs (or 1 if --jobs was not set).',
-    'default': ''
-}
-
-# threads
-args_dict['threads'] = {
-    'help': 'Number of threads to use for each alignment job.',
-    'type': int,
-    'default': 1
-}
-
-# sample
-args_dict['sample'] = {
-    'default': 'UnnamedSample',
-    'help': 'Sample name to use in final variant calls'
-}
-
-# species
-args_dict['species'] = {
-    'default': 'human',
-    'help': 'Common or scientific species name to pass to RepeatMasker.'
-}
-
-# variants
-args_dict['variants'] = {
-    'help': 'VCF of variants called by local assembly alignments.'
 }
 
 
