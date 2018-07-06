@@ -3,6 +3,7 @@
 #chr1	9230436	9230711	insertion	275	AAAAAATTAGCCAGGTGTGGTGGTGGTGCCTGTAGTCCAGCTACTAGGAGGCTATGGAGGAGATGGAGAACAGGAGCAGAGGTGAGTGAGCGAGATCACGCACTGCACCCAGCTGGGTGACAAAAAAAACCATCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATGTAATGGCTGGTGCGGTGCTCACACTGTAATCCAGCACTTGAGCCAAGAGGTGATCATAGGTCAGCATCCAGACAGCTGGCAAATAGTAAACCTGTCTCTACTAAAAATA	AluYh9:INC,AluYb:INC	AAAAATTA
 import sys
 import argparse
+import pdb
 
 ap = argparse.ArgumentParser(description="Print insertions based on how many annotations there are.")
 ap.add_argument("infile", help="input bed file, 7th column is the annotation.")
@@ -25,13 +26,12 @@ ap.add_argument("-v", help="Complement of any previous logic.", action='store_tr
 
 args = ap.parse_args()
 
-inFile =  open(args.infile, 'r')
+inFile = open(args.infile, 'r')
 
-if (args.remainder is not None):
+if args.remainder is not None:
     remainder = open(args.remainder, 'w')
 else:
     remainder = None
-import pdb
 
 for line in inFile:
     vals = line.split()
@@ -39,29 +39,33 @@ for line in inFile:
     nann = len(ann.split(';'))
     annotations = ann.split(';')
 
-
     doPrint = False
     
-    if (True):
+    if True:
         nPrefix = 0
         nNotPrefix = 0
         nSTR = 0
         nSecondary = 0
         lp = 0
-        if (args.prefix is not None):
+
+        if args.prefix is not None:
             lp = len(args.prefix)
+
         ls = 0
-        if (args.secondary is not None):
+
+        if args.secondary is not None:
             ls = len(args.secondary)
 
         for a in annotations:
-            if (args.prefix is not None and a[0:lp] == args.prefix):
-                nPrefix +=1
-            elif (args.secondary is not None and a[0:ls] == args.secondary):
+            if args.prefix is not None and a[0:lp] == args.prefix:
+                nPrefix += 1
+
+            elif args.secondary is not None and a[0:ls] == args.secondary:
                 nSecondary += 1
-            elif (a.find(")n") != -1 or a.find("_rich") != -1 or a.find("-rich") != -1):
+
+            elif a.find(")n") != -1 or a.find("_rich") != -1 or a.find("-rich") != -1:
                 nSTR += 1
-                if (args.minNotPrefix is None and args.maxNotPrefix is None):
+                if args.minNotPrefix is None and args.maxNotPrefix is None:
                     nNotPrefix += 1
             else:
                 nNotPrefix += 1
@@ -78,16 +82,18 @@ for line in inFile:
             (args.maxSecondary == None or nSTR <= args.maxSecondary) ):
             doPrint = True
 
-    if ((args.complex == False and ((args.exact is not None and nann == args.exact) or (args.max is not None and nann <= args.max))) or (nann > 1 and args.complex)):
+    if ((not args.complex) and ((args.exact is not None and nann == args.exact) or (args.max is not None and nann <= args.max))) or (nann > 1 and args.complex):
         doPrint = True
 
+    if args.v:
 
-    if (args.v == True):
-        if (doPrint):
+        if doPrint:
             doPrint = False
         else:
             doPrint = True
-    if (doPrint):
+
+    if doPrint:
         print line.strip()
-    elif (remainder is not None):
+
+    elif remainder is not None:
         remainder.write(line)

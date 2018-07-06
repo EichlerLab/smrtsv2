@@ -114,7 +114,7 @@ def call(args):
             '--config',
             'variants={}'.format(args.variants),
             'species="{}"'.format(args.species),
-            'sample="{}""'.format(args.sample)
+            'sample="{}"'.format(args.sample)
         ),
         cmd_log='call/log'
     )

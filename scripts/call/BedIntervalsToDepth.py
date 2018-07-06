@@ -4,6 +4,9 @@ import argparse
 import numpy as np
 import sys
 
+import os
+import inspect
+
 # Append smrtsvlib to path
 smrtsv_base = os.path.abspath(
     os.path.dirname(os.path.dirname(os.path.dirname(

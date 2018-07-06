@@ -37,6 +37,11 @@ bool setAlignPos(const char *chrNameHdr, int &chrId, int &pos, bam_hdr_t *outHea
 // Set contig name on the output record
 bool setContigName(bam1_t *alignRecordIn, bam1_t *alignRecordOut, const uint8_t *regionNameC, int regionNameLen);
 
+// Calculate number of reference bases covered. Older versions of BLASR stored this in the TLEN field, but newer
+// versions do not. Calculate it here for tools that use the field (e.g. inversion calling).
+int getReferenceLength(const bam1_t *alignRecordIn);
+
+
 //
 // Main
 //
@@ -144,7 +149,7 @@ int main(int argc, char *argv[]) {
 	if (boost::algorithm::iends_with(outFileName, ".sam"))
 		outFileType = SAM;
 	else if (boost::algorithm::iends_with(outFileName, ".bam"))
-		outFileType = SAM;
+		outFileType = BAM;
 	else if (boost::algorithm::iends_with(outFileName, ".cram"))
 		outFileType = CRAM;
 	else {
@@ -243,7 +248,7 @@ int main(int argc, char *argv[]) {
 
 		alignRecordOut->core.bin = alignRecordIn->core.bin;
 		alignRecordOut->core.unused1 = alignRecordIn->core.unused1;
-		alignRecordOut->core.isize = alignRecordIn->core.isize;
+		alignRecordOut->core.isize = getReferenceLength(alignRecordIn);
 
 		if (alignRecordIn->core.mtid >= 0)
 			warn("Found split alignment in record %d: %s: RNEXT and PNEXT have been cleared", recordCount, (char *) alignRecordIn->data);

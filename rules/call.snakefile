@@ -1,4 +1,3 @@
-import os
 
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
@@ -160,9 +159,9 @@ rule call_annotate_support_from_assembled_contigs_for_indels:
 rule call_annotate_strs_in_indels:
     input:
         'call/indel_calls/{indel_type}/gaps_2bp_or_more_without_homopolymers.bed',
-        'call/strs_in_reference.bed'
+        'call/ref/strs_in_reference.bed'
     output:
-        'indel_calls/{indel_type}/strs.txt'
+        'call/indel_calls/{indel_type}/strs.txt'
     shell:
         """cut -f 1-3 {input[0]} | """
         """bedtools intersect -a stdin -b {input[1]} -loj -sorted | """
@@ -249,11 +248,13 @@ rule call_remove_indel_events_in_homopolymers:
 
 rule call_split_indels_by_type:
     input:
-        'call/indel_calls/gaps.tiled.bed'
+        bed='call/indel_calls/gaps.tiled.bed'
     output:
-        'call/indel_calls/{indel_type}/gaps.bed'
-    run:
-        """grep {wildcards.indel_type} {input} | sort -k 1,1 -k 2,2n > {output}"""
+        bed='call/indel_calls/{indel_type}/gaps.bed'
+    shell:
+        """awk 'tolower($4) == "{wildcards.indel_type}"' {input.bed} | """
+        """sort -k 1,1 -k 2,2n """
+        """> {output.bed}"""
 
 rule call_filter_indel_gaps_by_tiling_path:
     input:
@@ -308,11 +309,11 @@ rule call_collect_all_summarized_sv_calls:
 
 rule call_collect_summarized_sv_calls_within_type:
     input:
-        'call/sv_calls/summarized_{sv_type}'
+        flag='call/sv_calls/summarized_{sv_type}/summarize_flag'
     output:
         'call/sv_calls/repeat_classified_{sv_type}.bed'
     shell:
-        """for file in {input}/*.bed; do """
+        """for file in $(dirname {input.flag})/anno/*.bed; do """
             """repeat_type=`basename ${{file/.bed/}} | """
             """sed 's/\./_/g'`; """
             """awk -v repeat_type=$repeat_type 'OFS="\\t" {{ print $0,repeat_type }}' $file; """
@@ -323,35 +324,67 @@ rule call_collect_summarized_sv_calls_within_type:
 
 rule call_summarize_calls_by_repeat_type:
     input:
-        'call/sv_calls/all_annotated_with_trf.{sv_type}.bed'
+        bed='call/sv_calls/all_annotated_with_trf.{sv_type}.bed'
     output:
-        'call/sv_calls/summarized_{sv_type}'
+        flag=touch('call/sv_calls/summarized_{sv_type}/summarize_flag')
     shell:
-        """mkdir -p {output}; """
-        """awk '$20 > 0.8' {input} > {output}/TRF.bed; """
-        """awk '$20 <= 0.8' {input} > sv_calls/not_trf.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < sv_calls/not_trf.bed | """
-            """awk '$18 < 0.7' > {output}/NotMasked.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < sv_calls/not_trf.bed | """
-            """awk '$18 >= 0.7' > sv_calls/repeat.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py sv_calls/repeat.bed --prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/1.bed > {output}/AluY.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/1.bed --prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/2.bed > {output}/AluS.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/2.bed --minSTR 1  --maxNotPrefix 0 --remainder {output}/4.bed > {output}/STR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/4.bed --prefix L1HS  --maxNotPrefix 0 --remainder {output}/5.bed > {output}/L1HS.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/5.bed --prefix Alu  --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 --remainder {output}/6.bed > {output}/Alu.Mosaic.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/6.bed --prefix Alu  --minSTR 1 --minPrefix 1 --maxNotPrefix 0 --remainder {output}/7.bed > {output}/Alu.STR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/7.bed --prefix ALR   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/8.bed > {output}/ALR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/8.bed --prefix SVA   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/9.bed > {output}/SVA.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/9.bed --prefix HERV   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/10.bed > {output}/HERV.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/10.bed --prefix L1P   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/11.bed > {output}/L1P.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/11.bed --prefix BSR/Beta   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/12.bed > {output}/Beta.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/12.bed --prefix HSAT   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/13.bed > {output}/HSAT.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/13.bed --prefix MER   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/14.bed > {output}/MER.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/14.bed --prefix L1   --minPrefix 1 --maxNotPrefix 0 --remainder {output}/15.bed > {output}/L1.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/15.bed --prefix LTR  --minPrefix 1 --maxNotPrefix 0 --remainder {output}/16.bed > {output}/LTR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py {output}/16.bed --max 1 --remainder {output}/17.bed > {output}/Singletons.bed; """
-        """mv -f {output}/17.bed {output}/Complex.bed; """
-        """rm -f {output}/[0-9]*.bed"""
+        """OUT_DIR=$(dirname {output.flag}); """
+        """mkdir -p ${{OUT_DIR}}/anno; """
+        """awk '$20 > 0.8' {input.bed} > ${{OUT_DIR}}/anno/TRF.bed; """
+        """awk '$20 <= 0.8' {input.bed} > ${{OUT_DIR}}/not_trf.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < ${{OUT_DIR}}/not_trf.bed | """
+            """awk '$18 < 0.7' > ${{OUT_DIR}}/anno/NotMasked.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < ${{OUT_DIR}}/not_trf.bed | """
+            """awk '$18 >= 0.7' > ${{OUT_DIR}}/repeat.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/repeat.bed """
+            """--prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 """
+            """--remainder ${{OUT_DIR}}/1.bed > ${{OUT_DIR}}/anno/AluY.simple.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/1.bed """
+            """--prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 """
+            """--remainder ${{OUT_DIR}}/2.bed > ${{OUT_DIR}}/anno/AluS.simple.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/2.bed """
+            """--minSTR 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/4.bed > ${{OUT_DIR}}/anno/STR.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/4.bed """
+            """--prefix L1HS --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/5.bed > ${{OUT_DIR}}/anno/L1HS.simple.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/5.bed """
+            """--prefix Alu --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 """
+            """--remainder ${{OUT_DIR}}/6.bed > ${{OUT_DIR}}/anno/Alu.Mosaic.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/6.bed """
+            """--prefix Alu --minSTR 1 --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/7.bed > ${{OUT_DIR}}/anno/Alu.STR.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/7.bed """
+            """--prefix ALR --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/8.bed > ${{OUT_DIR}}/anno/ALR.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/8.bed """
+            """--prefix SVA --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/9.bed > ${{OUT_DIR}}/anno/SVA.simple.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/9.bed """
+            """--prefix HERV --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/10.bed > ${{OUT_DIR}}/anno/HERV.simple.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/10.bed """
+            """--prefix L1P --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/11.bed > ${{OUT_DIR}}/anno/L1P.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/11.bed """
+            """--prefix BSR/Beta   --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/12.bed > ${{OUT_DIR}}/anno/Beta.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/12.bed """
+            """--prefix HSAT --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/13.bed > ${{OUT_DIR}}/anno/HSAT.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/13.bed """
+            """--prefix MER   --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/14.bed > ${{OUT_DIR}}/anno/MER.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/14.bed """
+            """--prefix L1   --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/15.bed > ${{OUT_DIR}}/anno/L1.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/15.bed """
+            """--prefix LTR  --minPrefix 1 --maxNotPrefix 0 """
+            """--remainder ${{OUT_DIR}}/16.bed > ${{OUT_DIR}}/anno/LTR.bed; """
+        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/16.bed """
+            """--max 1 --remainder ${{OUT_DIR}}/17.bed > ${{OUT_DIR}}/anno/Singletons.bed; """
+        """mv -f ${{OUT_DIR}}/17.bed ${{OUT_DIR}}/anno/Complex.bed; """
+        """rm -f ${{OUT_DIR}}/[0-9]*.bed"""
 
 rule call_merge_sv_calls:
     input:
@@ -409,7 +442,11 @@ rule call_repeatmask_sv_fasta:
         threads='8',
         species=_get_repeat_species
     shell:
-        """RepeatMasker -species "{params.species}" -dir `dirname {output[0]}` -xsmall -no_is -e wublast -s -pa {params.threads} {input}"""
+        """RepeatMasker -species "{params.species}" """
+            """-dir `dirname {output[0]}` """
+            """-xsmall -no_is -e wublast """
+            """-s -pa {params.threads} """
+            """{input}"""
 
 rule call_create_sv_fasta:
     input:
@@ -455,7 +492,8 @@ rule call_find_calls_by_gaps_in_alignments:
         indel_pack_distance='20'
     shell:
         """samtools view -h {input.alignments} | """
-        """python3 {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin --qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} | """
+        """python3 {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
+            """--qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} | """
         """sort -k 1,1 -k 2,2n """
         """> {output}"""
 
@@ -524,3 +562,54 @@ rule call_find_inversions:
         """samtools view {input.alignments} | """
         """{SMRTSV_DIR}/scripts/mcst/screenInversions """
             """/dev/stdin {input.reference} {output.bed} -w {params.reference_window} -r --noClip -j {params.threads}"""
+
+
+
+#
+# Reference annotations
+#
+
+rule call_ref_combine_repeats:
+    input:
+        'call/ref/low_complexity_repeats.bed',
+        'call/ref/simple_repeats.bed'
+    output:
+        'call/ref/strs_in_reference.bed'
+    shell:
+        """sort -k 1,1 -k 2,2n -m {input} > {output}"""
+
+rule call_ref_get_low_complexity_repeats:
+    input:
+        'call/ref/repeats.bed'
+    output:
+        'call/ref/low_complexity_repeats.bed'
+    shell:
+        """awk '$4 == "Low_complexity"' {input} > {output}"""
+
+rule call_ref_prepare_repeatmasker_repeats_bed:
+    input:
+        'call/ref/rmsk.txt.gz'
+    output:
+        'call/ref/repeats.bed'
+    shell:
+        """zcat {input} | cut -f 6-8,12 | sort -k 1,1 -k 2,2n > {output}"""
+
+rule call_ref_get_repeatmasker_repeats:
+    output:
+        'call/ref/rmsk.txt.gz'
+    shell:
+        """wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/$(basename {output}) -O {output}"""
+
+rule call_ref_prepare_simple_repeats_bed:
+    input:
+        'call/ref/simpleRepeat.txt.gz'
+    output:
+        'call/ref/simple_repeats.bed'
+    shell:
+        """zcat {input} | cut -f 2-5 | sort -k 1,1 -k 2,2n > {output}"""
+
+rule call_ref_get_simple_repeats:
+    output:
+        'call/ref/simpleRepeat.txt.gz'
+    shell:
+        """wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/$(basename {output}) -O {output}"""

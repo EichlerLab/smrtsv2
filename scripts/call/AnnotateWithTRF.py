@@ -15,12 +15,16 @@ prevSeqName = ""
 
 annotations = {}
 for line in trfFile:
-    if (line[0] == '@'):
+
+    if line[0] == '@':
         seqName = line[1:].strip()
+
     else:
         vals = line.split()
-        if (seqName not in annotations):
+
+        if seqName not in annotations:
             annotations[seqName] = itree.IntervalTree()
+
         annotations[seqName].addi(int(vals[0]), int(vals[1]))
 
 print "done processing annotations"
@@ -32,7 +36,8 @@ for line in bedFile:
     vals = line.split()
     seqTitle = '/'.join(vals[0:3])
     totalTR = 0
-    if (seqTitle in annotations):
+
+    if seqTitle in annotations:
         seq = vals[5]
         i = 0
         annotations[seqTitle].merge_overlaps()
@@ -48,10 +53,10 @@ for line in bedFile:
 
         # Annotate the input BED with total tandem repeat bases and the
         # proportion of bases annotated as tandem repeats.
- 	vals.append(str(totalTR))
-	vals.append("{:2.2f}".format(float(totalTR)/len(seq)))
+        vals.append(str(totalTR))
+        vals.append("{:2.2f}".format(float(totalTR)/len(seq)))
     else:
-	vals.append("0")
-	vals.append("0")
-    bedOutFile.write('\t'.join(vals)  + "\n")
+        vals.append("0")
+        vals.append("0")
 
+    bedOutFile.write('\t'.join(vals) + "\n")
