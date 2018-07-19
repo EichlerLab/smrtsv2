@@ -5,6 +5,7 @@ assembly.
 
 import os
 import pandas as pd
+import numpy as np
 
 localrules: detect_get_regions
 
@@ -29,6 +30,14 @@ if os.path.isfile('align/alignments.fofn'):
 
             DETECT_BATCH_LIST.append(int(os.path.basename(line).rstrip('.bam')))
 
+CANDIDATE_BED_DTYPES = {
+    '#CHROM': np.object,
+    'POS': np.int64,
+    'END': np.int64,
+    'ID': np.object,
+    'DEPTH': np.float32,
+    'GROUP_ID': np.object
+}
 
 #############
 ### Rules ###
@@ -54,9 +63,14 @@ rule detect_group_merge_regions:
     run:
 
         # Read candidates and windows
-        df_can = pd.read_table(input.bed_can, header=0)
-        del(df_can['DEPTH'])
-        del(df_can['ID'])
+        df_can = pd.read_table(
+            input.bed_can,
+            header=0,
+            dtype=CANDIDATE_BED_DTYPES,
+            usecols=('#CHROM', 'POS', 'END', 'GROUP_ID')
+        )
+
+        df_can['#CHROM'] = df_can['#CHROM'].apply(str)
 
         df_win = pd.read_table(input.bed_win, header=0)
 
