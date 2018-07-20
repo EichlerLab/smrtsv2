@@ -83,7 +83,7 @@ args_dict['wait_time'] = {
 }
 
 args_dict['cluster_params'] = {
-    'default': ' -V -cwd -e ./{log} -o ./{log} '
+    'default': ' -V -cwd -j y -o ./{log} '
                '-pe serial {{cluster.cpu}} '
                '-l mfree={{cluster.mem}} '
                '-l h_rt={{cluster.rt}} '

@@ -77,7 +77,7 @@ rule detect_group_merge_regions:
         # Filter windows by those with candidate regions
         group_set = set(df_can['GROUP_ID'].tolist())
 
-        df_win = df_win.ix[df_win['GROUP_ID'].apply(lambda set_name: set_name in group_set), :]
+        df_win = df_win.loc[df_win['GROUP_ID'].apply(lambda set_name: set_name in group_set)]
 
         # Merge
         df = pd.concat([df_can, df_win])

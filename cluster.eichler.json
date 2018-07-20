@@ -120,15 +120,15 @@
     "rt": "08:00:00"
   },
   "gt_call_sample_breakpoint_depth": {
-    "mem": "10G",
+    "mem": "24G",
     "rt": "04:00:00"
   },
   "gt_call_sample_insert_delta": {
-    "mem": "4G",
+    "mem": "8G",
     "rt": "04:00:00"
   },
   "gt_call_sample_read_depth": {
-    "mem": "10G",
+    "mem": "24G",
     "rt": "04:00:00"
   },
   "gt_contig_bam_to_fasta": {
