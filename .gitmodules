@@ -10,6 +10,7 @@
 [submodule "dist/blasr"]
 	path = dist/blasr
 	url = https://github.com/EichlerLab/blasr.git
+	ignore = dirty
 [submodule "dist/bedtools"]
 	path = dist/bedtools
 	url = https://github.com/arq5x/bedtools2.git
@@ -19,18 +20,21 @@
 [submodule "dist/pbcore"]
 	path = dist/pbcore
 	url = https://github.com/PacificBiosciences/pbcore.git
+	ignore = dirty
 [submodule "dist/ConsensusCore"]
 	path = dist/ConsensusCore
 	url = https://github.com/PacificBiosciences/ConsensusCore.git
 [submodule "dist/GenomicConsensus"]
 	path = dist/GenomicConsensus
 	url = https://github.com/PacificBiosciences/GenomicConsensus.git
+	ignore = dirty
 [submodule "dist/pbh5tools"]
 	path = dist/pbh5tools
 	url = https://github.com/PacificBiosciences/pbh5tools.git
 [submodule "dist/bcftools"]
 	path = dist/bcftools
-	url = git://github.com/samtools/bcftools.git
+	url = https://github.com/samtools/bcftools.git
 [submodule "dist/vcflib"]
 	path = dist/vcflib
-	url = git@github.com:vcflib/vcflib.git
+	url = https://github.com/vcflib/vcflib.git
+	ignore = dirty

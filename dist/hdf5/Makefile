@@ -1,12 +1,11 @@
-PWD=$(shell pwd)
+PREFIX = $(abspath ..)
 
-all: lib/libhdf5_cpp.so
+${PREFIX}/lib/libhdf5_cpp.so: hdf5-1.8.19/configure
+	cd $(dir $<) && ./configure --enable-cxx --prefix=${PREFIX} && make install
 
-lib/libhdf5_cpp.so: hdf5-1.8.15-patch1
-	cd $< && ./configure --enable-cxx --prefix=$(PWD) && make install clean
+hdf5-1.8.19/configure: hdf5-1.8.19.tar.gz
+	tar -zxf $<
+	touch $@
 
-hdf5-1.8.15-patch1 : hdf5-1.8.15-patch1.tar.gz
-	tar zxvf $<
-
-hdf5-1.8.15-patch1.tar.gz :
-	wget http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8.15-patch1/src/$@ -O $@
+hdf5-1.8.19.tar.gz:
+	wget https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz

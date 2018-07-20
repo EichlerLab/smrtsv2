@@ -1,12 +1,17 @@
-PWD=$(shell pwd)
+PREFIX=$(abspath ..)
 
-all: bin/swig
+${PREFIX}/bin/swig: swig-3.0.12/Makefile
+	mkdir -p ${dir $@}
+	cd swig-3.0.12 && make
+	cd swig-3.0.12 && make install
+	cd swig-3.0.12 && make clean
 
-bin/swig: swig-3.0.8
-	cd $< && wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.39.tar.gz && Tools/pcre-build.sh && ./configure --prefix=$(PWD) && make && make install && make clean && make distclean
+swig-3.0.12/Makefile: swig-3.0.12/configure
+	cd swig-3.0.12 && ./configure --prefix=${PREFIX}
 
-swig-3.0.8 : swig-3.0.8.tar.gz
-	tar zxvf $<
+swig-3.0.12/configure: swig-3.0.12.tar.gz
+	tar -zxf swig-3.0.12.tar.gz
+	touch $@
 
-swig-3.0.8.tar.gz :
-	wget http://downloads.sourceforge.net/project/swig/swig/swig-3.0.8/$@ -O $@
+swig-3.0.12.tar.gz:
+	wget http://downloads.sourceforge.net/project/swig/swig/swig-3.0.12/swig-3.0.12.tar.gz

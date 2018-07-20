@@ -4,6 +4,18 @@ Structural variant (SV) and indel caller for PacBio reads based on methods from
 [Chaisson et
 al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.html).
 
+## What's new in SMRT-SV
+
+SMRT-SV provides an official software package for tools described in [Chaisson et
+al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.html) and adds several key features including the following.
+
+  * Unified variant calling user interface with built-in cluster compute support
+  * Small indel calling (2-49 bp)
+  * Improved inversion calling (`screenInversions`)
+  * Quality metric for SV calls based on number of local assemblies supporting each call
+  * Higher sensitivity for SV calls using tiled local assemblies across the entire genome instead of "signature" regions
+  * Genotyping of SVs with Illumina paired-end reads from WGS samples
+
 ## Installation
 
 SMRT-SV requires git, Python (2.6.6 or later) and Perl (5.10.1 or later) for
@@ -20,7 +32,7 @@ dependencies.
 ```bash
 mkdir /usr/local/smrtsv
 cd /usr/local/smrtsv
-git clone --recursive git@github.com:EichlerLab/pacbio_variant_caller.git .
+git clone --recursive https://github.com/EichlerLab/pacbio_variant_caller.git .
 make
 ```
 
