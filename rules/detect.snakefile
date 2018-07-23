@@ -86,11 +86,12 @@ rule detect_group_merge_regions:
         df_group = df.groupby('GROUP_ID')
 
         df_range = pd.concat([
-            df_group['#CHROM'].all(),
+            df_group['#CHROM'].apply(lambda vals: vals.iloc[0]),  # Group is on one chr
             df_group['POS'].min(),
             df_group['END'].max(),
-            df_group['GROUP_ID'].all(),
         ], axis=1)
+
+        df_range['GROUP_ID'] = df_range.index
 
         # Add actual size after merging the candidate regions with groups
         df_range['SIZE'] = df_range.apply(lambda row: row['END'] - row['POS'], axis=1)
