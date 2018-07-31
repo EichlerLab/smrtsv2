@@ -7,7 +7,6 @@ bin/*
 !bin/trf
 
 # Files in dist
-dist/**
 !dist/htslib/
 !dist/htslib/Makefile
 !dist/zlib/
@@ -49,10 +48,4 @@ dist/**
 !dist/ConsensusCore/Makefile
 !dist/swig/
 !dist/swig/Makefile
-!dist/smrtsvtools/
-!dist/smrtsvtools/Makefile
-!dist/smrtsvtools/src/
-!dist/smrtsvtools/src/*
-!dist/smrtsvtools/include/
-!dist/smrtsvtools/include/*
 
