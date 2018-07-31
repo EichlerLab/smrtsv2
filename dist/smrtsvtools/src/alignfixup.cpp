@@ -39,6 +39,8 @@ bool setContigName(bam1_t *alignRecordIn, bam1_t *alignRecordOut, const uint8_t 
 
 // Calculate number of reference bases covered. Older versions of BLASR stored this in the TLEN field, but newer
 // versions do not. Calculate it here for tools that use the field (e.g. inversion calling).
+const uint32_t CIGAR_MATCH = 0x0F;
+
 int getReferenceLength(const bam1_t *alignRecordIn);
 
 
@@ -404,4 +406,41 @@ bool setContigName(bam1_t *alignRecordIn, bam1_t *alignRecordOut, const uint8_t 
 	alignRecordOut->core.l_extranul = extraNul;
 
 	return true;
+}
+
+/**
+ * Get the number of reference bases covered by an alignment record.
+ */
+int getReferenceLength(const bam1_t *alignRecordIn) {
+
+	// Init
+	const uint32_t *cigar_array = bam_get_cigar(alignRecordIn);  // Get CIGAR array (uint32 array)
+	const uint32_t * const cigar_array_end = cigar_array + alignRecordIn->core.n_cigar;
+
+	int tlen = 0;  // Calculated template length
+
+	uint32_t cigarOp;
+	uint32_t cigarLen;
+
+	// Process CIGAR records
+	while (cigar_array < cigar_array_end) {
+		cigarOp = *cigar_array & CIGAR_MATCH;
+		cigarLen = *cigar_array >> 4;
+
+
+		switch (cigarOp) {
+		case BAM_CEQUAL:
+		case BAM_CDIFF:
+		case BAM_CDEL:
+		case BAM_CMATCH:
+		case BAM_CREF_SKIP:
+			tlen += cigarLen;
+			break;
+		}
+
+		// Next record
+		cigar_array += 1;
+	}
+
+	return tlen;
 }
