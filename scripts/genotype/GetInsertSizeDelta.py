@@ -5,10 +5,14 @@ Get insert size differences over SV breakpoints on the reference.
 """
 
 import argparse
+import gc
 import numpy as np
 import os
 import pandas as pd
 import pysam
+
+# Number of SVs to process before resetting pysam (close and re-open file). Avoids a memory leak in pysam.
+PYSAM_RESET_INTERVAL = 1000
 
 
 def get_insert_size_list(sv_record, bam_file, ref_flank):
@@ -79,6 +83,7 @@ def get_insert_size_distribution(bam_file_name, sample_size=5e6, size_min=100, s
 
     # Return
     return pd.Series((n_records, np.mean(size_list), np.std(size_list)), index=('N', 'MEAN', 'STDEV'))
+
 
 # Main
 if __name__ == '__main__':
@@ -162,30 +167,45 @@ if __name__ == '__main__':
         insert_stats.to_csv(args.out_stats, sep='\t')
 
     # Open files and process
-    with pysam.AlignmentFile(args.bam, 'r') as bam_file_in:
-        with open(args.out, 'w') as out_file:
-            out_file.write('INDEX\tN_INSERT\tINSERT_LOWER\tINSERT_UPPER\n')
+    bam_file_in = None
 
-            for sv_rec in df_bed.iterrows():
-                sv_rec = sv_rec[1]
+    with open(args.out, 'w') as out_file:
+        out_file.write('INDEX\tN_INSERT\tINSERT_LOWER\tINSERT_UPPER\n')
 
-                insert_array = get_insert_size_list(
-                    sv_rec, bam_file_in, args.ref_flank
-                )
+        # Iterate over SV calls
+        for index in range(df_bed.shape[0]):
 
-                sv_rec['N_INSERT'] = len(insert_array)
+            # Close and re-open pysam at set intervals (memory-leak work-around)
+            if index % PYSAM_RESET_INTERVAL == 0:
+                if bam_file_in is not None:
+                    bam_file_in.close()
 
-                if sv_rec['N_INSERT'] > 0:
-                    insert_array = np.array(insert_array)  # To array
-                    insert_array = (insert_array - insert_mean) / insert_sd  # Z-score
+                gc.collect()
 
-                    sv_rec['INSERT_LOWER'] = sum(insert_array < -z_limit) / sv_rec['N_INSERT']
-                    sv_rec['INSERT_UPPER'] = sum(insert_array > z_limit) / sv_rec['N_INSERT']
+                bam_file_in = pysam.AlignmentFile(args.bam, 'r')
 
-                else:
-                    sv_rec['INSERT_LOWER'] = 0
-                    sv_rec['INSERT_UPPER'] = 0
+            # Get record
+            sv_rec = df_bed.iloc[index]
 
-                out_file.write(
-                    '{INDEX}\t{N_INSERT}\t{INSERT_LOWER}\t{INSERT_UPPER}\n'.format(**sv_rec)
-                )
+            # Get insert size stats
+            insert_array = get_insert_size_list(
+                sv_rec, bam_file_in, args.ref_flank
+            )
+
+            sv_rec['N_INSERT'] = len(insert_array)
+
+            if sv_rec['N_INSERT'] > 0:
+                insert_array = np.array(insert_array)  # To array
+                insert_array = (insert_array - insert_mean) / insert_sd  # Z-score
+
+                sv_rec['INSERT_LOWER'] = sum(insert_array < -z_limit) / sv_rec['N_INSERT']
+                sv_rec['INSERT_UPPER'] = sum(insert_array > z_limit) / sv_rec['N_INSERT']
+
+            else:
+                sv_rec['INSERT_LOWER'] = 0
+                sv_rec['INSERT_UPPER'] = 0
+
+            # Write
+            out_file.write(
+                '{INDEX}\t{N_INSERT}\t{INSERT_LOWER}\t{INSERT_UPPER}\n'.format(**sv_rec)
+            )

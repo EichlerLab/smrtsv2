@@ -3,7 +3,8 @@
     "mem": "1G",
     "cpu": "1",
     "rt": "00:30:00",
-    "params": ""
+    "params": "",
+    "global": "-l gpfsstate=0"
   },
 
   "ref_make_fai": {
@@ -120,7 +121,7 @@
     "rt": "08:00:00"
   },
   "gt_call_sample_breakpoint_depth": {
-    "mem": "10G",
+    "mem": "4G",
     "rt": "04:00:00"
   },
   "gt_call_sample_insert_delta": {
@@ -128,7 +129,7 @@
     "rt": "04:00:00"
   },
   "gt_call_sample_read_depth": {
-    "mem": "10G",
+    "mem": "4G",
     "rt": "04:00:00"
   },
   "gt_contig_bam_to_fasta": {

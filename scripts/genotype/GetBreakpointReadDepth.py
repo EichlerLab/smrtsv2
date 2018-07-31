@@ -15,6 +15,7 @@ alignment for each read (CIGAR string and edit distance), and normalizing over b
 """
 
 import argparse
+import gc
 import collections
 import os
 import pandas as pd
@@ -37,6 +38,9 @@ BAM_CDIFF = 8
 CIGAR_NO_ALIGN = {BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, BAM_CHARD_CLIP, BAM_CDIFF}
 
 CIGAR_CLIPPED = {BAM_CSOFT_CLIP, BAM_CHARD_CLIP}
+
+# Number of SVs to process before resetting pysam (close and re-open file). Avoids a memory leak in pysam.
+PYSAM_RESET_INTERVAL = 1000
 
 
 class AlignRecord:
@@ -298,6 +302,9 @@ def get_bp_depth(sv_record, bam_file, minclip=4, mapq=20):
     """
 
     # Get breakpoint locations
+    # * bp_l: Left breakpoint (contig if INS, primary if DEL)
+    # * bp_r: Right breakpoint (contig if INS, primary if DEL)
+    # * bp_s: Single breakpoing (primary if INS (point of insertion), contig if DEL)
     if sv_record['SVTYPE'] == 'INS':
 
         is_ins = True
@@ -453,68 +460,87 @@ if __name__ == '__main__':
     df_bed = pd.read_table(args.bed, header=0)
 
     # Open files and process
-    with pysam.AlignmentFile(args.bam, 'r') as bam_file_in:
-        with open(args.out, 'w') as out_file:
+    bam_file_in = None  # Init within df_bed iterator loop
+
+    with open(args.out, 'w') as out_file:
+
+        # Write header
+        out_file.write(
+            'INDEX\tBP_REF_COUNT\tBP_ALT_COUNT\t'
+            'BP_REF_REL\tBP_ALT_REL\t'
+            'BP_PROB_HOMREF\tBP_PROB_HET\tBP_PROB_HOMALT\t'
+            'BP_REF_CLIP\tBP_ALT_CLIP\tBP_PRIMARY_CLIP\n'
+        )
+
+        # Iterate over SV calls
+        for index in range(df_bed.shape[0]):
+
+            # Close and re-open pysam at set intervals (memory-leak work-around)
+            if index % PYSAM_RESET_INTERVAL == 0:
+                if bam_file_in is not None:
+                    bam_file_in.close()
+
+                gc.collect()
+
+                bam_file_in = pysam.AlignmentFile(args.bam, 'r')
+
+            # Get record
+            sv_rec = df_bed.iloc[index]
+
+            # Get counts
+            ref_count, alt_count, ref_clip, alt_clip, primary_clip = \
+                get_bp_depth(sv_rec, bam_file_in, args.minclip, args.mapq)
+
+            # Normalize to ratios of depth and get binomial probability of HOM-REF and HET given read depth
+            total_depth = ref_count + alt_count
+
+            if total_depth > 0:
+                ref_rel = ref_count / total_depth
+                alt_rel = alt_count / total_depth
+
+                prob_homref = binom(total_depth, phomref).pmf(alt_count)
+                prob_het = binom(total_depth, phet).pmf(alt_count)
+                prob_homalt = binom(total_depth, phomalt).pmf(alt_count)
+
+            else:
+                ref_rel = 0
+                alt_rel = 0
+
+                prob_homref = 0
+                prob_het = 0
+                prob_homalt = 0
+
+            # Normalize clipping counts
+            if ref_count > 0:
+                ref_clip /= ref_count
+            else:
+                ref_clip = 0
+
+            if alt_count > 0:
+                alt_clip /= alt_count
+            else:
+                alt_clip = 0
+
+            # Update Series
+            sv_rec['BP_REF_COUNT'] = ref_count
+            sv_rec['BP_ALT_COUNT'] = alt_count
+            sv_rec['BP_REF_REL'] = ref_rel
+            sv_rec['BP_ALT_REL'] = alt_rel
+            sv_rec['BP_PROB_HOMREF'] = prob_homref
+            sv_rec['BP_PROB_HET'] = prob_het
+            sv_rec['BP_PROB_HOMALT'] = prob_homalt
+            sv_rec['BP_REF_CLIP'] = ref_clip
+            sv_rec['BP_ALT_CLIP'] = alt_clip
+            sv_rec['BP_PRIMARY_CLIP'] = primary_clip
+
+            # Write
             out_file.write(
-                'INDEX\tBP_REF_COUNT\tBP_ALT_COUNT\t'
-                'BP_REF_REL\tBP_ALT_REL\t'
-                'BP_PROB_HOMREF\tBP_PROB_HET\tBP_PROB_HOMALT\t'
-                'BP_REF_CLIP\tBP_ALT_CLIP\tBP_PRIMARY_CLIP\n'
+                '{INDEX}\t{BP_REF_COUNT}\t{BP_ALT_COUNT}\t'
+                '{BP_REF_REL}\t{BP_ALT_REL}\t'
+                '{BP_PROB_HOMREF}\t{BP_PROB_HET}\t{BP_PROB_HOMALT}\t'
+                '{BP_REF_CLIP}\t{BP_ALT_CLIP}\t{BP_PRIMARY_CLIP}\n'.format(**sv_rec)
             )
 
-            for sv_rec in df_bed.iterrows():
-                sv_rec = sv_rec[1]
-
-                # Get counts
-                ref_count, alt_count, ref_clip, alt_clip, primary_clip = \
-                    get_bp_depth(sv_rec, bam_file_in, args.minclip, args.mapq)
-
-                # Normalize to ratios of depth and get binomial probability of HOM-REF and HET given read depth
-                total_depth = ref_count + alt_count
-
-                if total_depth > 0:
-                    ref_rel = ref_count / total_depth
-                    alt_rel = alt_count / total_depth
-
-                    prob_homref = binom(total_depth, phomref).pmf(alt_count)
-                    prob_het = binom(total_depth, phet).pmf(alt_count)
-                    prob_homalt = binom(total_depth, phomalt).pmf(alt_count)
-
-                else:
-                    ref_rel = 0
-                    alt_rel = 0
-
-                    prob_homref = 0
-                    prob_het = 0
-                    prob_homalt = 0
-
-                # Normalize clipping counts
-                if ref_count > 0:
-                    ref_clip /= ref_count
-                else:
-                    ref_clip = 0
-
-                if alt_count > 0:
-                    alt_clip /= alt_count
-                else:
-                    alt_clip = 0
-
-                # Update Series
-                sv_rec['BP_REF_COUNT'] = ref_count
-                sv_rec['BP_ALT_COUNT'] = alt_count
-                sv_rec['BP_REF_REL'] = ref_rel
-                sv_rec['BP_ALT_REL'] = alt_rel
-                sv_rec['BP_PROB_HOMREF'] = prob_homref
-                sv_rec['BP_PROB_HET'] = prob_het
-                sv_rec['BP_PROB_HOMALT'] = prob_homalt
-                sv_rec['BP_REF_CLIP'] = ref_clip
-                sv_rec['BP_ALT_CLIP'] = alt_clip
-                sv_rec['BP_PRIMARY_CLIP'] = primary_clip
-
-                # Write
-                out_file.write(
-                    '{INDEX}\t{BP_REF_COUNT}\t{BP_ALT_COUNT}\t'
-                    '{BP_REF_REL}\t{BP_ALT_REL}\t'
-                    '{BP_PROB_HOMREF}\t{BP_PROB_HET}\t{BP_PROB_HOMALT}\t'
-                    '{BP_REF_CLIP}\t{BP_ALT_CLIP}\t{BP_PRIMARY_CLIP}\n'.format(**sv_rec)
-                )
+    # Gracefully close input file
+    if bam_file_in is not None:
+        bam_file_in.close()

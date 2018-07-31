@@ -87,8 +87,8 @@ args_dict['cluster_params'] = {
                '-pe serial {{cluster.cpu}} '
                '-l mfree={{cluster.mem}} '
                '-l h_rt={{cluster.rt}} '
-               '-l gpfsstate=0 '
                '{{cluster.params}} '
+               '{{cluster.global}} '
                '-w n -S /bin/bash',
     'help': 'Cluster scheduling parameters with place-holders as {{cluster.XXX}} for parameters in the cluster '
             'configuration file (--cluster-config) and {log} for the log directory where standard output from cluster '

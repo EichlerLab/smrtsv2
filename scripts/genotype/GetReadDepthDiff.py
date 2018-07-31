@@ -1,22 +1,31 @@
 import argparse
+import gc
 import numpy as np
 import os
 import pandas as pd
 import pysam
 
 
-def get_read_depth(df_subset, bam_file, mapq):
+# Number of SVs to process before resetting pysam (close and re-open file). Avoids a memory leak in pysam.
+PYSAM_RESET_INTERVAL = 1000
+
+
+def get_read_depth(df_subset, bam_file_name, mapq):
     """
     Get read depths over one or more breakpoints.
 
     :param df_subset: Subset dataframe with a column for contigs (first column) and one or more columns for the
         location of breakpoints to quantify.
-    :param bam_file: Open Pysam alignment file.
+    :param bam_file_name: Name of alignment file to query.
     :param mapq: Minimum mapping quality.
 
     :return: A Series with with one element for each row of `df_subset` containing the average of read depths over
         the breakpoints for each variant.
     """
+
+    # Init pysam query count (for memory leak prevention)
+    pysam_count = 0
+    bam_file = pysam.AlignmentFile(bam_file_name, 'r')
 
     # Init dataframe
     df_subset = df_subset.copy()
@@ -39,9 +48,24 @@ def get_read_depth(df_subset, bam_file, mapq):
 
             n_reads = 0
 
+            # Get position
             contig = df_subset.iloc[row_index, 0]
             pos = df_subset.iloc[row_index, subset_index]
 
+            # Reset pysam periodically (avoids memory leak)
+            pysam_count += 1
+
+            if pysam_count >= PYSAM_RESET_INTERVAL:
+                if bam_file is not None:
+                    bam_file.close()
+
+                gc.collect()
+
+                bam_file = pysam.AlignmentFile(bam_file_name, 'r')
+
+                pysam_count = 0
+
+            # Count
             for segment in bam_file.fetch(contig, pos, pos + 1):
                 if segment.mapping_quality >= mapq and segment.is_proper_pair:
                     n_reads += 1
@@ -105,6 +129,7 @@ def annotate_variant_info(variant_table, ref_len_series, flank):
 
     return variant_table
 
+
 # Main
 if __name__ == '__main__':
 
@@ -155,18 +180,17 @@ if __name__ == '__main__':
     # Annotate variant info with locations reads are extracted from
     df_bed = annotate_variant_info(df_bed, ref_len, args.flank)
 
-    # Open files and process
-    with pysam.AlignmentFile(args.bam, 'r') as bam_file_in:
+    # Count reads over variant midpoint
+    df_bed['DP_N_VAR'] =\
+        get_read_depth(df_bed.loc[:, ['VAR_CONTIG', 'VAR_MIDPOINT']], args.bam, args.mapq)
 
-        # Count reads over the variant midpoint
-        df_bed['DP_N_VAR'] =\
-            get_read_depth(df_bed.loc[:, ['VAR_CONTIG', 'VAR_MIDPOINT']], bam_file_in, args.mapq)
+    # Count reads over reference flank
+    df_bed['DP_N_PROX_REF'] =\
+        get_read_depth(df_bed.loc[:, ['#CHROM', 'FLANK_L_REF', 'FLANK_R_REF']], args.bam, args.mapq)
 
-        df_bed['DP_N_PROX_REF'] =\
-            get_read_depth(df_bed.loc[:, ['#CHROM', 'FLANK_L_REF', 'FLANK_R_REF']], bam_file_in, args.mapq)
-
-        df_bed['DP_N_PROX_CTG'] =\
-            get_read_depth(df_bed.loc[:, ['CONTIG', 'FLANK_L_CTG', 'FLANK_R_CTG']], bam_file_in, args.mapq)
+    # Count reads over contig flank
+    df_bed['DP_N_PROX_CTG'] =\
+        get_read_depth(df_bed.loc[:, ['CONTIG', 'FLANK_L_CTG', 'FLANK_R_CTG']], args.bam, args.mapq)
 
     # Get global stats
     ref_mean = np.mean(df_bed['DP_N_PROX_REF'])
