@@ -207,7 +207,7 @@ rule gt_vcf_fixup:
 rule gt_vcf_merge:
     input:
         vcf='sv_calls/sv_calls.vcf.gz',
-        genotype=expand('samples/{sample}/genotype.tab', sample=SAMPLES)
+        genotype=expand('samples/{sample}/temp/vcf_column.tab', sample=SAMPLES)
     output:
         vcf=temp('gt/temp/variants_genotyped.vcf')
     run:
@@ -218,7 +218,7 @@ rule gt_vcf_merge:
 
         # Merge samples into VCF
         vcf_df = pd.concat(
-            [vcf_body] + [genotype.get_sample_column('samples/{}/genotype.tab'.format(sample), sample, SAMPLE_TABLE.loc[sample, 'SEX']) for sample in SAMPLES],
+            [vcf_body] + [pd.read_table('samples/{}/temp/vcf_column.tab'.format(sample)) for sample in SAMPLES],
             axis=1
         )
 
@@ -226,6 +226,22 @@ rule gt_vcf_merge:
         with open(output.vcf, 'w') as out_file:
             out_file.write(''.join(header_line_list))
             vcf_df.to_csv(out_file, sep='\t', index=False)
+
+# gt_vcf_get_sample_column
+#
+# Get VCF column
+rule gt_vcf_get_sample_column:
+    input:
+        tab='samples/{sample}/genotype.tab'
+    output:
+        tab=temp('samples/{sample}/temp/vcf_column.tab')
+    run:
+
+        # Get VCF column and write
+        genotype.get_sample_column(
+            input.tab, wildcards.sample, SAMPLE_TABLE.loc[wildcards.sample, 'SEX']
+        ).to_csv(output.tab, sep='\t', index=False, header=True)
+
 
 #
 # Call genotypes (apply learned model to features)

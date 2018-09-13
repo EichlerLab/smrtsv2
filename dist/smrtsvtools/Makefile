@@ -1,6 +1,6 @@
 PREFIX = $(abspath ..)
 
-CXXFLAGS += -I$(abspath include) -I$(abspath ../include) --std=c++14
+CXXFLAGS += -I$(abspath include) -I$(abspath ../include) --std=c++14 -g
 
 #LDFLAGS = -L$(abspath ../lib)
 LDFLAGS += -lboost_program_options -lrt -lpthread -lbz2 -lhts -llzma

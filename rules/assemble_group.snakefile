@@ -101,6 +101,7 @@ rule assemble_align_fixup:
 
         bam_temp='temp/region/{}/asm/assemble_align_fixup'.format(wildcards.region_id)
         bam_usort='temp/region/{}/asm/assemble_align_fixup_usort.bam'.format(wildcards.region_id)
+        bam_tlen='temp/region/{}/asm/assemble_align_fixup_tlen.bam'.format(wildcards.region_id)
 
         if os.stat(input.sam).st_size > 0:
             shell(
@@ -110,8 +111,15 @@ rule assemble_align_fixup:
                     """-d $(head -n 1 {input.align_fofn}) """
                     """-r {REF_FA} -g {wildcards.region_id} """
                     """-o {bam_usort}; """
-                """samtools sort -T {bam_temp} -o {output.bam} {bam_usort}; """
-                """rm {bam_usort}"""
+                """tlenadd -i {bam_usort} -o {bam_tlen} -r {input.ref_fa}; """
+                """rm {bam_usort}; """
+                """{{ """
+                    """samtools view -H {bam_tlen} | grep -Ev '^@(RG|PG)'; """
+                    """samtools view {bam_tlen}; """
+                """}} | """
+                """bamleftalign -f {input.ref_fa} | """
+                """samtools sort -T {bam_temp} -o {output.bam}; """
+                """rm {bam_tlen}"""
             )
         else:
             # Output bam with headers only

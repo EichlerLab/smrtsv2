@@ -40,6 +40,12 @@ def _get_repeat_species(wildcards):
 # All variant calls
 #
 
+# call_variant_vcf
+#
+# Create variant VCF file.
+#
+# Note: "sleep 5" attempts to prevent "the index file is older than the vcf file" tabix errors while reading the
+# VCF.
 rule call_variant_vcf:
     input:
         vcf='call/variants_merged.vcf'
@@ -50,6 +56,7 @@ rule call_variant_vcf:
         if output.vcf.endswith('.vcf.gz'):
             shell(
                 """bgzip -c {input.vcf} > {output.vcf}; """
+                """sleep 5; """
                 """tabix {output.vcf}; """
             )
 

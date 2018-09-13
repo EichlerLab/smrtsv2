@@ -65,7 +65,9 @@ def get_sample_column(table_file_name, sample_name, sex='U'):
     df_gt['GT'] = df_gt['CLASS'].apply(lambda gt_class: GENOTYPE_TO_GT[gt_class])
 
     df_gt['GQ'] = df_gt.apply(
-        lambda row: int(10 * -math.log10(1 - row[row['CLASS']])) if row['CALLABLE'] else '.',
+        lambda row: (
+            int(10 * -math.log10(1 - row[row['CLASS']])) if row[row['CLASS']] < 1 else 255
+        ) if row['CALLABLE'] else '.',
         axis=1
     )
 

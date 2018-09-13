@@ -115,9 +115,17 @@
     "rt": "02:00:00"
   },
 
+  "gt_vcf_fixup": {
+    "mem": "1G",
+    "rt": "8:00:00"
+  },
   "gt_vcf_merge": {
     "mem": "12G",
     "rt": "48:00:00"
+  },
+  "gt_vcf_get_sample_column": {
+    "mem": "2G",
+    "rt": "8:00:00"
   },
   "gt_call_sample_breakpoint_depth": {
     "mem": "4G",

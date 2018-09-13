@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
 	outFile = hts_open(outFileName.c_str(), ALIGN_WRITE_MODE[outFileType]);
 
 	if (! outFile) {
-		err("Error opening input file: %s", outFileName.c_str());
+		err("Error opening output file: %s", outFileName.c_str());
 		return ERR_IO;
 	}
 
