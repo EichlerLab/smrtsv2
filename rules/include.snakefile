@@ -137,3 +137,5 @@ if os.path.isdir(TEMP_DIR) and os.path.samefile(TEMP_DIR, '.'):
 #
 
 INCLUDE_SNAKEFILE = True
+raise RuntimeError('Movie is not an integer: {movie}'.format(**wildcards))
+U

@@ -349,6 +349,7 @@ rule gt_call_sample_read_depth:
 # For each variant, determine if the expected insert size of alignments over the altered reference changed.
 rule gt_call_sample_insert_delta:
     input:
+        sv_ref='altref/ref.fasta',
         bed='sv_calls/sv_calls.bed',
         bam='samples/{sample}/alignments.cram'
     output:
@@ -369,6 +370,7 @@ rule gt_call_sample_insert_delta:
             """--ref_flank {params.ref_flank} """
             """--z_threshold {params.z_threshold} """
             """--out_stats {output.stats} """
+            """--ref {input.sv_ref} """
             """{input.bam} {input.bed} {output.tab}"""
 
 # gt_call_sample_breakpoint_depth

@@ -46,7 +46,7 @@ def get_insert_size_list(sv_record, bam_file, ref_flank):
     return insert_size_list
 
 
-def get_insert_size_distribution(bam_file_name, sample_size=5e6, size_min=100, size_limit=10000):
+def get_insert_size_distribution(bam_file_name, sample_size=5e6, size_min=100, size_limit=10000, ref=None):
     """
     Get the expected insert size distribution.
 
@@ -54,6 +54,7 @@ def get_insert_size_distribution(bam_file_name, sample_size=5e6, size_min=100, s
     :param sample_size: Number of records to retrieve.
     :param size_min: Lower limit on the insert size for outlier removal.
     :param size_limit: Upper limit on the insert size for outlier removal.
+    :param ref: Reference file name. Required for CRAM files.
 
     :return: A Series with elements "N", "MEAN", and "STDEV" describing the insert size sample.
     """
@@ -61,7 +62,7 @@ def get_insert_size_distribution(bam_file_name, sample_size=5e6, size_min=100, s
     n_records = 0
     size_list = list()
 
-    with pysam.AlignmentFile(bam_file_name, 'r') as in_file:
+    with pysam.AlignmentFile(bam_file_name, 'r', reference_filename=ref) as in_file:
         for record in in_file:
 
             if record.is_proper_pair and \
@@ -99,6 +100,9 @@ if __name__ == '__main__':
 
     arg_parser.add_argument('out',
                             help='Output file.')
+
+    arg_parser.add_argument('--ref', default=None,
+                            help='Reference file for alignments. Required for BAM files.')
 
     arg_parser.add_argument('--out_stats',
                             help='Output size distribution statistics used for z-scores.')
@@ -159,7 +163,7 @@ if __name__ == '__main__':
     df_bed = pd.read_table(args.bed, header=0)
 
     # Get insert size distribution
-    insert_stats = get_insert_size_distribution(args.bam, args.sample_size, args.size_min, args.size_limit)
+    insert_stats = get_insert_size_distribution(args.bam, args.sample_size, args.size_min, args.size_limit, ref=args.ref)
     insert_mean = np.float(insert_stats['MEAN'])
     insert_sd = np.float(insert_stats['STDEV'])
 
@@ -182,7 +186,7 @@ if __name__ == '__main__':
 
                 gc.collect()
 
-                bam_file_in = pysam.AlignmentFile(args.bam, 'r')
+                bam_file_in = pysam.AlignmentFile(args.bam, 'r', reference_filename=args.ref)
 
             # Get record
             sv_rec = df_bed.iloc[index]
