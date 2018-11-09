@@ -1,229 +1,84 @@
-# SMRT-SV
+# SMRT-SV long read structural variant caller
 
-Structural variant (SV) and indel caller for PacBio reads based on methods from
-[Chaisson et
-al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.html).
+SMRT-SV calls structural variants (SVs) using long reads (PacBio RS II or Sequel). The input is an FOFN file that lists
+each input file (BAX H5 or BAM) and a genome reference. Reads are aligned to the reference and local assemblies are
+done in kilobase-size overlapping windows across the genome. Assemblies are aligned back to the reference, and
+structural variants are called from them.
 
-## What's new in SMRT-SV
+Because of this approach, SMRT-SV yields both SV calls and contigs containing the SV with know breakpoints on the
+contig. These data feed into powerful analysis tools that use the reference and the contigs, such as the SMRT-SV
+genotyper, which is also included in this package.
 
-SMRT-SV provides an official software package for tools described in [Chaisson et
-al. 2014](http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13907.html) and adds several key features including the following.
 
-  * Unified variant calling user interface with built-in cluster compute support
-  * Small indel calling (2-49 bp)
-  * Improved inversion calling (`screenInversions`)
-  * Quality metric for SV calls based on number of local assemblies supporting each call
-  * Higher sensitivity for SV calls using tiled local assemblies across the entire genome instead of "signature" regions
-  * Genotyping of SVs with Illumina paired-end reads from WGS samples
+## Dependencies
+Currently, SMRT-SV relies on an environment where all its dependencies are already installed. To make it easier to run,
+we are actively working on putting these dependencies into a conda package. Please contact us (Peter Audano in the
+Eichler lab) if you need assistance getting the tool running in its current state.
 
-## Installation
+Dependencies include:
+* python 3 with pandas and numpy
+* Snakemake
+* Freebayes (for bamleftalign)
+* RepeatMasker
+* BLASR
+* Arrow and/or Quiver (depending on polishing method)
+* Canu
+* BWAkit
+* Samtools
+* Bedtools
+* seqtk
+* vcflib
+* samblaster
+* Java 8
 
-SMRT-SV requires git, Python (2.6.6 or later) and Perl (5.10.1 or later) for
-installation.
+## Pipeline process
 
-SMRT-SV has been tested on CentOS 6.8 and should work with most Linux-style
-distributions.
+SMRT-SV is run in several steps:
 
-### Get the code
+1) Align
+2) Detect SV signatures
+3) Assemble
+4) Call variants
 
-Clone the repository into your desired installation directory and build SMRT-SV
-dependencies.
+### Align
 
-```bash
-mkdir /usr/local/smrtsv
-cd /usr/local/smrtsv
-git clone --recursive https://github.com/EichlerLab/pacbio_variant_caller.git .
-make
-```
+All reads are aligned to the reference. Alignments are done in batches, which is controlled by the `--batches` parameter
+(default = 20). Batching is useful for distributing alignment workload over a cluster. Alignments are done in the
+`alignment` subdirectory, and `align/alignments.fofn` contains a list of aligned BAM files.
 
-Note that some dependencies (e.g., RepeatMasker) require hardcoded paths to this
-installation directory. If you need to move SMRT-SV to another directory, it is
-easier to change to that directory, clone the repository, and rebuild the
-dependencies there.
+### Detect SV signatures
 
-### Test installation
+Overlapping windows are tiled across the genome. By default, 60 kbp windows are tiled each offset by 20 kbp.
+The pipeline also searches for signatures of structural variation, and it places additional windows around those. The
+output from this step goes into the `detect` subdirectory.
 
-Add the installation directory to your path.
+### Assemble
 
-```bash
-export PATH=/usr/local/smrtsv:$PATH
-```
+For each window, reads are pulled down and assembled with Canu. The assemblies are polished (Arrow or Quiver), and
+then aligned back to the reference. This step takes the most time and compute resources. Output is in the `assemble`
+subdirectory with `assemble/local_assemblies.bam` containing all assemblies.
 
-Print SMRT-SV help to confirm installation.
+### Call
 
-```bash
-smrtsv.py --help
-```
+From the contigs, variants are called from the alignments. The output from this step is in `call`, and the final
+output is written to the root of the working directory (default = `variantsn.vcf.gz`)
 
-Alternately, run `smrtsv.py` directly from the installation directory.
 
-```bash
-/usr/local/smrtsv/bin/smrtsv.py --help
-```
+## Running
 
-## Configure distributed environment
+Change to a clean working directory that has nothing in it. The SMRT-SV pipeline should be installed in another
+directory. Setup your environment so all dependencies are available. All output will go into this working directory.
+The command below assumes a variable `SMRTSV_DIR` is defined to point to the root of the SMRT-SV install directory
+containing `smrtsv.py`.
 
-SMRT-SV uses DRMAA to submit jobs to a grid-engine-style cluster. To enable the `--distribute` option of SMRT SV, add the following line to your `.bash_profile` with the correct path to the DRMAA library for your cluster.
+To run all steps:
 
-```bash
-export DRMAA_LIBRARY_PATH=/opt/uge/lib/lx-amd64/libdrmaa.so.1.0
-```
+`${SMRTSV_DIR}/smrtsv.py run --batches 20 --threads 8 path/to/ref.fasta path/to/reads.fofn`
 
-Alternately, provide the path to your DRMAA library with the SMRT-SV
-`--drmaalib` option.
+Each step (see above) can be run on its own by replacing `run` with the name of the step. See `smrtsv.py -h` for help.
 
-Additionally, you may need to configure resource requirements depending on your
-cluster and PacBio data. Use the `--cluster_config` option when running SMRT-SV
-to pass a JSON file that specifies [Snakemake-style cluster
-parameters](https://bitbucket.org/snakemake/snakemake/wiki/Documentation#markdown-header-cluster-configuration). An
-example configuration used to run SMRT-SV with human genomes on the Eichler lab
-cluster is provided in this repository in the file `cluster.eichler.json`.
+## Distributed
 
-## Tutorial for variant calling
-
-The following tutorial shows how to call structural variants and indels in
-yeast.
-
-### Download PacBio reads
-
-```bash
-# List of AWS-hosted files from PacBio including raw reads and an HGAP assembly.
-wget https://gist.githubusercontent.com/pb-jchin/6359919/raw/9c172c7ff7cbc0193ce89e715215ce912f3f30e6/gistfile1.txt
-
-# Keep only .xml, .bas.h5, and .bax.h5 files.
-sed '/fasta/d;/fastq/d;/celera/d;/HGAP/d' gistfile1.txt > gistfile1.keep.txt
-
-# Download data into a raw reads directory.
-mkdir -p raw_reads
-cd raw_reads
-for f in `cat ../gistfile1.keep.txt`; do wget --force-directories $f; done
-
-# Create a list of reads for analysis.
-cd ..
-find ./raw_reads -name "*.bax.h5" -exec readlink -f {} \; > reads.fofn
-```
-
-### Prepare the reference assembly
-
-Download the reference assembly (sacCer3) from UCSC.
-
-```bash
-mkdir -p reference
-cd reference
-wget ftp://hgdownload.cse.ucsc.edu/goldenPath/sacCer3/bigZips/chromFa.tar.gz
-```
-
-Unpack the reference tarball and concatenate individual chromosome files into a
-single reference FASTA file.
-
-```bash
-tar zxvf chromFa.tar.gz
-cat *.fa > sacCer3.fasta
-rm -f *.fa *.gz
-cd ..
-```
-
-Prepare the reference sequence for alignment with PacBio reads. This step
-produces suffix array and ctab files used by BLASR to speed up alignments.
-
-```bash
-smrtsv.py index reference/sacCer3.fasta
-```
-
-### Align reads to the reference
-
-Align reads to the reference with BLASR.
-
-```bash
-smrtsv.py align reference/sacCer3.fasta reads.fofn
-```
-
-### Find signatures of variants in raw reads
-
-Find candidate regions to search for SVs based on SV signatures.
-
-```bash
-smrtsv.py detect reference/sacCer3.fasta alignments.fofn candidates.bed
-```
-
-### Assemble regions
-
-Assemble local regions of the genome that have SV signatures or tile across the
-genome.
-
-```bash
-smrtsv.py assemble reference/sacCer3.fasta reads.fofn alignments.fofn candidates.bed local_assembly_alignments.bam
-```
-
-### Call variants
-
-Call variants by aligning tiled local assemblies back to the
-reference. Optionally, specify the sample name for annotation of the final VCF
-file and a species name (common or scientific as supported by
-[RepeatMasker](http://www.repeatmasker.org/)) for repeat masking of structural
-variants.
-
-```bash
-smrtsv.py call reference/sacCer3.fasta alignments.fofn local_assembly_alignments.bam variants.vcf --sample UCSF_Yeast9464 --species yeast
-```
-
-## Genotyping
-
-After discovery of SVs with SMRT-SV, use SMRT Genotyper to determine whether
-those SVs are present in one or more Illumina-sequenced samples. The genotyper
-provides homozygous reference, heterozygous, and homozygous alternate genotypes
-for each SV when 5 or more reads are present at any of the SV breakpoints.
-
-To run the genotyper, first prepare a configuration file that looks like the
-following example.
-
-```json
-{
-    "homozygous_binomial_probability": 0.95,
-    "heterozygous_binomial_probability": 0.5,
-    "sample_manifest": "/home/jlhudd/samples.tab",
-    "local_assembly_alignments": "/home/jlhudd/CHM1_local_assembly_alignments.bam",
-    "sv_calls": "/home/jlhudd/CHM1_variants.vcf.gz",
-    "sv_reference": "/home/jlhudd/ucsc.hg38.no_alts.fasta",
-    "sv_reference_lengths": "/home/jlhudd/ucsc.hg38.no_alts.fasta.fai",
-    "bam_reference": {
-        "human_1kg_v37": "/home/jlhudd/human_1kg_v37.fasta",
-        "hg38": "/home/jlhudd/ucsc.hg38.no_alts.fasta",
-    },
-    "default_bam_reference": "human_1kg_v37",
-    "sample_bam_reference": {
-    },
-    "samples": {
-        "CHM1": "/home/jlhudd/CHM1_illumina_reads.bam",
-        "CHM13": "/home/jlhudd/CHM13_illumina_reads.bam"
-    }
-}
-```
-
-The parameters in this JSON file are described in the table below.
-
-Parameter | Description
---------- | -----------
-homozygous_binomial_probability | the probability to use in the binomial probability calculation for the heterozygous genotype state
-heterozygous_binomial_probability | the probability to use in the binomial probability calculation for the heterozygous genotype state
-sample_manifest | a headered tab-delimited manifest with "sample" and "sex" columns for each sample being genotyped where the sample name must match the sample name in the corresponding BAM's read group
-local_assembly_alignments | the absolute path to a BAM file containing BLASR alignments of local assemblies to the SV reference
-sv_calls | a VCF of variants including SVs (insertions and deletions >=50 bp)
-sv_reference | the absolute path to the FASTA for the reference used to call SVs
-sv_reference_lengths | the absolute path to the FASTA index (.fai) for the reference used to call SVs or chromInfo.txt file
-bam_reference | a dictionary of reference names and absolute paths to their corresponding FASTA sequence and BWA index
-default_bam_reference | the name of the reference to use by default when one isn't specified for a sample
-sample_bam_reference | a dictionary of sample names and their corresponding reference names if they differ from the default reference
-samples | a dictionary of sample names and absolute paths to BAMs containing paired-end Illumina sequences for each sample
-
-Finally, genotype SVs using the configuration file and specifying the name of
-the final compressed VCF with genotypes.
-
-```bash
-smrtsv.py genotype genotyper.config.json genotypes.vcf.gz
-```
-
-Note that the genotyper assumes that:
-
- 1. input genomes are in BAM format with alignments generated by BWA MEM against an existing reference assembly
- 2. BAMs have the sample tag ("SM") defined in the read group
+SMRT-SV can be run on a local machine or distributed over a cluster. Distributing is managed by Snakemake. When
+it is distributed, see `cluster.eichler.json` for expected resource usage for each rule. The cluster configuration
+file will probably need to be modified for your environment.
