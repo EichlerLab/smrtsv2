@@ -13,12 +13,12 @@ from smrtsvlib.args import get_arg
 
 # List of relative paths for PATH
 INSTALL_PATH = [
-    'dist/bin'
+    'dep/bin'
 ]
 
 # List of relative paths for LD_LIBRARY_PATH
 INSTALL_LD_PATH = [
-    'dist/lib'
+    'dep/lib'
 ]
 
 
