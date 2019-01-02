@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# Launch SMRT-SV using executables in the "dep" directory.
+
+dep/bin/python3 smrtsv.py
