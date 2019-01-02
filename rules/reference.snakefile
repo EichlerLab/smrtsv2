@@ -64,7 +64,7 @@ rule ref_make_ctab:
         """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.ctab ]; then """
             """ln -sf {REFERENCE}.ctab {output.ref_ctab}; """
         """else """
-            """printTupleCountTable {input.ref_fa} > {output.ref_ctab}; """
+            """PrintTupleCountTable {input.ref_fa} > {output.ref_ctab}; """
             """chmod a-w {output.ref_ctab}; """
         """fi"""
 
