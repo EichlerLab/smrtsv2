@@ -134,7 +134,6 @@ def run_snake_target(snakefile, args, process_env, smrtsv_dir, cmd,
     prefix = [
         'snakemake',
         '--snakefile', os.path.join(smrtsv_dir, snakefile),
-        '-T',
         '--rerun-incomplete'
     ]
 

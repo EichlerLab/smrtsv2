@@ -254,7 +254,7 @@ if __name__ == '__main__':
     parser.add_argument('--cluster-config', dest='cluster_config', **args_dict['cluster_config'])
     parser.add_argument('--cluster-params', dest='cluster_params', **args_dict['cluster_params'])
     parser.add_argument('--drmaalib', **args_dict['drmaalib'])
-    parser.add_argument('--job_prefix', **args_dict['job_prefix'])
+    parser.add_argument('--job-prefix', **args_dict['job_prefix'])
     parser.add_argument('--keep-going', '-k', dest='keep_going', **args_dict['keep_going'])
     parser.add_argument('--nt', **args_dict['nt'])
     parser.add_argument('--log', **args_dict['log'])
@@ -383,6 +383,11 @@ if __name__ == '__main__':
 
         # Flush output
         sys.stdout.flush()
+
+    # Check target
+    if 'func' not in cmd_args:
+        print('Unrecognized SMRT-SV command or command-line options could not be parsed. Try "-h" for help.', file=sys.stderr)
+        sys.exit(1)
 
     # Run target command
     cmd_return_code = cmd_args.func(cmd_args)
