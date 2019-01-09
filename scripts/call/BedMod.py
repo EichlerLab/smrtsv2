@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+
 import argparse
 import sys
 ap = argparse.ArgumentParser(description="Modify a bed file")

@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+
 """
 Recalculate total repeatmasked bases in the given variants based on the number
 of lowercased ATCG bases.

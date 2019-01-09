@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/bin/env python2
 
 import argparse
 import numpy as np

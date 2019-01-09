@@ -15,4 +15,7 @@ conda install -y \
     vcflib==1.0.0_rc1 \
     tabix==0.2.6 \
     bwakit=0.7.15 \
-    seqtk=1.3
+    seqtk=1.3 \
+    freebayes=1.2.0 \
+    repeatmasker=4.0.7 \
+    trf=4.09

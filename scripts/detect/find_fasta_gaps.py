@@ -1,4 +1,5 @@
-#!/bin/env python
+#!/bin/env python2
+
 """
 Report the positions of all gaps (N bases) in the given FASTA sequence(s).
 """
