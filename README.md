@@ -2,7 +2,7 @@
 
 SMRT-SV calls structural variants (SVs) using long reads (PacBio RS II or Sequel). The input is an FOFN file that lists
 each input file (BAX H5 or BAM) and a genome reference. Reads are aligned to the reference and local assemblies are
-done in kilobase-size overlapping windows across the genome. Assemblies are aligned back to the reference, and
+done in kilobase-scale overlapping windows across the genome. Assemblies are aligned back to the reference, and
 structural variants are called from them.
 
 Because of this approach, SMRT-SV yields both SV calls and contigs containing the SV with know breakpoints on the

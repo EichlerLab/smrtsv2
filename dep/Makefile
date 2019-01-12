@@ -71,6 +71,7 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 	ln -sf ../conda/build/envs/tools/bin/bamleftalign bin/bamleftalign
 	ln -sf ../conda/build/envs/tools/bin/RepeatMasker bin/RepeatMasker
 	ln -sf ../conda/build/envs/tools/bin/trf bin/trf
+	ln -sf ../conda/build/envs/tools/bin/bcftools bin/bcftools
 
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/bwa bin/bwa
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/k8 bin/k8

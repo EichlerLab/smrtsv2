@@ -338,7 +338,7 @@ rule gt_call_sample_read_depth:
         mapq=get_config_param('gt_mapq'),
         flank=100
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/GetReadDepthDiff.py """
+        """python3 {SMRTSV_DIR}/scripts/genotype/GetReadDepthDiff.py """
             """{input.bam} {input.bed} {input.alt_info} {output.tab} """
             """--out_stats {output.stats} """
             """--mapq {params.mapq} """
@@ -362,7 +362,7 @@ rule gt_call_sample_insert_delta:
         size_limit=1500,
         z_threshold=1.5
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/GetInsertSizeDelta.py """
+        """python3 {SMRTSV_DIR}/scripts/genotype/GetInsertSizeDelta.py """
             """-f """
             """--mapq {params.mapq} """
             """--sample_size {params.sample_size} """
@@ -385,7 +385,7 @@ rule gt_call_sample_breakpoint_depth:
     params:
         mapq=get_config_param('gt_mapq'),
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/GetBreakpointReadDepth.py """
+        """python3 {SMRTSV_DIR}/scripts/genotype/GetBreakpointReadDepth.py """
             """-f """
             """--mapq {params.mapq} """
             """{input.bam} {input.bed} {output.tab}"""
@@ -672,7 +672,7 @@ rule gt_contig_filter:
         sam='contigs/contigs.sam',
         sizes='contigs/contigs.sizes'
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/FilterContigs.py {input.contigs} {input.list} {output.sam} {output.sizes}"""
+        """python3 {SMRTSV_DIR}/scripts/genotype/FilterContigs.py {input.contigs} {input.list} {output.sam} {output.sizes}"""
 
 # gt_contig_list
 #

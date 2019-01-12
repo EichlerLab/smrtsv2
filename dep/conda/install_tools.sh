@@ -18,4 +18,5 @@ conda install -y \
     seqtk=1.3 \
     freebayes=1.2.0 \
     repeatmasker=4.0.7 \
-    trf=4.09
+    trf=4.09 \
+    bcftools=1.9
