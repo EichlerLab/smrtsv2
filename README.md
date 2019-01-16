@@ -10,26 +10,12 @@ contig. These data feed into powerful analysis tools that use the reference and 
 genotyper, which is also included in this package.
 
 
-## Dependencies
-Currently, SMRT-SV relies on an environment where all its dependencies are already installed. To make it easier to run,
-we are actively working on putting these dependencies into a conda package. Please contact us (Peter Audano in the
-Eichler lab) if you need assistance getting the tool running in its current state.
+## Short-read genotyper
 
-Dependencies include:
-* python 3 with pandas and numpy
-* Snakemake
-* Freebayes (for bamleftalign)
-* RepeatMasker
-* BLASR
-* Arrow and/or Quiver (depending on polishing method)
-* Canu
-* BWAkit
-* Samtools
-* Bedtools
-* seqtk
-* vcflib
-* samblaster
-* Java 8
+Variant calls discovered with long reads using the SMRT-SV method can be genotyped in short-reads with the SMRT-SV
+genotyper, which is also included in this package. See [GENOTYPE.md](:doc:/GENOTYPE.md) for information about
+configuring and running the SMRT-SV genotyper.
+
 
 ## Pipeline process
 
@@ -82,3 +68,7 @@ Each step (see above) can be run on its own by replacing `run` with the name of 
 SMRT-SV can be run on a local machine or distributed over a cluster. Distributing is managed by Snakemake. When
 it is distributed, see `cluster.eichler.json` for expected resource usage for each rule. The cluster configuration
 file will probably need to be modified for your environment.
+
+
+
+##

@@ -588,7 +588,7 @@ rule gt_altref_make_alts:
     output:
         alt='altref/ref.fasta.alt'
     shell:
-        """python {SMRTSV_DIR}/scripts/genotype/SamToAlt.py {input.sam} {output.alt}"""
+        """python3 {SMRTSV_DIR}/scripts/genotype/SamToAlt.py {input.sam} {output.alt}"""
 
 # gt_altref_index
 #

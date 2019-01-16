@@ -19,4 +19,5 @@ conda install -y \
     freebayes=1.2.0 \
     repeatmasker=4.0.7 \
     trf=4.09 \
-    bcftools=1.9
+    bcftools=1.9 \
+    samtools=1.9
