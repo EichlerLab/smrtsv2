@@ -50,7 +50,14 @@ From the contigs, variants are called from the alignments. The output from this 
 output is written to the root of the working directory (default = `variantsn.vcf.gz`)
 
 
-## Running
+## Running SMRT-SV
+
+### Build dependencies
+
+In the install directory, go into the `dep` directory and run `make`. This will build a set of programs SMRT-SV relies
+on
+
+### Run
 
 Change to a clean working directory that has nothing in it. The SMRT-SV pipeline should be installed in another
 directory. Setup your environment so all dependencies are available. All output will go into this working directory.
@@ -63,12 +70,8 @@ To run all steps:
 
 Each step (see above) can be run on its own by replacing `run` with the name of the step. See `smrtsv.py -h` for help.
 
-## Distributed
+### Run distributed
 
 SMRT-SV can be run on a local machine or distributed over a cluster. Distributing is managed by Snakemake. When
 it is distributed, see `cluster.eichler.json` for expected resource usage for each rule. The cluster configuration
 file will probably need to be modified for your environment.
-
-
-
-##

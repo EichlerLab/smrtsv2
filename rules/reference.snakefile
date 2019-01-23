@@ -7,7 +7,7 @@ import os
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
 
-localrules: ref_run, ref_set_fa
+localrules: ref_all, ref_set_fa
 
 
 ####################

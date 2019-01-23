@@ -13,7 +13,7 @@ insertions. However, this comes at the high cost of remapping all sequence reads
 ## Setup
 
 The SMRT-SV genotyper requires two input files, a genotyper config file and a table of samples. These files may be
-called anything, but in the following examples, we will use `genotyper.json` and `samples.tab'.
+called anything, but in the following examples, we will use `genotyper.json` and `samples.tab`.
 
 We recommend running the genotype in its own directory separate from other project files. Do no run in the SMRT-SV
 install directory. To setup, change to a clean location with no files, create the configuration and sample table in

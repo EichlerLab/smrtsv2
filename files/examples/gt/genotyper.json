@@ -1,8 +1,8 @@
 {
-    "sample_manifest": "/net/eichler/vol24/projects/structural_variation/nobackups/projects/SMRT_SV/CHM1_P6C4_genotype_with_SMRTSV/samples.tab",
-    "sv_reference": "/net/eichler/vol2/eee_shared/assemblies/hg38/ucsc.hg38.no_alts.fasta",
-    "sv_calls": "/net/eichler/vol4/home/jlhudd/src/pacbio_variant_caller/variants.vcf.gz",
-    "sv_contigs": "/net/eichler/vol4/home/jlhudd/projects/SMRT_SV/CHM1_P6C4/CHM1_realignments.leftaligned.bam",
+    "sample_manifest": "/path/to/samples.tab",
+    "sv_reference": "/path/to/ucsc.hg38.no_alts.fasta",
+    "sv_calls": "/path/to/variants.vcf.gz",
+    "sv_contigs": "/path/to/contigs.bam",
     "model": "30x-4",
     "min_call_depth": 8
 }
