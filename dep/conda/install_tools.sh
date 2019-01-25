@@ -20,4 +20,5 @@ conda install -y \
     repeatmasker=4.0.7 \
     trf=4.09 \
     bcftools=1.9 \
-    samtools=1.9
+    samtools=1.9 \
+    hdf5=1.10.4

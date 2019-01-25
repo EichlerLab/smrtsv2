@@ -31,7 +31,7 @@ install_flags/dep_blasr-extrautil_link: install_flags/dep_blasr-extrautil_build
 	ln -sf ../blasr_extrautil/bin/PrintTupleCountTable bin/PrintTupleCountTable
 	date > $@
 
-install_flags/dep_blasr-extrautil_build:
+install_flags/dep_blasr-extrautil_build: install_flags/dep_conda_link
 	mkdir -p install_flags
 	make -C blasr_extrautil
 	date > $@
