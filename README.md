@@ -55,7 +55,11 @@ output is written to the root of the working directory (default = `variantsn.vcf
 ### Build dependencies
 
 In the install directory, go into the `dep` directory and run `make`. This will build a set of programs SMRT-SV relies
-on
+on.
+
+A `RepeatMasker` step is run by the pipeline, but it does not install this dependency. Your environment should have a
+working version of RepeatMasker accessible through `PATH`.
+
 
 ### Run
 

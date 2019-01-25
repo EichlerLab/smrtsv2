@@ -3,7 +3,7 @@
 
 # All
 .PHONY: all
-all: install_flags/dep_conda_link install_flags/dep_blasr-extrautil_link install_flags/dep_smrtsvtools_link bin/python
+all: install_flags/dep_conda_link install_flags/dep_smrtsvtools_link bin/python
 
 
 # python: Refuse unambiguous "python" interpreter (require "python2" or "python3")
@@ -23,19 +23,6 @@ install_flags/dep_smrtsvtools_build:
 	mkdir -p install_flags
 	make -C smrtsvtools
 	date > $@
-
-
-# PrintTupleCountTable (blasr_extrautil)
-install_flags/dep_blasr-extrautil_link: install_flags/dep_blasr-extrautil_build
-	mkdir -p bin install_flags
-	ln -sf ../blasr_extrautil/bin/PrintTupleCountTable bin/PrintTupleCountTable
-	date > $@
-
-install_flags/dep_blasr-extrautil_build: install_flags/dep_conda_link
-	mkdir -p install_flags
-	make -C blasr_extrautil
-	date > $@
-
 
 # Conda
 install_flags/dep_conda_link: install_flags/dep_conda_build
@@ -69,7 +56,7 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 	ln -sf ../conda/build/envs/tools/bin/seqtk bin/seqtk
 	ln -sf ../conda/build/envs/tools/bin/samtools bin/samtools
 	ln -sf ../conda/build/envs/tools/bin/bamleftalign bin/bamleftalign
-	ln -sf ../conda/build/envs/tools/bin/RepeatMasker bin/RepeatMasker
+	#ln -sf ../conda/build/envs/tools/bin/RepeatMasker bin/RepeatMasker
 	ln -sf ../conda/build/envs/tools/bin/blastp bin/blastp
 	ln -sf ../conda/build/envs/tools/bin/trf bin/trf
 	ln -sf ../conda/build/envs/tools/bin/bcftools bin/bcftools
@@ -78,8 +65,8 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/k8 bin/k8
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/bwa-postalt.js bin/bwa-postalt.js
 
-	mkdir -p share
-	ln -sf ../conda/build/envs/tools/share/RepeatMasker share/
+	#mkdir -p share
+	#ln -sf ../conda/build/envs/tools/share/RepeatMasker share/
 
 	# Flag complete
 	date > $@
@@ -94,7 +81,6 @@ install_flags/dep_conda_build:
 .PHONY: clean
 clean:
 	make -C conda clean
-	make -C blasr_extrautil clean
 	make -C smrtsvtools clean
 	rm -rf bin
 	rm -rf install_flags

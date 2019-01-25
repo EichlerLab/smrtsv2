@@ -32,7 +32,6 @@ rule ref_all:
     input:
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
-        ref_ctab='reference/ref.fasta.ctab',
         ref_sa='reference/ref.fasta.sa',
         ref_sizes='reference/ref.fasta.sizes'
 
@@ -55,18 +54,20 @@ rule ref_make_sizes:
 # ref_make_ctab
 #
 # Count k-mers in the reference.
-rule ref_make_ctab:
-    input:
-        ref_fa='reference/ref.fasta'
-    output:
-        ref_ctab='reference/ref.fasta.ctab'
-    shell:
-        """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.ctab ]; then """
-            """ln -sf {REFERENCE}.ctab {output.ref_ctab}; """
-        """else """
-            """PrintTupleCountTable {input.ref_fa} > {output.ref_ctab}; """
-            """chmod a-w {output.ref_ctab}; """
-        """fi"""
+#
+# Note: Removed unless PacBio adds it to the blasr conda module (https://github.com/EichlerLab/smrtsv2/issues/2)
+#rule ref_make_ctab:
+#    input:
+#        ref_fa='reference/ref.fasta'
+#    output:
+#        ref_ctab='reference/ref.fasta.ctab'
+#    shell:
+#        """if [ "{LINK_INDEX}" = "True" -a -f {REFERENCE}.ctab ]; then """
+#            """ln -sf {REFERENCE}.ctab {output.ref_ctab}; """
+#        """else """
+#            """PrintTupleCountTable {input.ref_fa} > {output.ref_ctab}; """
+#            """chmod a-w {output.ref_ctab}; """
+#        """fi"""
 
 # ref_make_sa
 #
