@@ -65,6 +65,14 @@ rule aln_align_batch:
         # Get unaligned FASTA file name before compression
         unaligned_file_name = output.unaligned[:-3]  # Removed .gz extension
 
+        # Detect ctab
+        ctab_file_name = '{}.ctab'.format(input.ref_fa)
+
+        if os.path.isfile(ctab_file_name):
+            ctab_op = '--ctab {input.ref_ctab} '.format(ctab_file_name)
+        else:
+            ctab_op = ''
+
         # Map
         if os.path.getsize(input.reads) > 0:
 
@@ -77,7 +85,7 @@ rule aln_align_batch:
                     """--out ${{ALIGN_BATCH_TEMP}}/batch_out.bam """
                     """--sam """
                     """--sa {input.ref_sa} """
-                    """--ctab {input.ref_ctab} """
+                    """{ctab_op}"""
                     """--nproc {params.threads} """
                     """--clipping subread """
                     """{params.align_params} """

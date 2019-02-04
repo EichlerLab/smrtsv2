@@ -79,8 +79,7 @@ rule asm_assemble_group:
         bed_can='detect/candidates.bed',
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
-        ref_sa='reference/ref.fasta.sa',
-        ref_ctab='reference/ref.fasta.ctab'
+        ref_sa='reference/ref.fasta.sa'
     output:
         bam='assemble/group/{group_id}/contig.bam',
         bai='assemble/group/{group_id}/contig.bam.bai'
