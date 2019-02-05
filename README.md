@@ -72,7 +72,10 @@ To run all steps:
 
 `${SMRTSV_DIR}/smrtsv.py run --batches 20 --threads 8 path/to/ref.fasta path/to/reads.fofn`
 
-Each step (see above) can be run on its own by replacing `run` with the name of the step. See `smrtsv.py -h` for help.
+The `run` command will execute the whole pipeline, but each step (see above) can be run on its own by replacing `run`
+with the name of the step. Commands later in the pipeline expect to find output from previous commands (e.g. `detect`
+depends on output from `align`), so these steps still need to be run in order. Note that each command has its own set of
+options. See `smrtsv.py -h` for help, or use `-h` on a command to see its options.
 
 ### Run distributed
 
