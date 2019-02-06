@@ -46,8 +46,7 @@ rule aln_align_batch:
         reads='align/batches/{batch_id}.fofn',
         ref_fa='reference/ref.fasta',
         ref_fai='reference/ref.fasta.fai',
-        ref_sa='reference/ref.fasta.sa',
-        ref_ctab='reference/ref.fasta.ctab'
+        ref_sa='reference/ref.fasta.sa'
     output:
         bam=protected('align/bam/{batch_id}.bam'),
         bai=protected('align/bam/{batch_id}.bam.bai'),
