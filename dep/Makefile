@@ -19,7 +19,7 @@ install_flags/dep_smrtsvtools_link: install_flags/dep_smrtsvtools_build
 	ln -sf ../smrtsvtools/bin/tlenadd bin/tlenadd
 	date > $@
 
-install_flags/dep_smrtsvtools_build:
+install_flags/dep_smrtsvtools_build: install_flags/dep_conda_build
 	mkdir -p install_flags
 	make -C smrtsvtools
 	date > $@
