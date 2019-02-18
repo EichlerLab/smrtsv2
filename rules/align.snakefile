@@ -78,7 +78,8 @@ rule aln_align_batch:
             shell(
                 """ALIGN_BATCH_TEMP={TEMP_DIR}/aln_align_batch_{wildcards.batch_id}; """
                 """mkdir -p ${{ALIGN_BATCH_TEMP}}; """
-                """echo "Aligning batch {wildcards.batch_id}..." >{log}; """
+                """echo "Aligning batch: {wildcards.batch_id}" >{log}; """
+                """echo "Temp dir: ${{ALIGN_BATCH_TEMP}}" >> {log}; """
                 """blasr {input.reads} {input.ref_fa} """
                     """--unaligned {unaligned_file_name} """
                     """--out ${{ALIGN_BATCH_TEMP}}/batch_out.bam """
