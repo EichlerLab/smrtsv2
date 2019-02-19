@@ -46,6 +46,9 @@ The VCF must be output by SMRT-SV or be similar to SMRT-SV. It requires INFO fie
 SV breakpoints on that contig (`CONTIG_START` and `CONTIG_END`). These contigs must be found in the BAM referenced by
 `sv_contigs`.
 
+Currently, the reference file must be an uncompressed FASTA. We are expecting to add support for gzipped and bgzipped
+FASTA files, but that will currently not work correctly.
+
 The genotyping model is the name of a directory in `files/gtmodel`. Several models were trained at different read depths
 and with no-call cut-off criteria. For high-coverage data, we used `30x-4` with a `min_call_depth` of `8`. For
 low-coverage 1000 Genomes data, we used `8x2` with a `min_call_depth` of `2`.
