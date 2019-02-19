@@ -4,7 +4,7 @@ import argparse
 import pysam
 
 
-def filter_bam(input_file, queries, output_file, output_sizes_file):
+def filter_bam(input_file, queries, output_file, output_sizes_file, ref_filename):
     """
     Filter a BAM file.
 
@@ -12,12 +12,13 @@ def filter_bam(input_file, queries, output_file, output_sizes_file):
     :param queries: A set of query names to be extracted.
     :param output_file: Output SAM file.
     :param output_sizes_file: File query sizes are written to.
+    :param ref_filename: Reference file name. Query sequences are aligned against this reference.
     """
 
     found_queries = set()
 
     with pysam.AlignmentFile(input_file, 'rb') as input_bam:
-        with pysam.AlignmentFile(output_file, 'w', template=input_bam) as output_bam:
+        with pysam.AlignmentFile(output_file, 'w', template=input_bam, reference_filename=ref_filename) as output_bam:
             with open(output_sizes_file, 'w') as output_sizes:
                 for alignment in input_bam:
                     if alignment.query_name in queries:
@@ -95,27 +96,30 @@ def filter_sam(input_file, queries, output_file, output_sizes_file):
 
         raise ValueError('Missing {} query sequences while filtering SAM: {}'.format(n_missing, missing_str))
 
+
 if __name__ == '__main__':
 
     # Parse arguments
-    parser = argparse.ArgumentParser(description='Extract contigs from a BAM file.')
+    parser = argparse.ArgumentParser(description='Extract contigs from an alignment file (SAM, BAM, or CRAM).')
 
     parser.add_argument('input_file', help='SAM or BAM to filter')
     parser.add_argument('queries_to_keep', help='Read names to extract (one per line)')
     parser.add_argument('output_file', help='filtered SAM')
     parser.add_argument('output_sizes', help='A table of contig names (col 1) and their sizes (col 2) with no header. '
-                                             'Desigend to be input into bedtool slop.')
+                                             'Designed to be input into bedtools slop.')
+    parser.add_argument('ref_filename', nargs='?', default=None, help='Reference for records are aligned against.')
+
     args = parser.parse_args()
 
     # Get query names
     with open(args.queries_to_keep, 'r') as fh:
         query_set = set([query.strip() for query in fh])
 
-    if args.input_file.endswith('.bam'):
-        filter_bam(args.input_file, query_set, args.output_file, args.output_sizes)
+    if args.input_file.endswith('.bam') or args.input_file.endswith('.cram'):
+        filter_bam(args.input_file, query_set, args.output_file, args.output_sizes, args.ref_filename)
 
     elif args.input_file.endswith('.sam'):
         filter_sam(args.input_file, query_set, args.output_file, args.output_sizes)
 
     else:
-        raise RuntimeError('Unrecognized input file type (SAM or BAM): {}'.format(args.input_file))
+        raise RuntimeError('Unrecognized input file type (SAM, BAM, or CRAM): {}'.format(args.input_file))

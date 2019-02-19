@@ -272,8 +272,16 @@ def preprocess_manifest(manifest_file_name):
             'Sample manifest "{}" contains sexes that are not "M", "F", or "U"'.format(manifest_file_name)
         )
 
+    # Check reference column
+    if 'REF' not in df.columns:
+        df['REF'] = 'NA'
+
+    df['REF'] = df['REF'].fillna('NA')
+
+    df['REF'] = df['REF'].apply(lambda val: val.upper() if val.upper() == 'NA' else val)
+
     # Order and set index
-    df = df.loc[:, ['SAMPLE', 'SEX', 'DATA']]
+    df = df.loc[:, ['SAMPLE', 'SEX', 'DATA', 'REF']]
     df.set_index('SAMPLE', inplace=True)
 
     # Return

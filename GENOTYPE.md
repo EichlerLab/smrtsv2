@@ -68,6 +68,11 @@ Columns:
 * SEX: Male (M), Female (F), or unknown (U). Used to correct genotypes on sex chromosome.
 * DATA: Path to an alignment file (BAM or CRAM)
 
+To support aligned CRAM files, an optional `REF` column may be specified to point to the reference each sample is
+to. If the `REF` column is present and the value is not `NA` for a sample, then that reference is used to read the
+alignment file. If the reference has been seen by samtools or htslib before, it may be cached in
+`~/.cache/hts-ref`, and in this case, the `REF` field may not be required for to read these CRAM files.
+
 ## Run
 
 To run, call `smrtsv` from the install directory and run the `genotype` module. It will need the 

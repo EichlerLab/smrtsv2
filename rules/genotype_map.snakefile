@@ -15,6 +15,7 @@ import socket
 # Get parameters
 SAMPLE = config['sample']                      # Sample name
 SAMPLE_ALN = config['sample_aln']              # SAM/BAM/CRAM of aligned input reads
+SAMPLE_ALN_REF = config['sample_aln_ref']      # Reference SAMPLE_ALIGN was aligned to or NA. Used for reading CRAM files.
 SV_REF = config['sv_ref']                      # Augmented reference with local assemblies as alternate contigs.
 SV_REF_ALT = config['sv_ref_alt']              # Reference ALT file (.alt); aligns alternate to primary contigs.
 MAP_REGIONS_BED = config['map_regions_bed']    # Filter alignments outside these loci
@@ -27,6 +28,13 @@ SMRTSV_DIR = config['smrtsv_dir']            # Directory where SMRTSV is install
 POSTALT_PATH = config['postalt_path']        # Full path to bwa-postalt.js
 
 BM_DIR = os.path.join(os.path.dirname(OUTPUT_ALN), 'bm')  # Path to benchmark logs
+
+# Set command-line arguments for samtools collate --reference if SAMPLE_ALN_REF is not NA
+if SAMPLE_ALN_REF != 'NA':
+    SAM_REF_PARAM = '--reference {} '.format(SAMPLE_ALN_REF)
+else:
+    SAM_REF_PARAM = ''
+
 
 # Get hostname
 HOSTNAME = socket.gethostname()
@@ -55,7 +63,7 @@ rule gt_map_align_sample_reads:
         """echo "Input Reads: {SAMPLE_ALN}"; """
         """echo "Temp: $(pwd)"; """
         """echo "Host: {HOSTNAME}"; """
-        """samtools collate -Ou -n 1024 {SAMPLE_ALN} collate/part | """
+        """samtools collate -Ou -n 1024 {SAM_REF_PARAM}{SAMPLE_ALN} collate/part | """
         """samtools bam2fq - | """
         """seqtk dropse - | """
         """bwa mem -R '@RG\\tID:{SAMPLE}\\tSM:{SAMPLE}' -p -t {THREADS} {SV_REF} - | """

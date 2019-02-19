@@ -418,6 +418,12 @@ rule gt_map_sample_reads:
         align='samples/{sample}/alignments.log'
     run:
 
+        # Get alignment reference
+        aln_ref = SAMPLE_TABLE.loc[wildcards.sample, 'REF']
+
+        if aln_ref != 'NA':
+            aln_ref = os.path.abspath(aln_ref)
+
         # Set mapping_temp (will be deleted if not None)
         mapping_temp = None
 
@@ -439,6 +445,7 @@ rule gt_map_sample_reads:
                 '--config',
                 'sample={}'.format(wildcards.sample),
                 'sample_aln={}'.format(os.path.abspath(input.aln)),
+                'sample_aln_ref={}'.format(aln_ref),
                 'sv_ref={}'.format(os.path.abspath(input.sv_ref)),
                 'sv_ref_alt={}'.format(os.path.abspath(input.sv_ref_alts)),
                 'sv_ref_alt_info={}'.format(os.path.abspath(input.sv_ref_alt_info)),
@@ -672,7 +679,7 @@ rule gt_contig_filter:
         sam='contigs/contigs.sam',
         sizes='contigs/contigs.sizes'
     shell:
-        """python3 {SMRTSV_DIR}/scripts/genotype/FilterContigs.py {input.contigs} {input.list} {output.sam} {output.sizes}"""
+        """python3 {SMRTSV_DIR}/scripts/genotype/FilterContigs.py {input.contigs} {input.list} {output.sam} {output.sizes} {SV_REFERENCE}"""
 
 # gt_contig_list
 #
