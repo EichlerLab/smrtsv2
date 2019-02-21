@@ -356,18 +356,23 @@ args_dict['genotyped_variants'] = {
 args_dict['gt_map_cpu'] = {
     'type': int,
     'default': 8,
-    'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
+    'help': 'Memory per CPU core to allocate for BWA mapping jobs.'
 }
 
 # Memory per CPU core for BWA mapping jobs
 args_dict['gt_map_mem'] = {
     'default': '2.5G',
-    'help': 'Memory per CPU core to allocate for BWA mapping jobs (--threads).'
+    'help': 'Memory per CPU core to allocate for BWA mapping jobs.'
 }
 
 args_dict['gt_map_disk'] = {
     'default': '15G',
-    'help': 'Temp space per CPU Core for .'
+    'help': 'Temp space per CPU Core to allocate for BWA mapping jobs.'
+}
+
+args_dict['gt_map_time'] = {
+    'default': '72:00:00',
+    'help': 'Maximum runtime to allocate for BWA mapping jobs.'
 }
 
 # Keep temp files

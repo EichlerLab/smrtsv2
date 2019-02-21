@@ -413,6 +413,7 @@ rule gt_map_sample_reads:
         mapq=get_config_param('gt_mapq'),
         threads=get_config_param('gt_map_cpu'),    # Parses into cluster params
         mem=get_config_param('gt_map_mem'),        # Parses into cluster params
+        rt=get_config_param('gt_map_time'),        # Parses into cluster params
         disk_free=get_config_param('gt_map_disk')  # Parses into cluster params
     log:
         align='samples/{sample}/alignments.log'

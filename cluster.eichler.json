@@ -44,7 +44,7 @@
   },
   "detect_gaps_annotate_coverage": {
     "mem": "24G",
-    "rt": "01:00:00"
+    "rt": "04:00:00"
   },
   "detect_gaps_search": {
     "mem": "8G",
@@ -151,7 +151,7 @@
   "gt_map_sample_reads": {
     "mem": "{params.mem}",
     "cpu": "{params.threads}",
-    "rt": "72:00:00",
+    "rt": "{params.rt}",
     "params": "-l disk_free={params.disk_free} -R y"
   },
   "gt_altref_alt_info_bed": {
