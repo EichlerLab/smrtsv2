@@ -30,6 +30,7 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 
 	# python3
 	ln -sf ../conda/build/envs/python3/bin/python3 bin/python3
+	ln -sf ../conda/build/envs/python3/bin/python3 bin/python3.6
 	ln -sf ../conda/build/envs/python3/bin/ipython3 bin/ipython3
 	ln -sf ../conda/build/envs/python3/bin/snakemake bin/snakemake
 
