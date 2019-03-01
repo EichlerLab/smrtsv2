@@ -141,3 +141,34 @@ it's temporary directory unless the rule is stopped before it reaches the end.
 When SMRT-SV is distributed over a cluster, the temporary directory should be set to a location on the compute node
 running the job. This saves distributed filesystem from unnecessary I/O. If there is a fast disk available, such as
 a solid-state drive (SSD), then the pipeline can be sped up by placing a temp directory on that storage.
+
+
+## Filtering SVs
+
+SMRT-SV outputs variants with varying levels of confidence, and this includes false calls with weak support.
+
+The best way to filter SMRT-SV calls is by using the `CONTIG_SUPPORT` value in the `INFO` field of the output VCF. By
+selecting SVs with a contig support value of at least 2, most false calls can be eliminated.
+
+The `QUAL` field is based on a phred-scaled ratio of contig support and total contig depth at the SV locus
+(`CONTIG_SUPPORT / CONTIG_DEPTH`), which is then further scaled by the `CONTIG_DEPTH` to give more weight to SVs where
+there are many contigs. A maximum value of `100` is imposed. This score has limited value as a quality measurement.
+
+### Mixed haplotype assemblies and HETs
+
+SMRT-SV aligns variants to the reference and pulls them down in windows to do assemblies. These come from taking
+sliding-windows across the genome (default: 60 kbp widows each offset by 20 kbp) and from adding additional windows
+around signatures of SVs seen in the sequence read alignments. This attempts to build multiple assemblies over each
+SV for quality control.
+
+When pulling reads down and performing an assembly, both haplotypes are mixed (assuming it is a diploid sample). For
+heterozygous SVs, the assembly could yeild either the SV-containing haplotype or the reference haplotype. By adding
+additional windows around SV signature, it increases the chances that the SV haplotype is represented in one or more
+assemblies.
+
+As a result of heterozygosity and mixed-haplotype assemblies, many heterozygous calls go undetected. It takes a phasing
+approach or an approach based only on read alignments to recover these.
+
+For a full treatment of this phenomenon using SMRT-SV, see http://genome.cshlp.org/lookup/doi/10.1101/gr.214007.116
+
+For a newer method that employs phasing, see https://www.biorxiv.org/content/early/2018/06/13/193144
