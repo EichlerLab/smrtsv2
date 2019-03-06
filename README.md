@@ -172,3 +172,36 @@ approach or an approach based only on read alignments to recover these.
 For a full treatment of this phenomenon using SMRT-SV, see http://genome.cshlp.org/lookup/doi/10.1101/gr.214007.116
 
 For a newer method that employs phasing, see https://www.biorxiv.org/content/early/2018/06/13/193144
+
+## Common problems
+
+### Snakemake directory locked
+
+If the Snakemake process running a step is killed, it will leave behind locks, and the next invocation will result in
+error `Error: Directory cannot be locked.`. These locks can be manually removed with `rm .snakemake/locks/*`. Be sure
+the process is not running because two active instances may produce erroneous results.
+
+### Failed assembly groups
+
+SMRT-SV groups assemblies into megabase-size regions and performs assemblies in that group as one job. When distributing
+over a cluster, this help improve performance by pulling data for the group region from shared storage into local temp
+storage, and each group is assembled from the locally stored data. It also reduces the complexity of assembling so many
+regions.
+
+Some degenerate groups will have many assembly windows in them from signature-based window detection ("detect" step),
+but they are given the same amount of runtime as other windows. Also, because they are degenerate, the assemblies in
+these windows may also take longer. This results in assembly jobs failing because they are reaching runtime limits. This
+often affects around groups in a human genome. You can try increasing the group runtime (`--asm-group-rt`) or the
+individual assembly runtime (`--asm-rt`), but pericentromeric regions with dense alhpa-satellite repeat units may still
+fail to assemble.
+
+When assemblies fail, first try re-running them. Some of the assemblies may complete with a second attempt. The
+remaining regions are likely poor assemblies and can be discarded (check the regions before discarding to see what they
+are).
+
+To allow SMRT-SV to move past these regions without assembling, first make sure the pipeline is not running. Then you
+can touch the output BAM and BAI files to create empty files (e.g. `assemble/group/GROUP_ID/contig.bam 
+assemble/group/GROUP_ID/contig.bam`). Lastly, you will need to move or delete the Snakemake directory or Snakemake will
+try to re-run the rules because it knows the last run failed (e.g. `mv .snakemake .snakemake.asmfail`). After touching
+BAM, touching BAI files, and moving/removing `.snakemake`, restart SMRT-SV, and it will move past those assembly groups.
+  

@@ -297,6 +297,8 @@ if __name__ == '__main__':
     parser_assembler.add_argument('--asm-cpu', dest='asm_cpu', **args_dict['asm_cpu'])
     parser_assembler.add_argument('--asm-mem', dest='asm_mem', **args_dict['asm_mem'])
     parser_assembler.add_argument('--asm-polish', dest='asm_polish', **args_dict['asm_polish'])
+    parser_assembler.add_argument('--asm-group-rt', dest='asm_group_rt', **args_dict['asm_group_rt'])
+    parser_assembler.add_argument('--asm-rt', dest='asm_rt', **args_dict['asm_rt'])
     parser_assembler.set_defaults(func=assemble)
 
     # SMRTSV command: Call variants
@@ -332,6 +334,8 @@ if __name__ == '__main__':
     parser_runner.add_argument('--mapping-quality', dest='mapping_quality', **args_dict['mapping_quality'])
     parser_runner.add_argument('--min-hardstop-support', dest='min_hardstop_support', **args_dict['min_hardstop_support'])
     parser_runner.add_argument('--max-candidate-length', dest='max_candidate_length', **args_dict['max_candidate_length'])
+    parser_runner.add_argument('--asm-group-rt', dest='asm_group_rt', **args_dict['asm_group_rt'])
+    parser_runner.add_argument('--asm-rt', dest='asm_rt', **args_dict['asm_rt'])
     parser_runner.set_defaults(func=run)
 
     # SMRTSV command: Genotype SMRTSV SV calls with Illumina reads

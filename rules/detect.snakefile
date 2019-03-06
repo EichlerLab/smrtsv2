@@ -283,7 +283,7 @@ rule detect_stops_ref_gaps:
     output:
         bed='detect/stops/hardstops/ref_gap.bed'
     shell:
-        """python2 {SMRTSV_DIR}/scripts/detect/find_fasta_gaps.py {input.ref_fa} """
+        """python2 -s {SMRTSV_DIR}/scripts/detect/find_fasta_gaps.py {input.ref_fa} """
         """>{output.bed}"""
 
 # detect_stops_count_per_bin
@@ -447,7 +447,7 @@ rule detect_gaps_merge_batches:
         bed=temp('detect/gaps/gaps_no_cov_{svtype,ins|del}.bed')
     shell:
         """sort -k 1,1 -k 2,2n -m {input.bed} | """
-        """python2 {SMRTSV_DIR}/scripts/detect/PrintGapSupport.py /dev/stdin /dev/stdout | """
+        """python2 -s {SMRTSV_DIR}/scripts/detect/PrintGapSupport.py /dev/stdin /dev/stdout | """
         """sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n -k 6,6 -k 7,7 -k 8,8 -k 9,9 """
         """>{output.bed}"""
 
@@ -484,7 +484,7 @@ rule detect_gaps_search:
         mapq=get_config_param('mapping_quality')
     shell:
         """samtools view -F 0x4 -q {params.mapq} {input.bam} | """
-        """python2 {SMRTSV_DIR}/scripts/PrintGaps.py {input.ref_fa} /dev/stdin --condense 20 """
+        """python2 -s {SMRTSV_DIR}/scripts/PrintGaps.py {input.ref_fa} /dev/stdin --condense 20 """
         """>{output.bed} 2>{log}"""
 
 

@@ -114,7 +114,7 @@ rule call_find_snvs_alignments:
         min_contig_length=str(MIN_CONTIG_LENGTH)
     shell:
         """samtools view {input.alignments} | """
-        """python3 {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
+        """python3 -s {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
             """--minLength 0 --maxLength 0 --minContigLength {params.min_contig_length} """
             """--outFile /dev/null --snv {output}"""
 
@@ -132,7 +132,7 @@ rule call_convert_indel_bed_to_vcf:
     params:
         sample=config.get('sample', 'UnnamedSample')
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/variants_bed_to_vcf.py {input} {output} {params.sample} indel"""
+        """python2 -s {SMRTSV_DIR}/scripts/call/variants_bed_to_vcf.py {input} {output} {params.sample} indel"""
 
 rule call_call_indels:
     input:
@@ -214,7 +214,7 @@ rule call_calculate_coverage_from_assembled_contigs:
         'call/assembled_contigs.depth.bed'
     shell:
         """bedtools bamtobed -i {input.alignments} | """
-        """python2 {SMRTSV_DIR}/scripts/call/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | """
+        """python2 -s {SMRTSV_DIR}/scripts/call/BedIntervalsToDepth.py /dev/stdin {input.reference} --out /dev/stdout | """
         """sort -k 1,1 -k 2,2n > {output}"""
 
 rule call_cut_indel_events_by_columns:
@@ -243,11 +243,11 @@ rule call_remove_indel_events_in_homopolymers:
             """awk '$11 == "F"' {input} | """
             """cut -f 1,2,3,5,6,8 | """
             """sort -k 1,1 -k 2,2n -k 4,4n | """
-            """python2 {SMRTSV_DIR}/scripts/call/PrintSNVSupport.py /dev/stdin /dev/stdout"""
+            """python2 -s {SMRTSV_DIR}/scripts/call/PrintSNVSupport.py /dev/stdin /dev/stdout"""
         )
 
         if wildcards.indel_type == "ins":
-            command = "%s | python2 {SMRTSV_DIR}/scripts/call/BedMod.py /dev/stdin {output} --leftjustify 1" % command
+            command = "%s | python2 -s {SMRTSV_DIR}/scripts/call/BedMod.py /dev/stdin {output} --leftjustify 1" % command
         else:
             command = "%s > {output}" % command
 
@@ -271,7 +271,7 @@ rule call_filter_indel_gaps_by_tiling_path:
         'call/indel_calls/gaps.tiled.bed',
         'call/indel_calls/gaps.tiled.log'
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/FilterGapsByTilingPath.py {input} """
+        """python2 -s {SMRTSV_DIR}/scripts/call/FilterGapsByTilingPath.py {input} """
         """> {output[0]} 2> {output[1]}"""
 
 rule call_find_indel_gaps_in_alignments:
@@ -285,7 +285,7 @@ rule call_find_indel_gaps_in_alignments:
         min_contig_length=str(MIN_CONTIG_LENGTH)
     shell:
         """samtools view {input.alignments} | """
-        """python3 {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
+        """python3 -s {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
             """--minLength 0 --maxLength 50 --context 6 --removeAdjacentIndels --onTarget """
             """--minContigLength {params.min_contig_length} --condense {params.indel_pack_distance} """
             """--outFile {output}"""
@@ -304,7 +304,7 @@ rule call_convert_sv_bed_to_vcf:
     params:
         sample=config.get('sample', 'UnnamedSample')
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/variants_bed_to_vcf.py {input} {output} {params.sample} sv"""
+        """python2 -s {SMRTSV_DIR}/scripts/call/variants_bed_to_vcf.py {input} {output} {params.sample} sv"""
 
 rule call_collect_all_summarized_sv_calls:
     input:
@@ -339,56 +339,56 @@ rule call_summarize_calls_by_repeat_type:
         """mkdir -p ${{OUT_DIR}}/anno; """
         """awk '$20 > 0.8' {input.bed} > ${{OUT_DIR}}/anno/TRF.bed; """
         """awk '$20 <= 0.8' {input.bed} > ${{OUT_DIR}}/not_trf.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < ${{OUT_DIR}}/not_trf.bed | """
+        """python2 -s {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < ${{OUT_DIR}}/not_trf.bed | """
             """awk '$18 < 0.7' > ${{OUT_DIR}}/anno/NotMasked.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < ${{OUT_DIR}}/not_trf.bed | """
+        """python2 -s {SMRTSV_DIR}/scripts/call/FixMasked.py 17 < ${{OUT_DIR}}/not_trf.bed | """
             """awk '$18 >= 0.7' > ${{OUT_DIR}}/repeat.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/repeat.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/repeat.bed """
             """--prefix AluY --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 """
             """--remainder ${{OUT_DIR}}/1.bed > ${{OUT_DIR}}/anno/AluY.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/1.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/1.bed """
             """--prefix AluS --minPrefix 1 --maxPrefix 1 --maxNotPrefix 0 --maxSTR 0 """
             """--remainder ${{OUT_DIR}}/2.bed > ${{OUT_DIR}}/anno/AluS.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/2.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/2.bed """
             """--minSTR 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/4.bed > ${{OUT_DIR}}/anno/STR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/4.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/4.bed """
             """--prefix L1HS --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/5.bed > ${{OUT_DIR}}/anno/L1HS.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/5.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/5.bed """
             """--prefix Alu --minPrefix 1 --maxNotPrefix 0 --maxSTR 0 """
             """--remainder ${{OUT_DIR}}/6.bed > ${{OUT_DIR}}/anno/Alu.Mosaic.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/6.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/6.bed """
             """--prefix Alu --minSTR 1 --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/7.bed > ${{OUT_DIR}}/anno/Alu.STR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/7.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/7.bed """
             """--prefix ALR --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/8.bed > ${{OUT_DIR}}/anno/ALR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/8.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/8.bed """
             """--prefix SVA --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/9.bed > ${{OUT_DIR}}/anno/SVA.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/9.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/9.bed """
             """--prefix HERV --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/10.bed > ${{OUT_DIR}}/anno/HERV.simple.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/10.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/10.bed """
             """--prefix L1P --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/11.bed > ${{OUT_DIR}}/anno/L1P.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/11.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/11.bed """
             """--prefix BSR/Beta   --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/12.bed > ${{OUT_DIR}}/anno/Beta.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/12.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/12.bed """
             """--prefix HSAT --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/13.bed > ${{OUT_DIR}}/anno/HSAT.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/13.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/13.bed """
             """--prefix MER   --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/14.bed > ${{OUT_DIR}}/anno/MER.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/14.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/14.bed """
             """--prefix L1   --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/15.bed > ${{OUT_DIR}}/anno/L1.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/15.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/15.bed """
             """--prefix LTR  --minPrefix 1 --maxNotPrefix 0 """
             """--remainder ${{OUT_DIR}}/16.bed > ${{OUT_DIR}}/anno/LTR.bed; """
-        """python2 {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/16.bed """
+        """python2 -s {SMRTSV_DIR}/scripts/call/PrintUniqueEvents.py ${{OUT_DIR}}/16.bed """
             """--max 1 --remainder ${{OUT_DIR}}/17.bed > ${{OUT_DIR}}/anno/Singletons.bed; """
         """mv -f ${{OUT_DIR}}/17.bed ${{OUT_DIR}}/anno/Complex.bed; """
         """rm -f ${{OUT_DIR}}/[0-9]*.bed"""
@@ -418,7 +418,7 @@ rule call_annotate_sv_calls_with_trf:
     output:
         'call/sv_calls/all_annotated_with_trf.{sv_type}.bed'
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/AnnotateWithTRF.py {input} {output}"""
+        """python2 -s {SMRTSV_DIR}/scripts/call/AnnotateWithTRF.py {input} {output}"""
 
 rule call_annotate_sv_calls_with_repeatmasker:
     input:
@@ -428,7 +428,7 @@ rule call_annotate_sv_calls_with_repeatmasker:
     output:
         'call/sv_calls/all_annotated.{sv_type}.bed'
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"""
+        """python2 -s {SMRTSV_DIR}/scripts/call/AnnotateGapBed.py {input.calls} {output} {input.repeats} {input.masked_fasta}"""
 
 rule call_trf_mask_sv_fasta:
     input:
@@ -461,7 +461,7 @@ rule call_create_sv_fasta:
     output:
         'call/sv_calls/{sv_type}/{sv_type}.fasta'
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/GapBedToFasta.py {input} {output}"""
+        """python2 -s {SMRTSV_DIR}/scripts/call/GapBedToFasta.py {input} {output}"""
 
 # call_identify_calls_by_type
 #
@@ -482,7 +482,7 @@ rule call_identify_calls_by_type:
     shell:
         """awk 'tolower($4) == "{wildcards.sv_type}" && index($6, "N") == 0' {input.gaps} | """
         """awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "ins") {{ $3=$2 + 1 }} print }}' | """
-        """python2 {SMRTSV_DIR}/scripts/call/cluster_calls.py --window {params.window} --reciprocal_overlap {params.overlap} /dev/stdin {params.call_comparison_action} | """
+        """python2 -s {SMRTSV_DIR}/scripts/call/cluster_calls.py --window {params.window} --reciprocal_overlap {params.overlap} /dev/stdin {params.call_comparison_action} | """
         """awk 'OFS="\\t" {{ if ("{wildcards.sv_type}" == "ins") {{ $3=$2 + $5 }} print }}' | """
         """sort -k 1,1 -k 2,2n | """
         """while read line; do set -- $line; coverage=`samtools view -c {input.alignments} $1:$2-$3`; echo -e "$line\\t$coverage"; done """
@@ -499,7 +499,7 @@ rule call_find_calls_by_gaps_in_alignments:
         indel_pack_distance='20'
     shell:
         """samtools view -h {input.alignments} | """
-        """python3 {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
+        """python3 -s {SMRTSV_DIR}/scripts/PrintGaps.py {input.reference} /dev/stdin """
             """--qpos --condense {params.indel_pack_distance} --tsd {params.tsd_length} | """
         """sort -k 1,1 -k 2,2n """
         """> {output}"""
@@ -514,7 +514,7 @@ rule call_tile_contigs_from_alignments:
         'call/tiling_contigs.tab'
     shell:
         """samtools view -h {input} | """
-        """python3 {SMRTSV_DIR}/scripts/call/TilingPath.py /dev/stdin """
+        """python3 -s {SMRTSV_DIR}/scripts/call/TilingPath.py /dev/stdin """
         """> {output}"""
 
 
@@ -531,7 +531,7 @@ rule call_convert_inversion_bed_to_vcf:
     params:
         sample=config.get('sample', 'UnnamedSample')
     shell:
-        """python2 {SMRTSV_DIR}/scripts/call/variants_bed_to_vcf.py {input} {output} {params.sample} inversion"""
+        """python2 -s {SMRTSV_DIR}/scripts/call/variants_bed_to_vcf.py {input} {output} {params.sample} inversion"""
 
 rule call_merge_inversions:
     input:

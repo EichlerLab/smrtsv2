@@ -292,6 +292,21 @@ args_dict['asm_polish'] = {
         'work on RS II input.'
 }
 
+# asm_group_rt
+args_dict['asm_group_rt'] = {
+    'default': '72:00:00',
+    'help':
+        'Set maximum runtime for an assembly group. Assemblies are grouped by region, and multiple assemblies are done '
+        'in one grouped job. This is the maximum runtime for the whole group.'
+}
+
+# asm_group_rt
+args_dict['asm_rt'] = {
+    'default': '30m',
+    'help':
+        'Set maximum runtime for an assembly region. This should be a valid argument for the Linux "timeout" command.'
+}
+
 
 #
 # Variant caller

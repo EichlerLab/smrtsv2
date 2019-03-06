@@ -88,6 +88,8 @@ rule asm_assemble_group:
         align_params=get_config_param('asm_alignment_parameters'),
         threads=get_config_param('asm_cpu'),  # Parses into cluster params
         mem=get_config_param('asm_mem'),      # Parses into cluster params
+        rt=get_config_param('asm_group_rt'),  # Parses into cluster params
+        asm_rt=get_config_param('asm_rt'),
         asm_polish=get_config_param('asm_polish'),
         no_rm_temp=get_config_param('no_rm_temp'),
     log:

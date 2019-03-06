@@ -63,7 +63,7 @@
   "asm_assemble_group": {
     "mem": "{params.mem}",
     "cpu": "{params.threads}",
-    "rt": "72:00:00",
+    "rt": "{params.rt}",
     "params": "-l disk_free=2G"
   },
   "asm_merge_groups": {
