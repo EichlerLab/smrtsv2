@@ -38,6 +38,7 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 	ln -sf ../conda/build/envs/python2/bin/python2 bin/python2
 
 	# pacbio
+	ln -sf ../conda/build/envs/pacbio/bin/python2 bin/pb_python2
 	ln -sf ../conda/build/envs/pacbio/bin/blasr bin/blasr
 	ln -sf ../conda/build/envs/pacbio/bin/pbindex bin/pbindex
 	ln -sf ../conda/build/envs/pacbio/bin/sawriter bin/sawriter

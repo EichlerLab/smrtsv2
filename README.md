@@ -204,4 +204,3 @@ can touch the output BAM and BAI files to create empty files (e.g. `assemble/gro
 assemble/group/GROUP_ID/contig.bam`). Lastly, you will need to move or delete the Snakemake directory or Snakemake will
 try to re-run the rules because it knows the last run failed (e.g. `mv .snakemake .snakemake.asmfail`). After touching
 BAM, touching BAI files, and moving/removing `.snakemake`, restart SMRT-SV, and it will move past those assembly groups.
-  
