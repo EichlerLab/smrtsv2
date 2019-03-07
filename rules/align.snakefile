@@ -165,5 +165,9 @@ rule aln_assign_batches:
         # Separate into batches
         for batch_id in range(len(output.fofn)):
             with open(output.fofn[batch_id], 'w') as out_file:
-                out_file.write('\n'.join(input_files[batch_indices[batch_id]:batch_indices[batch_id + 1]]))
-                out_file.write('\n')
+
+                batch_input_file_list = input_files[batch_indices[batch_id]:batch_indices[batch_id + 1]]
+
+                if batch_input_file_list:
+                    out_file.write('\n'.join(batch_input_file_list))
+                    out_file.write('\n')
