@@ -463,11 +463,15 @@ rule asm_group_get_reads:
             for bam_file in bam_file_list:
                 batch_index = os.path.basename(bam_file).rstrip('.bam')
 
-                shell(
-                    """echo "Extracting reads from batch {batch_index}..."; """
-                    """samtools view -hb -q {params.mapq} {bam_file} {group_region} """
-                    """>{batch_temp}/{batch_index}.bam"""
-                )
+                if os.path.getsize(bam_file) > 0:
+                    shell(
+                        """echo "Extracting reads from batch {batch_index}..."; """
+                        """samtools view -hb -q {params.mapq} {bam_file} {group_region} """
+                        """>{batch_temp}/{batch_index}.bam"""
+                    )
+
+                else:
+                    print('Skipping empty batch {}'.format(batch_index))
 
             shell(
                 """echo "Merging batches..."; """

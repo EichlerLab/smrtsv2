@@ -516,5 +516,12 @@ rule detect_coverage_per_batch:
         bed='detect/coverage/batch/{batch_id}.bed'
     log:
         'detect/coverage/batch/log/{batch_id}.log'
-    shell:
-        """{SMRTSV_DIR}/scripts/mcst/coverage {output.bed} -in {input.bam} >{log} 2>&1"""
+    run:
+
+        if os.path.getsize(input.bam) > 0:
+            shell(
+                """{SMRTSV_DIR}/scripts/mcst/coverage {output.bed} -in {input.bam} >{log} 2>&1"""
+            )
+        else:
+            with open(output.bed, 'w'):
+                pass

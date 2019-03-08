@@ -10,4 +10,5 @@ conda config --add channels conda-forge
 conda install -y \
     genomicconsensus==2.3.2 \
     blasr==5.3.2 \
-    hdf5==1.10.2
+    hdf5==1.10.2 \
+    bax2bam==0.0.9
