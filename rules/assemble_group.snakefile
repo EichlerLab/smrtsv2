@@ -247,7 +247,7 @@ rule assemble_polish:
 
         if os.stat(input.fasta).st_size > 0:
             shell(
-                """pb_python2 -s variantCaller """
+                """pb_python2 -s {SMRTSV_DIR}/dep/bin/variantCaller """
                     """--referenceFilename {input.fasta} """
                     """{input.bam} """
                     """-o {output.fasta} """
