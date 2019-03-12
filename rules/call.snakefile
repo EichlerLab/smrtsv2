@@ -451,7 +451,7 @@ rule call_repeatmask_sv_fasta:
     shell:
         """RepeatMasker -species "{params.species}" """
             """-dir `dirname {output[0]}` """
-            """-xsmall -no_is -e wublast """
+            """-xsmall -no_is """
             """-s -pa {params.threads} """
             """{input}"""
 
