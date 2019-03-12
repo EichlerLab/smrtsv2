@@ -45,6 +45,7 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 	ln -sf ../conda/build/envs/pacbio/bin/variantCaller bin/variantCaller
 	ln -sf ../conda/build/envs/pacbio/bin/quiver bin/quiver
 	ln -sf ../conda/build/envs/pacbio/bin/arrow bin/arrow
+	ln -sf ../conda/build/envs/pacbio/bin/bax2bam bin/bax2bam
 
 	# Tools
 	ln -sf ../conda/build/envs/tools/bin/canu bin/canu
