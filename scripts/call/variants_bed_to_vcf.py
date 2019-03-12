@@ -30,76 +30,80 @@ def convert_bed_to_vcf(bed_filename, reference_filename, vcf_filename, sample, v
         raise Exception("Unsupported variant type: %s" % variant_type)
 
     calls = pd.read_table(bed_filename, header=None, usecols=columns, names=names)
-    calls["sample_name"] = sample
-    calls["call_id"] = "."
-    calls["quality"] = calls.apply(calculate_variant_quality, axis=1)
-    calls["filter"] = "PASS"
 
-    # Get the reference base at the position of the variant start.
-    reference = pysam.FastaFile(reference_filename)
-    calls["reference"] = calls.apply(lambda row: reference.fetch(row.chr, row.start, row.start + 1).upper(), axis=1)
+    if calls.shape[0] > 0:
+        calls["sample_name"] = sample
+        calls["call_id"] = "."
+        calls["quality"] = calls.apply(calculate_variant_quality, axis=1)
+        calls["filter"] = "PASS"
 
-    # Update start position to be 1-based.
-    #calls["start"] = calls["start"] + 1  # Start position is the base before the variant
+        # Get the reference base at the position of the variant start.
+        reference = pysam.FastaFile(reference_filename)
+        calls["reference"] = calls.apply(lambda row: reference.fetch(row.chr, row.start, row.start + 1).upper(), axis=1)
 
-    # Build an INFO field for each call.
-    if variant_type == "sv":
-        calls["alt"] = calls.apply(lambda row: "<%s>" % row.sv_call[:3].upper(), axis=1)
-        calls["info"] = calls.apply(
-            lambda row: ";".join(
-                ["=".join(map(str, item))
-                 for item in (
-                        ("END", row.end),
-                        ("SVTYPE", row.sv_call[:3].upper()),
-                        ("SVLEN", row.event_size),
-                        ("CONTIG", row.contig),
-                        ("CONTIG_START", row.contig_start),
-                        ("CONTIG_END", row.contig_end),
-                        ("REPEAT_TYPE", row.repeat_type),
-                        ("CONTIG_SUPPORT", row.contig_support),
-                        ("CONTIG_DEPTH", row.contig_depth),
-                        ("SAMPLES", row.sample_name),
-                        ("SEQ", row.sv_sequence)
-                 )]
-            ),
-            axis=1
-        )
-    elif variant_type == "indel":
-        calls["alt"] = calls.apply(lambda row: "<%s>" % row.sv_call[:3].upper(), axis=1)
-        calls["info"] = calls.apply(
-            lambda row: ";".join(
-                ["=".join(map(str, item))
-                 for item in (
-                        ("END", row.end),
-                        ("SVTYPE", row.sv_call[:3].upper()),
-                        ("SVLEN", row.event_size),
-                        ("CONTIG_SUPPORT", row.contig_support),
-                        ("CONTIG_DEPTH", row.contig_depth),
-                        ("DP", row.depth),
-                        ("SAMPLES", row.sample_name),
-                        ("SEQ", row.sv_sequence)
-                 )]
-            ),
-            axis=1
-        )
-    elif variant_type == "inversion":
-        calls["alt"] = "<INV>"
-        calls["info"] = calls.apply(
-            lambda row: ";".join(
-                ["=".join(map(str, item))
-                 for item in (
-                        ("END", row.end),
-                        ("SVTYPE", row.sv_call[:3].upper()),
-                        ("SVLEN", row.end - row.start),
-                        ("CONTIG_SUPPORT", row.contig_support),
-                        ("CONTIG_DEPTH", row.contig_depth),
-                        ("SAMPLES", row.sample_name),
-                 )]
-            ),
-            axis=1
-        )
+        # Update start position to be 1-based.
+        #calls["start"] = calls["start"] + 1  # Start position is the base before the variant
 
-    simple_calls = calls[["chr", "start", "call_id", "reference", "alt", "quality", "filter", "info"]].rename_axis({"chr": "#CHROM", "start": "POS", "reference": "REF", "call_id": "ID", "quality": "QUAL", "info": "INFO", "alt": "ALT", "filter": "FILTER"}, axis=1)
+        # Build an INFO field for each call.
+        if variant_type == "sv":
+            calls["alt"] = calls.apply(lambda row: "<%s>" % row.sv_call[:3].upper(), axis=1)
+            calls["info"] = calls.apply(
+                lambda row: ";".join(
+                    ["=".join(map(str, item))
+                     for item in (
+                            ("END", row.end),
+                            ("SVTYPE", row.sv_call[:3].upper()),
+                            ("SVLEN", row.event_size),
+                            ("CONTIG", row.contig),
+                            ("CONTIG_START", row.contig_start),
+                            ("CONTIG_END", row.contig_end),
+                            ("REPEAT_TYPE", row.repeat_type),
+                            ("CONTIG_SUPPORT", row.contig_support),
+                            ("CONTIG_DEPTH", row.contig_depth),
+                            ("SAMPLES", row.sample_name),
+                            ("SEQ", row.sv_sequence)
+                     )]
+                ),
+                axis=1
+            )
+        elif variant_type == "indel":
+            calls["alt"] = calls.apply(lambda row: "<%s>" % row.sv_call[:3].upper(), axis=1)
+            calls["info"] = calls.apply(
+                lambda row: ";".join(
+                    ["=".join(map(str, item))
+                     for item in (
+                            ("END", row.end),
+                            ("SVTYPE", row.sv_call[:3].upper()),
+                            ("SVLEN", row.event_size),
+                            ("CONTIG_SUPPORT", row.contig_support),
+                            ("CONTIG_DEPTH", row.contig_depth),
+                            ("DP", row.depth),
+                            ("SAMPLES", row.sample_name),
+                            ("SEQ", row.sv_sequence)
+                     )]
+                ),
+                axis=1
+            )
+        elif variant_type == "inversion":
+            calls["alt"] = "<INV>"
+            calls["info"] = calls.apply(
+                lambda row: ";".join(
+                    ["=".join(map(str, item))
+                     for item in (
+                            ("END", row.end),
+                            ("SVTYPE", row.sv_call[:3].upper()),
+                            ("SVLEN", row.end - row.start),
+                            ("CONTIG_SUPPORT", row.contig_support),
+                            ("CONTIG_DEPTH", row.contig_depth),
+                            ("SAMPLES", row.sample_name),
+                     )]
+                ),
+                axis=1
+            )
+
+        simple_calls = calls[["chr", "start", "call_id", "reference", "alt", "quality", "filter", "info"]].rename_axis({"chr": "#CHROM", "start": "POS", "reference": "REF", "call_id": "ID", "quality": "QUAL", "info": "INFO", "alt": "ALT", "filter": "FILTER"}, axis=1)
+    else:
+        simple_calls = pd.DataFrame([], columns=['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO'])
 
     # Save genotypes as tab-delimited file.
     with open(vcf_filename, "w") as vcf:
