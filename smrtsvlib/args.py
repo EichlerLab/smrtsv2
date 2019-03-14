@@ -331,6 +331,15 @@ args_dict['species'] = {
     'help': 'Common or scientific species name to pass to RepeatMasker.'
 }
 
+# rmsk
+args_dict['rmsk'] = {
+    'dest': 'rmsk',
+    'action': 'store_true',
+    'default': False,
+    'help': 'Run RepeatMasker on SVs. This option was developed using RepeatMasker 3.3.0 with the WU-BLAST engine. '
+            'With other versions, it may not run smoothly or it may cause failures in later steps.'
+}
+
 
 #
 # Run

@@ -60,7 +60,7 @@ for line in bedFileIn:
 
     repeatContent = ''
 
-    if 'name in maskedDict':
+    if name in maskedDict:
         vals[5] = str(maskedDict[name].seq)
         repeatContent = '\t{:2.2f}'.format(
             float(vals[5].count('a') + vals[5].count('c') + vals[5].count('g') + vals[5].count('t')) / len(vals[5])

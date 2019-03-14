@@ -447,13 +447,23 @@ rule call_repeatmask_sv_fasta:
         'call/sv_calls/{sv_type}/rm/{sv_type}.fasta.masked'
     params:
         threads='8',
-        species=_get_repeat_species
+        species=_get_repeat_species,
+        rmsk=get_config_param('rmsk')
     shell:
-        """RepeatMasker -species "{params.species}" """
-            """-dir `dirname {output[0]}` """
-            """-xsmall -no_is """
-            """-s -pa {params.threads} """
-            """{input}"""
+
+        if params.rmsk:
+            shell(
+                """RepeatMasker -species "{params.species}" """
+                    """-dir `dirname {output[0]}` """
+                    """-xsmall -no_is """
+                    """-s -pa {params.threads} """
+                    """{input}"""
+            )
+        else:
+            shell(
+                """cp {SMRTSV_DIR}/files/call/rmsk_empty {output[0]}; """
+                """touch {output[1]}"""
+            )
 
 rule call_create_sv_fasta:
     input:

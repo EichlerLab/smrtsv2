@@ -306,6 +306,7 @@ if __name__ == '__main__':
     parser_caller.add_argument('variants', **args_dict['variants'])
     parser_caller.add_argument('--sample', **args_dict['sample'])
     parser_caller.add_argument('--species', **args_dict['species'])
+    parser_caller.add_argument('--rmsk', **args_dict['rmsk'])
     parser_caller.set_defaults(func=call)
 
     # SMRTSV command: Run all steps of the variant calling pipeline from raw reads
@@ -336,6 +337,7 @@ if __name__ == '__main__':
     parser_runner.add_argument('--max-candidate-length', dest='max_candidate_length', **args_dict['max_candidate_length'])
     parser_runner.add_argument('--asm-group-rt', dest='asm_group_rt', **args_dict['asm_group_rt'])
     parser_runner.add_argument('--asm-rt', dest='asm_rt', **args_dict['asm_rt'])
+    parser_runner.add_argument('--rmsk', **args_dict['rmsk'])
     parser_runner.set_defaults(func=run)
 
     # SMRTSV command: Genotype SMRTSV SV calls with Illumina reads
