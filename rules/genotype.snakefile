@@ -292,7 +292,7 @@ rule gt_call_sample_merge:
         insert_tab='samples/{sample}/temp/insert_delta.tab',
         depth_tab='samples/{sample}/temp/depth_delta.tab'
     output:
-        tab='samples/{sample}/gt_features.tab'
+        tab=temp('samples/{sample}/gt_features.tab')
     run:
 
         # Read input tables (SVs, breakpoint  depths, and insert size deltas)
