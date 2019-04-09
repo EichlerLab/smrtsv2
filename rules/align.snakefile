@@ -149,8 +149,21 @@ rule aln_assign_batches:
 
         # Check input file list
         for input_file in input_files:
+
+            # File exists
             if not os.path.isfile(input_file):
                 raise RuntimeError('Input file does not exist or is not a regular file: {}'.format(input_file))
+
+            # Must be a subreads BAM file
+            if not input_file.lower().endswith('.subreads.bam'):
+
+                if input_file.lower().endswith('.bax.h5'):
+                    raise RuntimeError('File in input FOFN is a BAX file: Please use dep/bin/bax2bam to convert and include only ".subreads.bam" files in the input FOFN: {}'.format(input_file))
+
+                if input_file.lower().endswith('.scraps.bam'):
+                    raise RuntimeError('File in input FOFN is a scraps BAM file: Please include only ".subreads.bam" BAM files in the input FOFN: {}'.format(input_file))
+
+                raise RuntimeError('Unrecognized file type in input FOFN: Expect a list of only ".subreads.bam" files: {}'.format(input_file))
 
         # Get the number of files in each batch
         files_per_batch = int(len(input_files) / len(output.fofn))

@@ -100,6 +100,18 @@ is run on a compute node, but SMRT-SV will set it back to `LD_LIBRARY_PATH` from
 
 ## Running SMRT-SV
 
+### Creating the input FOFN file
+
+SMRT-SV requires an input FOFN file, which is a list of paths to the input sequence reads. Each file listed must be
+a ".subreads.bam" (subreads BAM) file. For the Sequel platform, one subreads BAM file is output per sequencing cell.
+Do not include ".scraps.bam" files in the input.
+
+The RS II platform generates three ".bax.h5" (BAX) files for each cell, and these must be converted to subreads BAM
+files before running SMRT-SV. A cell can be converted to BAM files by running `dep/bin/bax2bam` and giving it all three
+BAX files. To save space, remove the ".scraps.bam" files, which are rarely used for anything. If sequence reads are
+aligned from BAX files, some sequence read metadata is lost and assemblies will fail.
+
+
 ### Run
 
 Change to a clean working directory that has nothing in it. The SMRT-SV pipeline should be installed in another
