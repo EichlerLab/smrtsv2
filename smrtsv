@@ -15,4 +15,6 @@ SOURCE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 
 # Launch
+export LC_COLLATE=C
+
 ${SOURCE_DIR}/dep/bin/python3 ${SOURCE_DIR}/smrtsv.py "$@"
