@@ -63,8 +63,9 @@ rule detect_group_merge_regions:
     run:
 
         # Read candidates and windows
-        df_can = pd.read_table(
+        df_can = pd.read_csv(
             input.bed_can,
+            sep='\t',
             header=0,
             dtype=CANDIDATE_BED_DTYPES,
             usecols=('#CHROM', 'POS', 'END', 'GROUP_ID')
@@ -72,7 +73,7 @@ rule detect_group_merge_regions:
 
         df_can['#CHROM'] = df_can['#CHROM'].apply(str)
 
-        df_win = pd.read_table(input.bed_win, header=0)
+        df_win = pd.read_csv(input.bed_win, sep='\t', header=0)
 
         # Filter windows by those with candidate regions
         group_set = set(df_can['GROUP_ID'].tolist())

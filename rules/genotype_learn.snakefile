@@ -123,7 +123,7 @@ rule gt_learn_model_train:
         X = np.load(input.X_npy)
         y = np.load(input.y_npy)
 
-        features = pd.read_table(input.feat_tab, header=0)
+        features = pd.read_csv(input.feat_tab, sep='\t', header=0)
 
         # Get variants selected for testing (some may have been left out when balancing calls for each SV type)
         train_indices = features.index[features['SELECTED']]
@@ -183,7 +183,7 @@ rule gt_learn_get_stats:
         accuracy_list = list()
 
         for sample in FEATURE_SAMPLES:
-            acc = pd.read_table('cv/samples/{}/stats.tab'.format(sample), header=0, usecols=('accuracy', 'subset'), index_col='subset', squeeze=True)
+            acc = pd.read_csv('cv/samples/{}/stats.tab'.format(sample), sep='\t', header=0, usecols=('accuracy', 'subset'), index_col='subset', squeeze=True)
             acc.name = sample
 
             accuracy_list.append(acc)
@@ -207,13 +207,14 @@ rule gt_learn_cv_merge_predictions:
     run:
 
         # Read features
-        df_features = pd.read_table(input.tab_features, header=0)
+        df_features = pd.read_csv(input.tab_features, sep='\t', header=0)
 
         # Merge CV predictions
         df_pred = pd.concat(
             [
-                pd.read_table(
+                pd.read_csv(
                     'cv/samples/{}/folds/predict_{}.tab'.format(wildcards.sample, cv_set),
+                    sep='\t',
                     header=0,
                     index_col='INDEX'
                 ) for cv_set in range(FOLDS_K)
@@ -248,13 +249,13 @@ rule gt_learn_cv_merge_stats:
         n_folds = len(input.tab)
 
         # Read tables
-        df = pd.read_table(input.tab[0], header=0, index_col='subset')
+        df = pd.read_csv(input.tab[0], sep='\t', header=0, index_col='subset')
 
         # Get stats
         stats = np.asarray(df)  # For first table
 
         for index in range(1, n_folds):  # For other tables
-            stats += np.asarray(pd.read_table(input.tab[index], header=0, index_col='subset'))
+            stats += np.asarray(pd.read_csv(input.tab[index], sep='\t', header=0, index_col='subset'))
 
         stats /= n_folds
 
@@ -293,7 +294,7 @@ rule gt_learn_cv_run:
         fold_array = np.loadtxt(input.cv_tab, np.int32, skiprows=1)
         fold_array_nosel = np.loadtxt(input.cv_nosel_tab, np.int32, skiprows=1)
 
-        features = pd.read_table(input.feat_tab, header=0)
+        features = pd.read_csv(input.feat_tab, sep='\t', header=0)
 
         # Load data for samples to CV against
         # sample_list is a list of tuples with one list entry for each sample. The first element of each tuple
@@ -387,7 +388,7 @@ rule gt_learn_cv_statify_k:
     run:
 
         # Read data
-        features = pd.read_table(input.feat_tab, header=0)
+        features = pd.read_csv(input.feat_tab, sep='\t', header=0)
 
         features_nosel = features.loc[~features['SELECTED']]
         features = features.loc[features['SELECTED']]
@@ -432,7 +433,7 @@ rule gt_learn_model_scale:
     run:
 
         # Read
-        features = pd.read_table(input.tab, header=0)
+        features = pd.read_csv(input.tab, sep='\t', header=0)
         scaler = joblib.load(input.scaler)
 
         X = ml.features_to_array(features, scaler)
@@ -452,7 +453,7 @@ rule gt_learn_model_get_scaler:
     run:
 
         # Read
-        features = pd.read_table(input.tab, header=0)
+        features = pd.read_csv(input.tab, sep='\t', header=0)
 
         X = ml.features_to_unscaled_matrix(features)
         y = features['CALL'].copy()
@@ -478,7 +479,7 @@ rule gt_learn_model_link_features:
     run:
 
         # Read
-        df = pd.read_table(input.tab, header=0)
+        df = pd.read_csv(input.tab, sep='\t', header=0)
 
         cross = pd.crosstab(df['SVTYPE'], df['CALL'])
 
@@ -527,10 +528,10 @@ rule gt_learn_model_annotate:
     run:
 
         # Read features
-        df = pd.read_table(input.features, header=0)
+        df = pd.read_csv(input.features, sep='\t', header=0)
 
         # Read labels
-        labels = pd.read_table(input.labels, squeeze=True, header=None)
+        labels = pd.read_csv(input.labels, sep='\t', squeeze=True, header=None)
 
         if not labels.ndim == 1:
             raise RuntimeError('Labels file {} must contain one column: Found {}'.format(input.labels, labels.ndim))

@@ -273,7 +273,7 @@ def features_to_unscaled_matrix(features_table):
         raise ValueError('Cannot convert features table: None')
 
     if isinstance(features_table, str):
-        features_table = pd.read_table(features_table, header=0)
+        features_table = pd.read_csv(features_table, sep='\t', header=0)
 
     if not isinstance(features_table, pd.DataFrame):
         raise ValueError(

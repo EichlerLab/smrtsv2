@@ -38,8 +38,8 @@ def get_sample_column(table_file_name, sample_name, sex='U'):
     :return: Series of a column to add to the VCF for one genotyped sample.
     """
 
-    df_gt = pd.read_table(
-        table_file_name, header=0,
+    df_gt = pd.read_csv(
+        table_file_name, sep='\t', header=0,
         usecols=('#CHROM', 'CALLABLE', 'BP_REF_COUNT', 'BP_ALT_COUNT', 'HOM_REF', 'HET', 'HOM_ALT')
     )
 
@@ -138,7 +138,7 @@ def vcf_table(vcf_file_name):
 
     # Read
     with gzip.open(vcf_file_name) as in_file:
-        df_var = pd.read_table(in_file, header=None, comment='#')
+        df_var = pd.read_csv(in_file, sep='\t', ' header=None, comment='#')
 
     # Get only variant information (truncate FORMAT and any samples)
     df_var = df_var.loc[:, 0:7]
@@ -254,7 +254,7 @@ def preprocess_manifest(manifest_file_name):
     """
 
     # Read manifest
-    df = pd.read_table(manifest_file_name, header=0)
+    df = pd.read_csv(manifest_file_name, sep='\t', header=0)
 
     df.columns = [colname.upper() for colname in df.columns]
 

@@ -30,7 +30,7 @@ def _get_group_bams(wildcards):
     return [
         'assemble/group/{}/contig.bam'.format(group_id)
         for group_id in
-            pd.read_table('detect/candidate_groups.bed', header=0, usecols=('GROUP_ID', ), squeeze=True).tolist()
+            pd.read_csv('detect/candidate_groups.bed', sep='\t', header=0, usecols=('GROUP_ID', ), squeeze=True).tolist()
     ]
 
 

@@ -42,7 +42,7 @@ BED_CANDIDATES = config['bed_candidates']
 ### Candidate Regions ###
 
 # Get region
-DF_CANDIDATES = pd.read_table(BED_CANDIDATES, header=0, index_col='ID')
+DF_CANDIDATES = pd.read_csv(BED_CANDIDATES, sep='\t', header=0, index_col='ID')
 
 if GROUP_ID not in set(DF_CANDIDATES['GROUP_ID']):
     raise RuntimeError('Group ID {} is not in the candidates file {}'.format(GROUP_ID, BED_CANDIDATES))
@@ -55,7 +55,7 @@ del(DF_CANDIDATES['GROUP_ID'])
 
 ### Group Series ###
 
-GROUP = pd.read_table(BED_GROUPS, header=0, index_col='GROUP_ID')
+GROUP = pd.read_csv(BED_GROUPS, sep='\t', header=0, index_col='GROUP_ID')
 GROUP = GROUP.loc[GROUP_ID].copy()
 GROUP['POS1'] = GROUP['POS'] + 1
 

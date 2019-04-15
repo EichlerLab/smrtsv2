@@ -218,7 +218,7 @@ rule gt_vcf_merge:
 
         # Merge samples into VCF
         vcf_df = pd.concat(
-            [vcf_body] + [pd.read_table('samples/{}/temp/vcf_column.tab'.format(sample)) for sample in SAMPLES],
+            [vcf_body] + [pd.read_csv('samples/{}/temp/vcf_column.tab'.format(sample), sep='\t') for sample in SAMPLES],
             axis=1
         )
 
@@ -262,7 +262,7 @@ rule gt_call_predict:
     run:
 
         # Read features
-        features = pd.read_table(input.tab, header=0)
+        features = pd.read_csv(input.tab, sep='\t', header=0)
 
         # Annotate no-calls
         features['CALLABLE'] = features.apply(
@@ -296,21 +296,21 @@ rule gt_call_sample_merge:
     run:
 
         # Read input tables (SVs, breakpoint  depths, and insert size deltas)
-        df_sv = pd.read_table(input.sv_bed, header=0)
+        df_sv = pd.read_csv(input.sv_bed, sep='\t', header=0)
         df_sv.index = df_sv['INDEX']
         del(df_sv['CONTIG'])
         del(df_sv['CONTIG_START'])
         del(df_sv['CONTIG_END'])
 
-        df_bp = pd.read_table(input.bp_tab, header=0)
+        df_bp = pd.read_csv(input.bp_tab, sep='\t', header=0)
         df_bp.index = df_bp['INDEX']
         del(df_bp['INDEX'])
 
-        df_ins = pd.read_table(input.insert_tab, header=0)
+        df_ins = pd.read_csv(input.insert_tab, sep='\t', header=0)
         df_ins.index = df_ins['INDEX']
         del(df_ins['INDEX'])
 
-        df_depth = pd.read_table(input.depth_tab, header=0)
+        df_depth = pd.read_csv(input.depth_tab, sep='\t', header=0)
         df_depth.index = df_depth['INDEX']
         del(df_depth['INDEX'])
 
@@ -512,10 +512,10 @@ rule gt_altref_map_regions_bed:
     run:
 
         # Read breakpoints on primary contigs
-        df_primary = pd.read_table(input.bed, usecols=('#CHROM', 'POS', 'END'))
+        df_primary = pd.read_csv(input.bed, sep='\t', usecols=('#CHROM', 'POS', 'END'))
 
         # Read breakpoints on SV contigs
-        df_sv = pd.read_table(input.bed, usecols=('CONTIG', 'CONTIG_START', 'CONTIG_END'))
+        df_sv = pd.read_csv(input.bed, sep='\t', usecols=('CONTIG', 'CONTIG_START', 'CONTIG_END'))
         df_sv.columns = ('#CHROM', 'POS', 'END')
 
         # Merge and write
@@ -537,8 +537,9 @@ rule gt_altref_alt_info_bed:
     run:
 
         # Read reference FAI (Series of lengths keyed by chromosome name)
-        seq_len = pd.read_table(
+        seq_len = pd.read_csv(
             input.altref_fai,
+            sep='\t',
             header=None,
             names=('CHROM', 'LEN', 'OFFSET', 'LINE_LEN', 'LINE_BYTES'),
             usecols=('CHROM', 'LEN'),
@@ -547,10 +548,10 @@ rule gt_altref_alt_info_bed:
         )
 
         # Get a list of primary contigs (from reference sequence only, no alt contigs)
-        primary_seqs = set(pd.read_table(input.sv_ref_fai, header=None, usecols=(0, ))[0].tolist())
+        primary_seqs = set(pd.read_csv(input.sv_ref_fai, sep='\t', header=None, usecols=(0, ))[0].tolist())
 
         # Get the alternates file (a SAM file of ALT contigs aligned to a primary contig)
-        alt_to_primary = pd.read_table(input.contig_chr, header=None, index_col=0, squeeze=True)
+        alt_to_primary = pd.read_csv(input.contig_chr, sep='\t', header=None, index_col=0, squeeze=True)
 
         # Make BED of all contigs as a dataframe
         df_bed = pd.DataFrame(
