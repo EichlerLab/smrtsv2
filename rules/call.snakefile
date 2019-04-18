@@ -449,7 +449,7 @@ rule call_repeatmask_sv_fasta:
         threads='8',
         species=_get_repeat_species,
         rmsk=get_config_param('rmsk')
-    shell:
+    run:
 
         if params.rmsk:
             shell(
