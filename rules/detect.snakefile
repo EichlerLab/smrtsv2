@@ -505,7 +505,7 @@ rule detect_merge_coverage:
         """echo -e "#CHROM\tPOS\tEND\tDEPTH" > {output.bed}; """
         """paste {input.bed} | """
         """awk 'OFS="\\t" {{ sum = 0; for (i = 4; i <= NF; i++) {{ if (i % 4 == 0) {{ sum += $i }} }} print $1,$2,$3,sum }}' | """
-        """sort -k 1,1 -k 2,2n >> {output.bed}"""
+        """sort -k1,1 -k2,2n >> {output.bed}"""
 
 # detect_coverage_per_batch
 #
