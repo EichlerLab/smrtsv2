@@ -68,7 +68,7 @@ def get_read_depth(df_subset, bam_file_name, mapq):
                 pysam_count = 0
 
             # Count
-            for segment in bam_file.fetch(contig, pos, pos + 1):
+            for segment in bam_file.fetch(str(contig), pos, pos + 1):
                 if segment.mapping_quality >= mapq and segment.is_proper_pair:
                     n_reads += 1
 

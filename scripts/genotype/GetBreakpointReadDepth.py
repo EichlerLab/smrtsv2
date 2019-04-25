@@ -337,15 +337,15 @@ def get_bp_depth(sv_record, bam_file, minclip=4, mapq=20):
     records_r = collections.defaultdict(list)
     records_s = collections.defaultdict(list)
 
-    for record in bam_file.fetch(bp_lr_chr, bp_l, bp_l + 1):
+    for record in bam_file.fetch(str(bp_lr_chr), bp_l, bp_l + 1):
         if record.mapping_quality >= mapq and record.is_proper_pair:
             records_l[record.query_name].append(AlignRecord(record))
 
-    for record in bam_file.fetch(bp_lr_chr, bp_r, bp_r + 1):
+    for record in bam_file.fetch(str(bp_lr_chr), bp_r, bp_r + 1):
         if record.mapping_quality >= mapq and record.is_proper_pair:
             records_r[record.query_name].append(AlignRecord(record))
 
-    for record in bam_file.fetch(bp_s_chr, bp_s, bp_s + 1):
+    for record in bam_file.fetch(str(bp_s_chr), bp_s, bp_s + 1):
         if record.mapping_quality >= mapq and record.is_proper_pair:
             records_s[record.query_name].append(AlignRecord(record))
 

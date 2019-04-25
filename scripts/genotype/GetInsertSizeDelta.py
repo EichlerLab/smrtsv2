@@ -39,7 +39,7 @@ def get_insert_size_list(sv_record, bam_file, ref_flank):
     # Get insert sizes over the variant
     insert_size_list = list()
 
-    for record in bam_file.fetch(chr, bp_l_lower, bp_l_upper):
+    for record in bam_file.fetch(str(chr), bp_l_lower, bp_l_upper):
         if record.next_reference_name == chr and bp_r_lower <= record.next_reference_start <= bp_r_upper:
             insert_size_list.append(abs(record.template_length))
 
