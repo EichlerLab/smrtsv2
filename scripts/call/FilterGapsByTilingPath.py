@@ -39,7 +39,3 @@ for line in gaps:
     for o in ovps:
         if (o[2] == vals[7]):
             print line.strip()
-    
-
-
-

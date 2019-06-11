@@ -1,19 +1,20 @@
 # SMRT-SV Genotyper
 
-The SMRT-SV genotyper takes a VCF of structural variant (SV) calls and some number of sample alignment files (BAM/CRAM).
-In each sample, it searches for evidence of each SV calls and attempts to assign a genotype (0/0, 0/1, or 1/1).
+The SMRT-SV genotyper takes a VCF of structural variant (SV) calls and some number of sample alignment files (BAM/CRAM)
+containing short-read Illumina data. In each sample, it searches for evidence of each SV calls and attempts to assign a
+genotype (0/0, 0/1, or 1/1).
 
 Using the reference FASTA SVs were called against, the genotyper builds an ALT-reference by taking the primary contigs
 from the SV reference and adding local-assembly contigs from SMRT-SV as ALT sequences. BWA-MEM is then used to remap all
-reads to this ALT reference. Therefore, each SV has both a primary (from primary contigs) and alt (from SV contigs)
-representation, and so reads associated with the presence or the absense of an SV have a place to map. This greatly
-improves sensitivity over genotyping methods that use the reference without SV ALTs, which is especially true for
-insertions. However, this comes at the high cost of remapping all sequence reads to the ALT reference.
+short-reads to this ALT reference. Therefore, each SV has both a primary (from primary contigs) and alt (from SV
+contigs) representation, and so reads associated with the presence or the absense of an SV have a place to map. This
+greatly improves sensitivity over genotyping methods that use the reference without SV ALTs, which is especially true
+for insertions. However, this comes at the high cost of remapping all sequence reads to the ALT reference.
 
 ## Setup
 
-The SMRT-SV genotyper requires two input files, a genotyper config file and a table of samples. These files may be
-called anything, but in the following examples, we will use `genotyper.json` and `samples.tab`.
+The SMRT-SV genotyper requires two input files, a genotyper config file and a table of short-read samples. These files
+may be called anything, but in the following examples, we will use `genotyper.json` and `samples.tab`.
 
 We recommend running the genotype in its own directory separate from other project files. Do no run in the SMRT-SV
 install directory. To setup, change to a clean location with no files, create the configuration and sample table in
