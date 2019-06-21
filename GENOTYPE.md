@@ -97,3 +97,34 @@ SMRTSV_DIR=/path/to/smrtsv2
 
 ${SMRTSV_DIR}/smrtsv --cluster-config=${SMRTSV_DIR}/cluster.eichler.json --drmaalib /path/to/libdrmaa.so.1.0 --distribute --jobs 20 genotype genotyper.json variants.vcf.gz
 ```
+
+## Results
+
+All VCF fields up to the `FILTER` column are copied from the input VCF. `INFO` is altered after building the VCF using
+`vcffixup` in `vcflib`.
+
+The `FORMAT` of each sample is `GT:GQ:GL:DPR:DPA`
+
+* GT: Genotype.
+  * ./.: No call. Insufficient read depth over breakpoints to make a genotype call.
+  * 0/0: Homozygous reference (absent).
+  * 0/1: Heterozygous (present in one copy).
+  * 1/1: Homozygous (present in two copies).
+* GQ: Genotype quality computed as a PHRED-scaled score of genotype density (see below).
+* GL: Genotype likelihood based on the relative genotype density predicted by the genotype model (see below).
+* DPR: Read read depth over reference breakpoints.
+* DPA: Read depth over alternate breakpoints on SV contig.
+
+
+Note: For male samples, `0/1` will never be observed on chromosome X. However, X is present in only one copy, so
+allele number calculations should adjust for this.
+
+### GQ and GL FORMAT fields
+
+Given a set of features (breakpoint depth, split reads, intsert size, etc), the relative density of each genotype call
+(0/0, 0/1, and 1/1) is computed by the machine learning model, and the sum of these three densities adds up to 1. This
+is encoded in the GL field as a comma-separated list for 0/0, 0/1, and 1/1, respectively. For example,
+`0.0441,0.8809,0.0750` is a 0/1 call with a relative density of 0.8809 (compared to 0.0441 for 0/0 and 0.0750 for 1/1).
+
+The genotype quality is a Phred-scaled score of the maximum likelihood. It is computed as `10 * -log10(1 - D)`, where
+`D` is relative density of the accepted genotype call (0.8809 in the example above).
