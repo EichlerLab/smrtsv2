@@ -114,7 +114,8 @@ def call(args):
             '--config',
             'variants={}'.format(args.variants),
             'species="{}"'.format(args.species),
-            'sample="{}"'.format(args.sample)
+            'sample="{}"'.format(args.sample),
+            'rmsk={}'.format(str(args.rmsk).lower())
         ),
         cmd_log='call/log'
     )

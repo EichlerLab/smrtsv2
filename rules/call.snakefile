@@ -13,6 +13,8 @@ INDEL_TYPES = ("ins", "del")
 
 MIN_CONTIG_LENGTH = 40000
 
+RUN_RMSK = config.get('rmsk', 'false').lower() == 'true'
+
 
 ###################
 ### Definitions ###
@@ -447,11 +449,10 @@ rule call_repeatmask_sv_fasta:
         'call/sv_calls/{sv_type}/rm/{sv_type}.fasta.masked'
     params:
         threads='8',
-        species=_get_repeat_species,
-        rmsk=get_config_param('rmsk')
+        species=_get_repeat_species
     run:
 
-        if params.rmsk:
+        if RUN_RMSK:
             shell(
                 """RepeatMasker -species "{params.species}" """
                     """-dir `dirname {output[0]}` """
