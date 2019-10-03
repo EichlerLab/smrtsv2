@@ -424,6 +424,9 @@ if __name__ == '__main__':
                             help='Probability of a read aligning better to the alternate breakpoint(s) assuming the '
                                  'genotype is heterozygous.')
 
+    arg_parser.add_argument('--ref', nargs='?', default=None,
+                            help='Reference for records are aligned against.')
+
     args = arg_parser.parse_args()
 
     # Check arguments
@@ -482,7 +485,7 @@ if __name__ == '__main__':
 
                 gc.collect()
 
-                bam_file_in = pysam.AlignmentFile(args.bam, 'r')
+                bam_file_in = pysam.AlignmentFile(args.bam, 'r', reference_filename=args.ref)
 
             # Get record
             sv_rec = df_bed.iloc[index]

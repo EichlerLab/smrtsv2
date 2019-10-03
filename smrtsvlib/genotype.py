@@ -138,7 +138,7 @@ def vcf_table(vcf_file_name):
 
     # Read
     with gzip.open(vcf_file_name) as in_file:
-        df_var = pd.read_csv(in_file, sep='\t', ' header=None, comment='#')
+        df_var = pd.read_csv(in_file, sep='\t', header=None, comment='#')
 
     # Get only variant information (truncate FORMAT and any samples)
     df_var = df_var.loc[:, 0:7]

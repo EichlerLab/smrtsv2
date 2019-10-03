@@ -12,7 +12,7 @@ import pysam
 PYSAM_RESET_INTERVAL = 1000
 
 
-def get_read_depth(df_subset, bam_file_name, mapq):
+def get_read_depth(df_subset, bam_file_name, mapq, ref_filename=None):
     """
     Get read depths over one or more breakpoints.
 
@@ -27,7 +27,7 @@ def get_read_depth(df_subset, bam_file_name, mapq):
 
     # Init pysam query count (for memory leak prevention)
     pysam_count = 0
-    bam_file = pysam.AlignmentFile(bam_file_name, 'r')
+    bam_file = pysam.AlignmentFile(bam_file_name, 'r', reference_filename=ref_filename)
 
     # Init dataframe
     df_subset = df_subset.copy()
@@ -63,7 +63,7 @@ def get_read_depth(df_subset, bam_file_name, mapq):
 
                 gc.collect()
 
-                bam_file = pysam.AlignmentFile(bam_file_name, 'r')
+                bam_file = pysam.AlignmentFile(bam_file_name, 'r', reference_filename=ref_filename)
 
                 pysam_count = 0
 
@@ -156,6 +156,9 @@ if __name__ == '__main__':
     arg_parser.add_argument('--flank', type=int, default=100,
                             help='Number of reference bases on each side of the SV for flanking regions.')
 
+    arg_parser.add_argument('--ref', nargs='?',
+                            default=None, help='Reference for records are aligned against.')
+
     args = arg_parser.parse_args()
 
     # Check arguments
@@ -184,15 +187,15 @@ if __name__ == '__main__':
 
     # Count reads over variant midpoint
     df_bed['DP_N_VAR'] =\
-        get_read_depth(df_bed.loc[:, ['VAR_CONTIG', 'VAR_MIDPOINT']], args.bam, args.mapq)
+        get_read_depth(df_bed.loc[:, ['VAR_CONTIG', 'VAR_MIDPOINT']], args.bam, args.mapq, ref_filename=args.ref)
 
     # Count reads over reference flank
     df_bed['DP_N_PROX_REF'] =\
-        get_read_depth(df_bed.loc[:, ['#CHROM', 'FLANK_L_REF', 'FLANK_R_REF']], args.bam, args.mapq)
+        get_read_depth(df_bed.loc[:, ['#CHROM', 'FLANK_L_REF', 'FLANK_R_REF']], args.bam, args.mapq, ref_filename=args.ref)
 
     # Count reads over contig flank
     df_bed['DP_N_PROX_CTG'] =\
-        get_read_depth(df_bed.loc[:, ['CONTIG', 'FLANK_L_CTG', 'FLANK_R_CTG']], args.bam, args.mapq)
+        get_read_depth(df_bed.loc[:, ['CONTIG', 'FLANK_L_CTG', 'FLANK_R_CTG']], args.bam, args.mapq, ref_filename=args.ref)
 
     # Get global stats
     ref_mean = np.mean(df_bed['DP_N_PROX_REF'])

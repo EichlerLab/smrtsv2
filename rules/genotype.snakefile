@@ -328,6 +328,7 @@ rule gt_call_sample_merge:
 # Get read depths in and around altered bases.
 rule gt_call_sample_read_depth:
     input:
+        sv_ref='altref/ref.fasta',
         bed='sv_calls/sv_calls.bed',
         bam='samples/{sample}/alignments.cram',
         alt_info='altref/alt_info.bed'
@@ -342,7 +343,8 @@ rule gt_call_sample_read_depth:
             """{input.bam} {input.bed} {input.alt_info} {output.tab} """
             """--out_stats {output.stats} """
             """--mapq {params.mapq} """
-            """--flank {params.flank}"""
+            """--flank {params.flank} """
+            """--ref {input.sv_ref}"""
 
 # gt_call_sample_insert_delta
 #
@@ -378,6 +380,7 @@ rule gt_call_sample_insert_delta:
 # Get breakpoints
 rule gt_call_sample_breakpoint_depth:
     input:
+        sv_ref='altref/ref.fasta',
         bed='sv_calls/sv_calls.bed',
         bam='samples/{sample}/alignments.cram'
     output:
@@ -388,6 +391,7 @@ rule gt_call_sample_breakpoint_depth:
         """python3 -s {SMRTSV_DIR}/scripts/genotype/GetBreakpointReadDepth.py """
             """-f """
             """--mapq {params.mapq} """
+            """--ref {input.sv_ref} """
             """{input.bam} {input.bed} {output.tab}"""
 
 #

@@ -17,7 +17,7 @@ def filter_bam(input_file, queries, output_file, output_sizes_file, ref_filename
 
     found_queries = set()
 
-    with pysam.AlignmentFile(input_file, 'rb') as input_bam:
+    with pysam.AlignmentFile(input_file, 'rb', reference_filename=ref_filename) as input_bam:
         with pysam.AlignmentFile(output_file, 'w', template=input_bam, reference_filename=ref_filename) as output_bam:
             with open(output_sizes_file, 'w') as output_sizes:
                 for alignment in input_bam:
