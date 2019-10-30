@@ -1,8 +1,8 @@
 # Build conda environments
 
 # Define
-MINICONDA_INSTALLER = Miniconda3-4.5.11-Linux-x86_64.sh
-
+MINICONDA_INSTALLER = Miniconda3-4.7.12-Linux-x86_64.sh
+SHELL := /bin/bash
 
 ## All ###
 .PHONY: all
