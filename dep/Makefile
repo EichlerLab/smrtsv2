@@ -19,7 +19,7 @@ install_flags/dep_smrtsvtools_link: install_flags/dep_smrtsvtools_build
 	ln -sf ../smrtsvtools/bin/tlenadd bin/tlenadd
 	date > $@
 
-install_flags/dep_smrtsvtools_build: install_flags/dep_conda_build
+install_flags/dep_smrtsvtools_build: install_flags/dep_conda_link
 	mkdir -p install_flags
 	make -C smrtsvtools
 	date > $@
@@ -60,13 +60,22 @@ install_flags/dep_conda_link: install_flags/dep_conda_build
 	ln -sf ../conda/build/envs/tools/bin/samtools bin/samtools
 	ln -sf ../conda/build/envs/tools/bin/bamleftalign bin/bamleftalign
 	#ln -sf ../conda/build/envs/tools/bin/RepeatMasker bin/RepeatMasker
-	ln -sf ../conda/build/envs/tools/bin/blastp bin/blastp
-	ln -sf ../conda/build/envs/tools/bin/trf bin/trf
+	#ln -sf ../conda/build/envs/tools/bin/blastp bin/blastp
+	#ln -sf ../conda/build/envs/tools/bin/trf bin/trf
 	ln -sf ../conda/build/envs/tools/bin/bcftools bin/bcftools
 
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/bwa bin/bwa
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/k8 bin/k8
 	ln -sf ../conda/build/envs/tools/share/bwakit-0.7.15-1/bwa-postalt.js bin/bwa-postalt.js
+
+	# Tools: Link GCC (take "x86_64-conda_cos6-linux-gnu-" of the link name; e.g. "x86_64-conda_cos6-linux-gnu-gcc" to "gcc")
+	for FILE in conda/build/envs/tools/bin/x86_64-conda_cos6-linux-gnu-*; do \
+		FILE=$$(basename $${FILE}); \
+		DEST_FILE=$${FILE#"x86_64-conda_cos6-linux-gnu-"}; \
+		ln -sf ../conda/build/envs/tools/bin/$${FILE} bin/$${DEST_FILE}; \
+	done
+
+	# TODO: Link gcc binaries
 
 	#mkdir -p share
 	#ln -sf ../conda/build/envs/tools/share/RepeatMasker share/

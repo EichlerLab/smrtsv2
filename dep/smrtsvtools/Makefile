@@ -1,8 +1,8 @@
 ENV_TOOLS = $(abspath ../conda/build/envs/tools)
 
-CXX = $(ENV_TOOLS)/bin/g++
+CXX = $(ENV_TOOLS)/bin/x86_64-conda_cos6-linux-gnu-g++
 
-CXXFLAGS = -I$(abspath include) -I$(abspath ${PREFIX}/include) -std=c++11 -g
+CXXFLAGS = -I$(abspath include) -I$(abspath ${PREFIX}/include) -I$(abspath ${ENV_TOOLS}/include) -std=c++11 -g
 
 LDFLAGS = -L$(ENV_TOOLS)/lib -Wl,-rpath=$(ENV_TOOLS)/lib -lboost_program_options -lrt -lpthread -lbz2 -lhts -llzma
 

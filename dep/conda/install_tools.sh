@@ -8,18 +8,15 @@ conda config --add channels conda-forge
 # pip install --upgrade pip
 
 conda install -y \
-    canu=1.8 \
-    bedtools=2.27.1 \
-    boost=1.67.0 \
-    htslib=1.9 \
-    gcc=4.8.5 \
-    vcflib=1.0.0_rc1 \
-    tabix=0.2.6 \
-    bwakit=0.7.15 \
-    seqtk=1.3 \
-    freebayes=1.2.0 \
-    repeatmasker=4.0.7 \
-    trf=4.09 \
     bcftools=1.9 \
+    bedtools=2.29.0 \
+    bwakit=0.7.15 \
+    boost=1.70.0 \
+    canu=1.8 \
+    freebayes=1.3.1 \
+    gxx_linux-64=7.3.0 \
+    htslib=1.9 \
+    seqtk=1.3 \
     samtools=1.9 \
-    hdf5=1.10.4
+    tabix=0.2.6 \
+    vcflib=1.0.0_rc2

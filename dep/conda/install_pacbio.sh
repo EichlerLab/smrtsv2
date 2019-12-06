@@ -8,8 +8,7 @@ conda config --add channels conda-forge
 # pip install --upgrade pip
 
 conda install -y \
-    bam2fastx==1.3.0 \
-    bax2bam==0.0.9 \
-    blasr==5.3.2 \
-    genomicconsensus==2.3.2 \
-    hdf5==1.10.2
+    bam2fastx=1.3.0 \
+    bax2bam=0.0.9 \
+    blasr=5.3.3 \
+    genomicconsensus=2.3.3
