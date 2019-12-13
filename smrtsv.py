@@ -69,7 +69,8 @@ def detect(args):
         'min_coverage={}'.format(args.min_coverage),
         'max_coverage={}'.format(args.max_coverage),
         'min_hardstop_support={}'.format(args.min_hardstop_support),
-        'max_candidate_length={}'.format(args.max_candidate_length)
+        'max_candidate_length={}'.format(args.max_candidate_length),
+        'candidate_group_size={}'.format(args.candidate_group_size)
     )
 
     if args.exclude:
@@ -289,6 +290,7 @@ if __name__ == '__main__':
     parser_detector.add_argument('--max-coverage', dest='max_coverage', **args_dict['max_coverage'])
     parser_detector.add_argument('--min-hardstop-support', dest='min_hardstop_support', **args_dict['min_hardstop_support'])
     parser_detector.add_argument('--max-candidate-length', dest='max_candidate_length', **args_dict['max_candidate_length'])
+    parser_detector.add_argument('--candidate-group-size', dest='candidate_group_size', **args_dict['candidate_group_size'])
     parser_detector.set_defaults(func=detect)
 
     # SMRTSV command: Assemble regions
@@ -336,6 +338,7 @@ if __name__ == '__main__':
     parser_runner.add_argument('--mapping-quality', dest='mapping_quality', **args_dict['mapping_quality'])
     parser_runner.add_argument('--min-hardstop-support', dest='min_hardstop_support', **args_dict['min_hardstop_support'])
     parser_runner.add_argument('--max-candidate-length', dest='max_candidate_length', **args_dict['max_candidate_length'])
+    parser_runner.add_argument('--candidate-group-size', dest='candidate_group_size', **args_dict['candidate_group_size'])
     parser_runner.add_argument('--asm-group-rt', dest='asm_group_rt', **args_dict['asm_group_rt'])
     parser_runner.add_argument('--asm-rt', dest='asm_rt', **args_dict['asm_rt'])
     parser_runner.add_argument('--rmsk', **args_dict['rmsk'])
