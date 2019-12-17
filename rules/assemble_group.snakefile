@@ -29,7 +29,7 @@ LOG_DIR = config['log_dir']
 MAPQ = config['mapping_quality']
 ALN_PARAMS=config['asm_alignment_parameters'].strip('"')
 GROUP_ID = config['group_id']
-THREADS = config['threads']
+THREADS = config['asm_threads']
 POLISH_METHOD = config['asm_polish']
 REF_FA = config['ref_fa']
 

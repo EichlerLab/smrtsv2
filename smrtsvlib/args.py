@@ -282,6 +282,7 @@ args_dict['asm_mem'] = {
     'default': '1G',
     'help':
         'Multiply this amount of memory by the number of cores for the amount of memory allocated to assembly steps.'
+        'If multiple simultaneous assemblies are run, then this is multiplied again by that factor (see --asm-parallel).'
 }
 
 # asm_polish
@@ -298,6 +299,13 @@ args_dict['asm_group_rt'] = {
     'help':
         'Set maximum runtime for an assembly group. Assemblies are grouped by region, and multiple assemblies are done '
         'in one grouped job. This is the maximum runtime for the whole group.'
+}
+
+args_dict['asm_parallel'] = {
+    'type': int,
+    'default': 1,
+    'help':
+        'Number of simultaneous assemblies to run. The actual thread count will be this times --asm-cpu'
 }
 
 # asm_group_rt

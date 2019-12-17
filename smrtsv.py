@@ -97,6 +97,7 @@ def assemble(args):
         'mapping_quality={}'.format(args.mapping_quality),
         'asm_cpu={}'.format(args.asm_cpu),
         'asm_mem={}'.format(args.asm_mem),
+        'asm_parallel={}'.format(args.asm_parallel),
         'asm_polish={}'.format(args.asm_polish),
         'no_rm_temp={}'.format(args.nt)
     )
@@ -302,6 +303,7 @@ if __name__ == '__main__':
     parser_assembler.add_argument('--asm-polish', dest='asm_polish', **args_dict['asm_polish'])
     parser_assembler.add_argument('--asm-group-rt', dest='asm_group_rt', **args_dict['asm_group_rt'])
     parser_assembler.add_argument('--asm-rt', dest='asm_rt', **args_dict['asm_rt'])
+    parser_assembler.add_argument('--asm-parallel', dest='asm_parallel', **args_dict['asm_parallel'])
     parser_assembler.set_defaults(func=assemble)
 
     # SMRTSV command: Call variants
@@ -341,6 +343,7 @@ if __name__ == '__main__':
     parser_runner.add_argument('--candidate-group-size', dest='candidate_group_size', **args_dict['candidate_group_size'])
     parser_runner.add_argument('--asm-group-rt', dest='asm_group_rt', **args_dict['asm_group_rt'])
     parser_runner.add_argument('--asm-rt', dest='asm_rt', **args_dict['asm_rt'])
+    parser_runner.add_argument('--asm-parallel', dest='asm_parallel', **args_dict['asm_parallel'])
     parser_runner.add_argument('--rmsk', **args_dict['rmsk'])
     parser_runner.set_defaults(func=run)
 

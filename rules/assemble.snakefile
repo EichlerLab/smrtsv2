@@ -86,9 +86,10 @@ rule asm_assemble_group:
     params:
         mapq=get_config_param('mapping_quality'),
         align_params=get_config_param('asm_alignment_parameters'),
-        threads=get_config_param('asm_cpu'),  # Parses into cluster params
+        asm_threads=get_config_param('asm_cpu'),
         mem=get_config_param('asm_mem'),      # Parses into cluster params
         rt=get_config_param('asm_group_rt'),  # Parses into cluster params
+        threads=get_config_param('asm_cpu') * get_config_param('asm_parallel'),  # Parses into cluster params
         asm_rt=get_config_param('asm_rt'),
         asm_polish=get_config_param('asm_polish'),
         no_rm_temp=get_config_param('no_rm_temp'),
@@ -136,7 +137,7 @@ rule asm_assemble_group:
                 'align_fofn={}'.format(os.path.abspath(input.align_fofn)),
                 'bed_groups={}'.format(os.path.abspath(input.bed_grp)),
                 'bed_candidates={}'.format(os.path.abspath(input.bed_can)),
-                'threads={:d}'.format(params.threads),
+                'asm_threads={:d}'.format(params.asm_threads),
                 'ref_fa={}'.format(os.path.abspath(input.ref_fa))
             ]
 
