@@ -1,4 +1,3 @@
-
 if not 'INCLUDE_SNAKEFILE' in globals():
     include: 'include.snakefile'
 

@@ -340,6 +340,7 @@ rule assemble_reads:
                 """-d {canu_dir} """
                 """-p asm """
                 """useGrid=false """
+                """gnuplotTested=true """
                 """corMhapSensitivity=high """
                 """corMinCoverage=2 """
                 """correctedErrorRate=0.045 """  # Was errorRate=0.035
