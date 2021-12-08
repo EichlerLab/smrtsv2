@@ -1,3 +1,13 @@
+DEPRECATED - This project is obsolete. PacBio CLR has been replaced by HiFi (CCS), and there are far better methods for running these samples today.
+
+See these other tools for SV detection with HiFi (CCS) or CLR:
+* PAV: https://github.com/EichlerLab/pav
+* pbsv: https://github.com/PacificBiosciences/pbsv
+* Sniffles: https://github.com/fritzsedlazeck/Sniffles
+* SVIM: https://github.com/eldariont/svim
+
+
+
 # SMRT-SV long read structural variant caller
 
 SMRT-SV calls structural variants (SVs) using long reads (PacBio RS II or Sequel). The input is an FOFN file that lists
